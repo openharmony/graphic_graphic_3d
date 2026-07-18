@@ -26,7 +26,7 @@ META_REGISTER_INTERFACE(ICurve, "9ec41bb4-d5a9-4c18-afa4-686908e76adb")
  * @brief ICurve is the base interface for all curves. A curve transforms a parameter
  *        along a curve, specified by each class which implements the ICurve interface.
  */
-template<class T>
+template <class T>
 class ICurve : public CORE_NS::IInterface {
     META_INTERFACE(CORE_NS::IInterface, ICurve)
 public:

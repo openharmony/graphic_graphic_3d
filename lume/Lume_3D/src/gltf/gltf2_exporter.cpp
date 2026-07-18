@@ -65,25 +65,25 @@
 #include "util/json_util.h"
 #include "util/log.h"
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const bool& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::ComponentType& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::DataType& val)
 {
     return static_cast<uint64_t>(val);
 }
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const CORE3D_NS::GLTF2::BufferTarget& val)
 {
     return static_cast<uint64_t>(val);
@@ -220,7 +220,7 @@ inline bool operator<(const RenderHandleReference& lhs, const RenderHandleRefere
 }
 
 /* Returns the index where the given object is in the vector. */
-template<typename T>
+template <typename T>
 int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 {
     const auto comparePointers = [ptr = &object](const auto& aUniqueObject) { return aUniqueObject.get() == ptr; };
@@ -232,7 +232,7 @@ int FindObjectIndex(vector<unique_ptr<T>> const& array, T const& object)
 }
 
 /* Returns the index where the given handle is in the vector. */
-template<typename T>
+template <typename T>
 uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 {
     if (const auto handlePos = std::find(handles.begin(), handles.end(), handle); handlePos != handles.end()) {
@@ -242,7 +242,7 @@ uint32_t FindHandleIndex(vector<T> const& handles, T handle)
 }
 
 /* Returns the index where the given handle is in the vector. If the handle was not in the vector it is added. */
-template<typename T>
+template <typename T>
 uint32_t FindOrAddIndex(vector<T>& handles, const T& handle)
 {
     if (const auto handlePos =
@@ -700,10 +700,8 @@ void ExportGltfSkins(const IEcs& ecs, const Entities& entities, const vector<uni
         if (!skinJointsHandle) {
             continue;
         }
-        // Clamp to the fixed array size; count is not re-clamped after the component is written.
-        const size_t jointCount = Math::min(skinJointsHandle->count, countof(skinJointsHandle->jointEntities));
-        exportSkin->joints.reserve(jointCount);
-        for (const auto& jointEntity : array_view(skinJointsHandle->jointEntities, jointCount)) {
+        exportSkin->joints.reserve(skinJointsHandle->count);
+        for (const auto& jointEntity : array_view(skinJointsHandle->jointEntities, skinJointsHandle->count)) {
             const auto jointIndex = FindHandleIndex(entities.nodes, jointEntity);
             if (jointIndex < nodeArray.size()) {
                 exportSkin->joints.push_back(nodeArray[jointIndex].get());
@@ -979,10 +977,8 @@ vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const 
 
             const auto& submeshes = meshHandle->submeshes;
             const auto& originalPrimitives = originalGltf->meshes[meshIndex]->primitives;
-            // Clamp to the source primitive count to avoid reading past originalPrimitives.
-            const size_t exportCount = Math::min(submeshes.size(), originalPrimitives.size());
             std::transform(submeshes.cbegin(),
-                submeshes.cbegin() + static_cast<ptrdiff_t>(exportCount),
+                submeshes.cend(),
                 originalPrimitives.cbegin(),
                 std::back_inserter(exportMesh->primitives),
                 MeshPrimitiveGenerator{materialManager, buffer, usedMaterials});

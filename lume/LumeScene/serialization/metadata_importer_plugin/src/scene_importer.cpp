@@ -372,13 +372,7 @@ INode::Ptr SceneImportContext::LoadExternalNode(const ISceneExternalNodeSer& in,
         }
         auto sgroups = in.GetSubresourceGroups();
         if (auto res = interface_pointer_cast<IScene>(resource)) {
-            auto nodeName = in.GetName();
-            auto group = sgroups.empty() ? "" : sgroups.front();
-            INodeImport::ImportOptions opts;
-            opts.nodeName = nodeName;
-            opts.resourceGroup = group;
-            opts.namingBehavior = INodeImport::ImportOptions::NamingBehavior::NAME_AS_IS;
-            node = imp->ImportChildScene(res, opts).GetResult();
+            node = imp->ImportChildScene(res, in.GetName(), sgroups.empty() ? "" : sgroups.front()).GetResult();
         } else if (auto res = interface_pointer_cast<META_NS::IObjectTemplate>(resource)) {
             node = imp->ImportTemplate(res, sgroups.empty() ? "" : sgroups.front()).GetResult();
         } else {
@@ -911,24 +905,6 @@ ResourceGroupBundle StringToResourceGroupBundle(
         }
     }
     return bundle;
-}
-
-void CopyResourceInfos(const BASE_NS::array_view<const CORE_NS::ResourceInfo>& infos,
-    META_NS::IResourceManagerExtension& destExt, const CORE_NS::ResourceContextPtr& context,
-    BASE_NS::vector<CORE_NS::ResourceId>& out)
-{
-    for (auto&& i : infos) {
-        META_NS::ResourceData d{i};
-        if (i.options) {
-            d.options = i.options->Clone();
-        }
-        auto destI = destExt.GetResources({i.id}, context);
-        if (!destI.empty()) {
-            out.push_back(destI.front().id);
-            d.object = destI.front().object;
-        }
-        destExt.AddResources({d}, context);
-    }
 }
 
 SCENE_END_NAMESPACE()

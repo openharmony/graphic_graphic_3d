@@ -34,7 +34,7 @@ public:
 };
 
 /** Create interface from specified interface registry */
-template<class T>
+template <class T>
 auto CreateInstance(IClassFactory& factory, const BASE_NS::Uid& uid)
 {
     // Create the instance
@@ -49,7 +49,7 @@ auto CreateInstance(IClassFactory& factory, const BASE_NS::Uid& uid)
     and tries to get the requested interface from it.
     Returns empty T::Ptr (null) if the class does not support the interface (or the class could not be created).
 */
-template<class T>
+template <class T>
 typename T::Ptr CreateInstance(const BASE_NS::Uid& factory_id, const BASE_NS::Uid& class_id)
 {
     if (auto factory = GetInstance<IClassFactory>(factory_id)) {
@@ -62,7 +62,7 @@ typename T::Ptr CreateInstance(const BASE_NS::Uid& factory_id, const BASE_NS::Ui
     and tries to get the requested interface from it.
     Returns empty T::Ptr (null) if the class does not support the interface (or the class could not be created).
 */
-template<class T>
+template <class T>
 typename T::Ptr CreateInstance(const BASE_NS::Uid& class_id)
 {
     auto factory = GetPluginRegister().GetClassRegister().GetInterface<IClassFactory>();

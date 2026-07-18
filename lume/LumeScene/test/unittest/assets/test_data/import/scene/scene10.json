@@ -11,6 +11,7 @@
 			"children": [
 				{
 					"type": "external",
+					"name": "1",
 					"source": {
 						"type": "nodeTemplate",
 						"url": "scene10.nodeTemplate"

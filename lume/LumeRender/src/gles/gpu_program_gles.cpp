@@ -211,13 +211,8 @@ void ProcessCombinedSamplers(GLuint program, const ShaderModulePlatformDataGLES&
                 if (si == 0) {
                     si = ++map.maxSamplerBinding;
                 }
-                // keep the packed finalMap index in range.
-                if ((si >= MAX_FINAL_BIND_MAP_A) || (ii >= MAX_FINAL_BIND_MAP_B)) {
-                    PLUGIN_LOG_E("GL(ES): combined sampler exceeds final bind map capacity (sampler %u, texture %u)",
-                        static_cast<uint32_t>(si),
-                        static_cast<uint32_t>(ii));
-                    continue;
-                }
+                PLUGIN_ASSERT(si < MAX_FINAL_BIND_MAP_A);
+                PLUGIN_ASSERT(ii < MAX_FINAL_BIND_MAP_B);
                 uint8_t& fi = map.finalMap[BIND_MAP_4_4(si, ii)];
                 if (fi == 0) {
                     fi = ++map.maxFinalBinding;
@@ -271,16 +266,13 @@ void ProcessSamplers(GLuint program, const ShaderModulePlatformDataGLES& plat, G
                 if (fi == 0) {
                     // Assign texture units to each "sampler".
                     GLint units[Gles::ResourceLimits::MAX_SAMPLERS_IN_STAGE];
-                    const GLint arraySize =
-                        Math::min(inUse[2], static_cast<GLint>(Gles::ResourceLimits::MAX_SAMPLERS_IN_STAGE));
-                    PLUGIN_ASSERT(inUse[2] <= static_cast<GLint>(Gles::ResourceLimits::MAX_SAMPLERS_IN_STAGE));
                     fi = (uint8_t)(map.maxFinalBinding + 1);
-                    for (int i = 0; i < arraySize; i++) {
+                    for (int i = 0; i < inUse[2]; i++) {
                         // (we have NO WAY of knowing if the index is actually used..)
                         units[i] = fi + i - 1;
                     }
-                    map.maxFinalBinding += (uint8_t)arraySize;
-                    glProgramUniform1iv(program, inUse[1], arraySize, units);
+                    map.maxFinalBinding += (uint8_t)inUse[2];
+                    glProgramUniform1iv(program, inUse[1], inUse[2], units);
                 }
             }
         }
@@ -314,7 +306,7 @@ void SetValue(char* source, uint32_t final)
     PLUGIN_ASSERT(tmp < 99);
     const auto div = static_cast<char>((tmp / 10u) + '0');
     const auto mod = static_cast<char>((tmp % 10u) + '0');
-    source[10u] = (tmp >= 10u) ? div : ' ';
+    source[10u] = (tmp > 10u) ? div : ' ';
     source[11u] = mod;
 }
 
@@ -324,7 +316,7 @@ struct binder {
     vector<size_t>& bindingIndices;
 };
 
-template<typename T, size_t N, typename TypeOfOther>
+template <typename T, size_t N, typename TypeOfOther>
 void FixBindings(T (&types)[N], binder& map, const TypeOfOther& sbSets, string& source)
 {
     // SetValue does inplace replacements so the string's data addess is constant and a string_view can be used while
@@ -431,15 +423,6 @@ void PostProcessSource(BindMaps& map, const ShaderModulePlatformDataGLES& modPla
     }
 }
 
-// returns 0 (no binding) when either index is out of the finalMap range.
-inline uint8_t LookupFinalBind(const BindMaps& map, uint32_t samplerIndex, uint32_t textureIndex)
-{
-    if ((samplerIndex >= MAX_FINAL_BIND_MAP_A) || (textureIndex >= MAX_FINAL_BIND_MAP_B)) {
-        return 0;
-    }
-    return map.finalMap[BIND_MAP_4_4(samplerIndex, textureIndex)];
-}
-
 void BuildBindInfos(Resources& resources, const PipelineLayout& pipelineLayout, BindMaps& map,
     const vector<ShaderModulePlatformDataGLES::DoubleBind>& combSets)
 {
@@ -476,7 +459,7 @@ void BuildBindInfos(Resources& resources, const PipelineLayout& pipelineLayout, 
                         if (!iid) {
                             continue;
                         }
-                        const uint8_t final = LookupFinalBind(map, id, iid);
+                        const uint8_t final = map.finalMap[BIND_MAP_4_4(id, iid)];
                         if (final) {
                             for (auto& ids : descriptorIndex) {
                                 if (!ids.count) {
@@ -499,7 +482,7 @@ void BuildBindInfos(Resources& resources, const PipelineLayout& pipelineLayout, 
                         if (!sid) {
                             continue;
                         }
-                        const uint8_t final = LookupFinalBind(map, sid, id);
+                        const uint8_t final = map.finalMap[BIND_MAP_4_4(sid, id)];
                         if (final) {
                             for (auto& ids : descriptorIndex) {
                                 if (!ids.count) {
@@ -657,10 +640,6 @@ void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
             values);
         if ((values[LOCATION] != Gles::INVALID_LOCATION) &&
             ((values[VERTEX_REF] == GL_TRUE) || (values[FRAGMENT_REF] == GL_TRUE))) {
-            if (inputsInUse >= Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES) {
-                PLUGIN_ASSERT_MSG(false, "More active program inputs than MAX_VERTEXINPUT_ATTRIBUTES");
-                break;
-            }
             inputLocations[inputsInUse] = static_cast<uint32_t>((values[LOCATION]));
             inputsInUse++;
         }

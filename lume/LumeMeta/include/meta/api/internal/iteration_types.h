@@ -24,21 +24,21 @@
 META_BEGIN_NAMESPACE()
 namespace Internal {
 
-template<typename Func>
+template <typename Func>
 struct IterationFuncType;
 
-template<typename R, typename Type>
+template <typename R, typename Type>
 struct IterationFuncType<R(Type)> {
     using ArgType = PlainType_t<Type>;
     using ActualType = Type;
 };
 
-template<typename T>
+template <typename T>
 using IterationArgType = typename IterationFuncType<FuncToSignature_t<T>>::ArgType;
-template<typename T>
+template <typename T>
 using IterationForwardArgType = typename IterationFuncType<FuncToSignature_t<T>>::ArgType;
 
-template<template<typename> class Intf, typename Func>
+template <template <typename> class Intf, typename Func>
 class IterationCallable : public IntroduceInterfaces<Intf<IterationArgType<Func>>> {
 public:
     IterationCallable(Func f) : func_(BASE_NS::move(f))
@@ -59,21 +59,21 @@ protected:
     }
 };
 
-template<typename T>
+template <typename T>
 using DisableIfCallable = BASE_NS::enable_if_t<!BASE_NS::is_convertible_v<T, const ICallable::Ptr&>>;
 
-template<typename Func>
+template <typename Func>
 auto MakeIterationCallable(Func f)
 {
     return ICallable::Ptr(new IterationCallable<IIterableCallable, Func>(BASE_NS::move(f)));
 }
-template<typename Func>
+template <typename Func>
 auto MakeIterationConstCallable(Func f)
 {
     return ICallable::Ptr(new IterationCallable<IIterableConstCallable, Func>(BASE_NS::move(f)));
 }
 
-template<template<typename> class InterableCallable, typename Iterable, typename Func>
+template <template <typename> class InterableCallable, typename Iterable, typename Func>
 auto CallIterate(const Iterable& i, Func&& func, IterateStrategy is)
 {
     IterationCallable<InterableCallable, Func> f(BASE_NS::forward<Func>(func));
@@ -81,7 +81,7 @@ auto CallIterate(const Iterable& i, Func&& func, IterateStrategy is)
     return i->Iterate(IterationParameters{f, is});
 }
 
-template<template<typename> class InterableCallable, typename Iterable>
+template <template <typename> class InterableCallable, typename Iterable>
 auto CallIterate(const Iterable& i, ICallable& func, IterateStrategy is)
 {
     InterfaceLock lock(is.lock, i);

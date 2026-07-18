@@ -15,14 +15,12 @@
 
 #include "animation.h"
 
-#include <scene/ext/scene_utils.h>
 #include <scene/interface/resource/types.h>
 
 #include <meta/api/metadata_util.h>
 #include <meta/interface/animation/builtin_animations.h>
 #include <meta/interface/animation/intf_animation.h>
 #include <meta/interface/property/construct_array_property.h>
-#include <meta/interface/resource/intf_resource.h>
 
 #include "../import_any.h"
 #include "../import_context.h"
@@ -31,6 +29,19 @@
 #include "curve.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
+
+// Import IAnimation::Name (string)
+static IDiagnostics::Ptr ImportAnimationName(ImportContext& context, META_NS::IMetadata& meta)
+{
+    ErrorHandler h(context);
+    if (auto value = GetOptString(context, "name"); h.HandleOptValue(value)) {
+        if (value.error) {
+            return value.error;
+        }
+        AddSetProperty(meta, "Name", value.GetValue());
+    }
+    return h;
+}
 
 // Import IAnimation::Enabled (bool)
 static IDiagnostics::Ptr ImportAnimationEnabled(ImportContext& context, META_NS::IMetadata& meta)
@@ -310,61 +321,6 @@ static void RegisterDeferredChildResolution(
     }
 }
 
-// Mirrors the rman fallback chain in ImportResourceIndex so the lookup finds
-// resources registered in the template's local rman during template index parsing.
-static CORE_NS::IResourceManager::Ptr GetActiveResourceManager(ImportContext& context)
-{
-    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(context.GetImportParameters().object);
-    if (!rman) {
-        rman = SCENE_NS::GetResourceManager(context.GetImportParameters().scene);
-    }
-    if (!rman && context.GetRenderContext()) {
-        rman = context.GetRenderContext()->GetResources();
-    }
-    return rman;
-}
-
-// Inline animation children with `derivedFrom` need eager parse-time inlining of base's
-// properties: LoadAnimationFromTemplate doesn't run IResourceOptions::ApplyOptions on
-// inline children, so the regular top-level derivedFrom flow (LoadBaseResource +
-// base.ApplyTo) doesn't fire here. ImportContext::ImportSubType already registered
-// SetBaseResource on the child; here we additionally pull base's parsed properties into
-// the child meta so LoadAnimationFromTemplate's static ApplyProperties has them.
-
-// Limitation: the base template should not depend on the scene hierarchy being built
-// (e.g. should not contain its own deferred PropertyPath fields). This lookup happens
-// during index parsing — before template instantiation completes — so anything that
-// would defer to "after rootNode is built" cannot resolve correctly here.
-static void EagerInlineBaseProperties(ImportContext& childContext, const META_NS::IObject::Ptr& child)
-{
-    auto childMeta = interface_cast<META_NS::IMetadata>(child);
-    if (!childMeta) {
-        return;
-    }
-    auto derived = interface_cast<META_NS::IDerivedResourceOptions>(child.get());
-    if (!derived) {
-        return;
-    }
-    auto rid = derived->GetBaseResource();
-    if (!rid.IsValid()) {
-        return;
-    }
-    auto rman = GetActiveResourceManager(childContext);
-    if (!rman) {
-        return;
-    }
-    auto base = rman->GetResource({rid, childContext.GetImportParameters().scene});
-    auto baseMeta = interface_cast<META_NS::IMetadata>(base);
-    if (!baseMeta) {
-        return;
-    }
-    for (auto&& p : baseMeta->GetProperties()) {
-        if (!childMeta->GetProperty(p->GetName())) {
-            META_NS::Clone(p, *childMeta);
-        }
-    }
-}
-
 // Parse a single child animation entry from the JSON array
 static IDiagnostics::Ptr ParseChildEntry(ImportContext& context, const CORE_NS::json::value& v, ErrorHandler& h,
     BASE_NS::vector<META_NS::IObject::Ptr>& children, BASE_NS::vector<DeferredChildEntry>& deferred)
@@ -398,7 +354,6 @@ static IDiagnostics::Ptr ParseChildEntry(ImportContext& context, const CORE_NS::
             return result.error;
         }
         if (result) {
-            EagerInlineBaseProperties(childContext, result.object);
             children.push_back(BASE_NS::move(result.object));
         }
     }
@@ -434,7 +389,7 @@ static IDiagnostics::Ptr ImportChildAnimations(
 static IDiagnostics::Ptr ImportBaseAnimationFields(
     ImportContext& context, META_NS::IMetadata& meta, BASE_NS::string_view animationType, ErrorHandler& h)
 {
-    if (auto err = ImportResourceName(context, meta); h.Handle(err)) {
+    if (auto err = ImportAnimationName(context, meta); h.Handle(err)) {
         return err;
     }
     if (auto err = ImportAnimationEnabled(context, meta); h.Handle(err)) {
@@ -500,7 +455,7 @@ ImportResult ImportAnimation::Import(ImportContext& context)
     if (!obj) {
         return ImportResult{context.CreateDiagnostics("Failed to create animation template")};
     }
-    auto meta = interface_cast<META_NS::IMetadata>(obj);
+    auto meta = interface_cast<META_NS::IMetadata>(obj.get());
     if (!meta) {
         return ImportResult{context.CreateDiagnostics("Animation template has no metadata")};
     }

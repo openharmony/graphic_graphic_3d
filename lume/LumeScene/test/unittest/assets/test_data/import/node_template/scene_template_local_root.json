@@ -9,6 +9,7 @@
             "children": [
                 {
                     "type": "external",
+                    "name": "hostA",
                     "source": { "type": "nodeTemplate", "url": "template_local_root.nodeTemplate" },
                     "resourceGroup": "grpA"
                 }

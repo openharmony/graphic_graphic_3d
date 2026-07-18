@@ -33,8 +33,7 @@ RENDER_BEGIN_NAMESPACE()
 
 ShaderModuleMln::ShaderModuleMln(Device& device, const ShaderModuleCreateInfo& createInfo) : device_(device)
 {
-    MLN_LOG_INIT("ShaderModuleMln: creating shader module (stageFlags=0x%x, spvSize=%zu)",
-        createInfo.shaderStageFlags,
+    MLN_LOG_INIT("ShaderModuleMln: creating shader module (stageFlags=0x%x, spvSize=%zu)", createInfo.shaderStageFlags,
         createInfo.spvData.size());
     shaderStageFlags_ = createInfo.shaderStageFlags;
 
@@ -76,8 +75,7 @@ ShaderModuleMln::ShaderModuleMln(Device& device, const ShaderModuleCreateInfo& c
         std::copy(createInfo.spvData.begin(), createInfo.spvData.end(), spvData_.begin());
         plat_.spvSource = reinterpret_cast<const uint32_t*>(spvData_.data());
         plat_.spvSourceSize = spvData_.size();
-        MLN_LOG_INIT("ShaderModuleMln: copied SPIR-V data (stageFlags=0x%x, spvBytes=%zu)",
-            shaderStageFlags_,
+        MLN_LOG_INIT("ShaderModuleMln: copied SPIR-V data (stageFlags=0x%x, spvBytes=%zu)", shaderStageFlags_,
             plat_.spvSourceSize);
     }
 }

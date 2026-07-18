@@ -151,7 +151,7 @@ protected:
     EntityManager entityManager_;
 };
 
-template<typename ListType, typename ValueType>
+template <typename ListType, typename ValueType>
 auto Find(ListType& list, const ValueType& value)
 {
     return std::find(list.begin(), list.end(), value);
@@ -191,7 +191,7 @@ void ProcessEntityListeners(const array_view<const pair<Entity, IEntityManager::
     }
 }
 
-template<class TypeInfo>
+template <class TypeInfo>
 const TypeInfo* FindTypeInfo(const Uid& uid, const array_view<const ITypeInfo* const>& container)
 {
     for (const auto& info : container) {
@@ -625,11 +625,6 @@ void Ecs::ProcessEvents()
         }
     }
 
-    // Clear modification flags from component managers.
-    for (auto& componentManager : managerOrder_) {
-        componentManager->ClearModifiedFlags();
-    }
-
     processingEvents_ = false;
 }
 
@@ -678,6 +673,11 @@ bool Ecs::Update(uint64_t time, uint64_t delta)
         if (s->Update(frameRenderingQueued, time, delta)) {
             frameRenderingQueued = true;
         }
+    }
+
+    // Clear modification flags from component managers.
+    for (auto& componentManager : managerOrder_) {
+        componentManager->ClearModifiedFlags();
     }
 
     renderRequested_ = false;
@@ -756,7 +756,7 @@ void Ecs::Unref() noexcept
     }
 }
 
-template<typename Container>
+template <typename Container>
 inline auto RemoveUid(Container& container, const Uid& uid)
 {
     container.erase(

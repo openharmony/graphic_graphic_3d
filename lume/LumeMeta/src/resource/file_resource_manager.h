@@ -92,13 +92,13 @@ struct ResourceTypeKey {
 
 META_END_NAMESPACE()
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const META_NS::ResourceGroupContext& g)
 {
     return BASE_NS::Hash(g.group, g.context.GetRawPointer());
 }
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const META_NS::ResourceTypeKey& g)
 {
     return BASE_NS::Hash(g.uid, g.version);
@@ -184,10 +184,9 @@ private:
         BASE_NS::vector<CORE_NS::ResourceIdContext>& result, BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy);
     BASE_NS::shared_ptr<ResourceData> FindResource(const ResourceIdContext& id);
     bool UpdateOptions(ResourceData& r, CORE_NS::ResourceContextPtr context = nullptr) const;
-    void CollectMatching(const BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ResourceData>>& group,
-        const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection,
-        BASE_NS::vector<BASE_NS::shared_ptr<ResourceData>>& matched) const;
     void Notify(const BASE_NS::vector<ResourceIdContext>& id, IResourceListener::EventType type);
+    void UpdateOptionsData(const BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ResourceData>>& data,
+        const BASE_NS::array_view<const CORE_NS::MatchingResourceId>& selection, const IObject::Ptr& depsContext);
     CORE_NS::IResource::Ptr GetResourceFromGroup(
         const BASE_NS::unordered_map<BASE_NS::string, BASE_NS::shared_ptr<ResourceData>>& resources,
         BASE_NS::string_view name, const ResourceContextPtr& context);

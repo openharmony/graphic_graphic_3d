@@ -21,7 +21,7 @@
 #include <meta/interface/detail/base_any.h>
 
 META_BEGIN_NAMESPACE()
-template<bool B>
+template <bool B>
 struct DefaultCompare<CORE3D_NS::MaterialComponent::Shader, B> {
     using T = CORE3D_NS::MaterialComponent::Shader;
     static constexpr bool Equal(const T& v1, const T& v2)
@@ -29,7 +29,7 @@ struct DefaultCompare<CORE3D_NS::MaterialComponent::Shader, B> {
         return v1.shader == v2.shader && v1.graphicsState == v2.graphicsState;
     }
 
-    template<typename NewType>
+    template <typename NewType>
     using Rebind = DefaultCompare<NewType>;
 };
 META_END_NAMESPACE()

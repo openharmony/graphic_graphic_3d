@@ -23,7 +23,7 @@
 #include "util/frustum_util.h"
 
 namespace {
-template<typename T>
+template <typename T>
 void ParseEmpty()
 {
     {
@@ -49,7 +49,7 @@ UNIT_TEST(SRCJson2Test, parseEmpty, testing::ext::TestSize.Level1)
     ParseEmpty<CORE_NS::json2::writable_tag>();
 }
 
-template<typename Tag>
+template <typename Tag>
 void Constructor()
 {
     using Json = CORE_NS::json2::value_t<Tag>;
@@ -228,7 +228,7 @@ UNIT_TEST(SRCJson2Test, constructors, testing::ext::TestSize.Level1)
     Constructor<CORE_NS::json2::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void ParseTypes()
 {
     // check basic json types
@@ -343,7 +343,7 @@ UNIT_TEST(SRCJson2Test, parseTypes, testing::ext::TestSize.Level1)
     ParseTypes<CORE_NS::json2::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void ParseInvalid()
 {
     {
@@ -464,7 +464,7 @@ UNIT_TEST(SRCJson2Test, escapedLiteral, testing::ext::TestSize.Level1)
     EXPECT_EQ("\n", s.value());
 }
 
-template<typename T>
+template <typename T>
 void ToString()
 {
     BASE_NS::string_view str{"[{\"object\":{}, \"array\":[], \"string\":\"value\", \"number\":42.25, \"boolean\":true, "

@@ -61,7 +61,7 @@ void* operator new[](size_t size, void* ptr) noexcept
     return ptr;
 }
 namespace std {
-template<class E>
+template <class E>
 class initializer_list {
 public:
     using value_type = E;
@@ -98,13 +98,13 @@ private:
     const E *_First, *_Last;
 };
 // initializer list range access
-template<class E>
+template <class E>
 constexpr const E* begin(initializer_list<E> il) noexcept
 {
     return (il.begin());
 }
 
-template<class E>
+template <class E>
 constexpr const E* end(initializer_list<E> il) noexcept
 {
     return (il.end());
@@ -133,7 +133,7 @@ static constexpr bool BASE_CONTAINERS_ENABLE_POISON = false;
 static constexpr const uint8_t POISON = 0xCD;
 }  // namespace
 
-template<typename T>
+template <typename T>
 class vector {
 public:
     using value_type = T;
@@ -223,7 +223,7 @@ public:
         other.data_ = nullptr;
     }
 
-    template<class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
+    template <class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
     vector(InputIt first, InputIt last) : allocator_(default_allocator())
     {
         const auto size = static_cast<size_type>(last - first);
@@ -661,7 +661,7 @@ public:
         return insert_impl(pos, first, last);
     }
 
-    template<class InputIt>
+    template <class InputIt>
     iterator insert(const_iterator pos, InputIt first, InputIt last)
     {
         return insert_impl(pos, first, last);
@@ -686,7 +686,7 @@ public:
         size_ += count;
     }
 
-    template<class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
+    template <class InputIt, enable_if_t<is_convertible<typename InputIt::value_type, value_type>::value, int> = 0>
     void append(InputIt first, InputIt last)
     {
         if (first == last) {
@@ -770,7 +770,7 @@ public:
         return iterator((pointer)first.ptr());
     }
 
-    template<class... Args>
+    template <class... Args>
     iterator emplace(const_iterator pos, Args&&... args)
     {
         const difference_type p = pos - begin();
@@ -803,7 +803,7 @@ public:
         return iterator(res);
     }
 
-    template<class... Args>
+    template <class... Args>
     reference emplace_back(Args&&... args)
     {
         pointer tmp = allocate_if_needed(size_ + 1U);
@@ -916,7 +916,7 @@ protected:
 
     // helpers for initialized memory
     // helper for range insert which may or may not need to convert values
-    template<class InputIt>
+    template <class InputIt>
     void copy(pointer pos, InputIt first, InputIt last)
     {
         if (first == last) {
@@ -1104,7 +1104,7 @@ protected:
     }
 
     // helper for range insert which may or may not need to convert values
-    template<class InputIt>
+    template <class InputIt>
     pointer init_copy(pointer pos, InputIt first, InputIt last)
     {
         BASE_ASSERT(last >= first);
@@ -1181,7 +1181,7 @@ protected:
         }
     }
 
-    template<class InputIt>
+    template <class InputIt>
     iterator insert_impl(const_iterator pos, InputIt first, InputIt last)
     {
         if (first == last) {
@@ -1224,23 +1224,23 @@ protected:
         return iterator(res);
     }
 
-    template<typename Iterator, typename = void>
+    template <typename Iterator, typename = void>
     struct has_iterator_category : BASE_NS::false_type {
         using category = void;
     };
 
-    template<typename Iterator>
+    template <typename Iterator>
     struct has_iterator_category<Iterator, void_t<typename Iterator::iterator_category>> : BASE_NS::true_type {
         using category = typename Iterator::iterator_category;
     };
 
-    template<typename Iterator>
+    template <typename Iterator>
     using ptr_fn = decltype(BASE_NS::declval<Iterator>().ptr());
 
-    template<typename Iterator, typename = void>
+    template <typename Iterator, typename = void>
     struct has_ptr_method : BASE_NS::false_type {};
 
-    template<typename Iterator>
+    template <typename Iterator>
     struct has_ptr_method<Iterator, BASE_NS::void_t<ptr_fn<Iterator>>> : BASE_NS::true_type {};
 
     size_type size_{}, capacity_{};

@@ -148,7 +148,7 @@ void DecodeUri(string& uri)
     }
 }
 
-template<typename EnumType, typename InputType>
+template <typename EnumType, typename InputType>
 bool RangedEnumCast(LoadResult& loadResult, EnumType& out, InputType input)
 {
     if (input >= static_cast<int>(EnumType::BEGIN) && input < static_cast<int>(EnumType::COUNT)) {
@@ -159,7 +159,7 @@ bool RangedEnumCast(LoadResult& loadResult, EnumType& out, InputType input)
     RETURN_WITH_ERROR(loadResult, "Invalid enum cast");
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, Parser parser)
 {
     if (!jsonObject.is_object()) {
@@ -169,7 +169,7 @@ bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, Parser p
     return parser(loadResult, jsonObject);
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     if (auto it = jsonObject.find(name); it) {
@@ -179,7 +179,7 @@ bool ParseObject(LoadResult& loadResult, const json::value& jsonObject, const st
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachInArray(LoadResult& loadResult, const json::value& jsonArray, Parser parser)
 {
     if (!jsonArray.is_array()) {
@@ -195,7 +195,7 @@ bool ForEachInArray(LoadResult& loadResult, const json::value& jsonArray, Parser
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachInArray(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     if (auto it = jsonObject.find(name); it) {
@@ -205,7 +205,7 @@ bool ForEachInArray(LoadResult& loadResult, const json::value& jsonObject, const
     return true;
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachObjectInArray(LoadResult& loadResult, const json::value& jsonObject, Parser parser)
 {
     return ForEachInArray(loadResult, jsonObject, [parser](LoadResult& loadResult, const json::value& item) -> bool {
@@ -215,7 +215,7 @@ bool ForEachObjectInArray(LoadResult& loadResult, const json::value& jsonObject,
     });
 }
 
-template<typename Parser>
+template <typename Parser>
 bool ForEachObjectInArray(LoadResult& loadResult, const json::value& jsonObject, const string_view name, Parser parser)
 {
     return ForEachInArray(
@@ -246,7 +246,7 @@ bool ParseOptionalString(LoadResult& loadResult, string& out, const json::value&
     return true;
 }
 
-template<typename Number>
+template <typename Number>
 void ConvertStringToValue(const string_view str, Number& value)
 {
 #if defined(__OHOS__) || defined(__linux__) || defined(__APPLE__)
@@ -267,7 +267,7 @@ void ConvertStringToValue(const string_view str, Number& value)
 #endif
 }
 
-template<typename T>
+template <typename T>
 bool ParseOptionalNumber(
     LoadResult& loadResult, T& out, const json::value& jsonObject, const string_view name, T defaultValue)
 {
@@ -305,7 +305,7 @@ bool ParseOptionalBoolean(
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool ParseOptionalNumberArray(LoadResult& loadResult, vector<T>& out, const json::value& jsonObject,
     const string_view name, vector<T> defaultValue, uint32_t minSize = 0,
     uint32_t maxSize = std::numeric_limits<int>::max())
@@ -337,7 +337,7 @@ bool ParseOptionalNumberArray(LoadResult& loadResult, vector<T>& out, const json
 }
 
 /** Tries to parse a Core::Math object (e.g. Vec4, Quat, and Mat4X4) from json. */
-template<typename T>
+template <typename T>
 bool ParseOptionalMath(
     LoadResult& loadResult, T& out, const json::value& jsonObject, const string_view name, T defaultValue)
 {
@@ -898,7 +898,7 @@ bool ValidateAccessor(LoadResult& loadResult, ComponentType componentType, uint3
     return true;
 }
 
-template<typename T>
+template <typename T>
 array_view<const T> GetView(const std::optional<vector<T>>& potential)
 {
     if (potential.has_value()) {
@@ -1789,13 +1789,6 @@ bool ParsePrimitive(LoadResult& loadResult, vector<MeshPrimitive>& primitives, c
     }
     if (indices != GLTF_INVALID_INDEX && indices < loadResult.data->accessors.size()) {
         meshPrimitive.indices = loadResult.data->accessors[indices].get();
-        // Per glTF 2.0 spec, the indices accessor must be SCALAR with an unsigned integer component type.
-        const auto ct = meshPrimitive.indices->componentType;
-        if (meshPrimitive.indices->type != DataType::SCALAR ||
-            (ct != ComponentType::UNSIGNED_BYTE && ct != ComponentType::UNSIGNED_SHORT &&
-                ct != ComponentType::UNSIGNED_INT)) {
-            RETURN_WITH_ERROR(loadResult, "Primitive indices accessor must be SCALAR unsigned integer");
-        }
     }
 
     if (!ParseOptionalNumber<uint32_t>(
@@ -2703,15 +2696,6 @@ bool ParseSkin(LoadResult& loadResult, const json::value& jsonData)
         skin->joints[i] = joint;
     }
 
-    // Per glTF 2.0 spec, inverseBindMatrices must be a MAT4 FLOAT accessor with one matrix per joint.
-    if (const auto* ibm = skin->inverseBindMatrices; ibm != nullptr) {
-        if (ibm->type != DataType::MAT4 || ibm->componentType != ComponentType::FLOAT ||
-            ibm->count != skin->joints.size()) {
-            RETURN_WITH_ERROR(
-                loadResult, "Skin inverseBindMatrices must be a MAT4 FLOAT accessor with count == joints");
-        }
-    }
-
     loadResult.data->skins.push_back(move(skin));
 
     return true;
@@ -2770,25 +2754,17 @@ bool AnimationSamplers(LoadResult& loadResult, const json::value& jsonData, Anim
             return false;
         }
 
-        // Per glTF 2.0 spec, the animation sampler input is required.
-        if (accessor == GLTF_INVALID_INDEX || accessor >= loadResult.data->accessors.size()) {
-            RETURN_WITH_ERROR(loadResult, "Animation sampler input is required");
-        }
-        sampler->input = loadResult.data->accessors[accessor].get();
-        // Per glTF 2.0 spec, the animation sampler input accessor must be SCALAR with FLOAT components.
-        if (sampler->input->type != DataType::SCALAR || sampler->input->componentType != ComponentType::FLOAT) {
-            RETURN_WITH_ERROR(loadResult, "Animation sampler input accessor must be SCALAR FLOAT");
+        if (accessor != GLTF_INVALID_INDEX && accessor < loadResult.data->accessors.size()) {
+            sampler->input = loadResult.data->accessors[accessor].get();
         }
 
         if (!ParseOptionalNumber<size_t>(loadResult, accessor, samplerJson, "output", GLTF_INVALID_INDEX)) {
             return false;
         }
 
-        // Per glTF 2.0 spec, the animation sampler output is required.
-        if (accessor == GLTF_INVALID_INDEX || accessor >= loadResult.data->accessors.size()) {
-            RETURN_WITH_ERROR(loadResult, "Animation sampler output is required");
+        if (accessor != GLTF_INVALID_INDEX && accessor < loadResult.data->accessors.size()) {
+            sampler->output = loadResult.data->accessors[accessor].get();
         }
-        sampler->output = loadResult.data->accessors[accessor].get();
 
         string interpolation;
         if (!ParseOptionalString(loadResult, interpolation, samplerJson, "interpolation", string())) {
@@ -2807,24 +2783,6 @@ bool AnimationSamplers(LoadResult& loadResult, const json::value& jsonData, Anim
         return false;
     }
     return true;
-}
-
-// Accessor type required by the glTF 2.0 spec for an animation sampler output, per channel target path.
-DataType RequiredAnimationOutputType(AnimationPath path)
-{
-    switch (path) {
-        case AnimationPath::TRANSLATION:
-        case AnimationPath::SCALE:
-            return DataType::VEC3;
-        case AnimationPath::ROTATION:
-            return DataType::VEC4;
-        case AnimationPath::WEIGHTS:
-        case AnimationPath::VISIBLE:
-        case AnimationPath::OPACITY:
-        case AnimationPath::INVALID:
-        default:
-            return DataType::SCALAR;
-    }
 }
 
 bool AnimationChannels(LoadResult& loadResult, const json::value& jsonData, Animation& animation)
@@ -2877,23 +2835,6 @@ bool AnimationChannels(LoadResult& loadResult, const json::value& jsonData, Anim
 
         if (!ParseObject(loadResult, channelJson, "target", targetParser)) {
             return false;
-        }
-
-        // Per glTF 2.0 spec, the sampler output accessor type must match the channel target path.
-        if (animationTrack.sampler->output->type != RequiredAnimationOutputType(animationTrack.channel.path)) {
-            RETURN_WITH_ERROR(loadResult, "Animation sampler output accessor type does not match channel path");
-        }
-
-        // Per glTF 2.0 spec, the output frame count equals the input keyframe count, or 3x for CUBICSPLINE
-        // (in/value/out tangents). WEIGHTS scales by the morph-target count, which isn't known here, so skip it.
-        if (animationTrack.channel.path != AnimationPath::WEIGHTS) {
-            const auto& trackSampler = *animationTrack.sampler;
-            const size_t expected = (trackSampler.interpolation == AnimationInterpolation::SPLINE)
-                                        ? static_cast<size_t>(trackSampler.input->count) * 3U
-                                        : trackSampler.input->count;
-            if (trackSampler.output->count != expected) {
-                RETURN_WITH_ERROR(loadResult, "Animation sampler output count does not match input");
-            }
         }
 
         animation.tracks.push_back(move(animationTrack));
@@ -3183,11 +3124,6 @@ bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const ui
     return true;
 }
 
-bool SetDataOffset(LoadResult& loadResult, const uint64_t headerLength, const uint64_t chunkJsonLength)
-{
-    return SetDataOffset(loadResult, headerLength, chunkJsonLength, 0);
-}
-
 bool ReadJsonChunkData(LoadResult& loadResult, IFile& file, const uint32_t chunkLength, string& jsonString)
 {
     jsonString.resize(chunkLength);
@@ -3278,7 +3214,7 @@ LoadResult LoadGLTF(IFileManager& fileManager, const string_view uri, int64_t of
         return LoadResult("Failed to open file, file size larger than SIZE_MAX");
     }
 
-    if (static_cast<uint64_t>(offset) > fileTotalLength) {
+    if (offset > fileTotalLength) {
         PLUGIN_LOG_D("Error loading '%s'", string(uri).data());
         return LoadResult("offset exceeds data length");
     }

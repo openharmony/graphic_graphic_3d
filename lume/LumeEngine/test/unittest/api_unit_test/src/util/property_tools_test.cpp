@@ -43,7 +43,7 @@ PROPERTY_LIST(Test, TestProperties,
 // clang-format on
 }  // namespace
 
-template<typename To, typename From>
+template <typename To, typename From>
 auto Cast(From* f)
 {
     if constexpr (BASE_NS::is_const_v<From>) {

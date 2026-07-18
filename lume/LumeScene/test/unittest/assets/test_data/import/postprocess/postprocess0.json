@@ -2,7 +2,6 @@
 	"version": "1.0",
 	"data": {
 		"type": "postProcess",
-		"name": "MyPostProcess",
 		"tonemap": {
 			"enabled": true,
 			"type": "aces",

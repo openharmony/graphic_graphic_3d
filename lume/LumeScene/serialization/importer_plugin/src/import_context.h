@@ -173,7 +173,7 @@ class ErrorHandler {
 public:
     explicit ErrorHandler(const ImportContext& context);
 
-    template<typename T>
+    template <typename T>
     bool HandleOptValue(OptValue<T>& value)
     {
         if (!value.error) {
@@ -235,31 +235,31 @@ struct DeferredHierarchyScope : DeferredScope {
     {}
 };
 
-template<typename T>
+template <typename T>
 void SetValue(const ImportContext& context, const META_NS::Property<T>& prop, const T& value)
 {
     if (context.IsTemplateContext()) {
         if (prop) {
-            prop->SetDefaultValue(value, !prop->IsValueSet());
+            prop->SetDefaultValue(value, prop->GetValue() == value);
         }
     } else {
         META_NS::SetValue(prop, value);
     }
 }
 
-template<typename T>
+template <typename T>
 void SetValue(const ImportContext& context, const META_NS::ArrayProperty<T>& prop, const BASE_NS::vector<T>& value)
 {
     if (context.IsTemplateContext()) {
         if (prop) {
-            prop->SetDefaultValue(value, !prop->IsValueSet());
+            prop->SetDefaultValue(value, VectorEquals(prop->GetValue(), value));
         }
     } else {
         prop->SetValue(value);
     }
 }
 
-template<typename FlagType, size_t N>
+template <typename FlagType, size_t N>
 IDiagnostics::Ptr ImportFlagsFromArray(ImportContext& context, const CORE_NS::json::value::array& arr,
     const NamedValue<FlagType> (&table)[N], BASE_NS::string_view flagsName, FlagType& out)
 {
@@ -283,7 +283,7 @@ IDiagnostics::Ptr ImportFlagsFromArray(ImportContext& context, const CORE_NS::js
     return h;
 }
 
-template<typename EnumType, size_t N>
+template <typename EnumType, size_t N>
 IDiagnostics::Ptr ImportEnumProperty(ImportContext& context, META_NS::IMetadata& meta, BASE_NS::string_view jsonName,
     BASE_NS::string_view propName, const NamedValue<EnumType> (&table)[N])
 {

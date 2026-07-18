@@ -1,1 +1,0 @@
-good:😀 bad-low:\ud800A lone-low:\udc00 dangling:\ud800

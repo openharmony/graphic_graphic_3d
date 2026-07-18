@@ -35,7 +35,7 @@ public:
     virtual ReturnError ImportFromNode(const ISerNode::ConstPtr&, IAny& entity) = 0;
 
     /// Import value from serialisation node
-    template<typename Type>
+    template <typename Type>
     ReturnError ImportValueFromNode(const ISerNode::ConstPtr& node, Type& value)
     {
         Any<Type> any;
@@ -62,7 +62,7 @@ public:
     /// Import itself as known interfaces, like IMetadata, IContainer, IAttach
     virtual ReturnError AutoImport() = 0;
     /// Import value with given name
-    template<typename Type>
+    template <typename Type>
     ReturnError ImportValue(BASE_NS::string_view name, Type& value)
     {
         Any<Type> v(value);
@@ -73,7 +73,7 @@ public:
         return r;
     }
     /// Import array of values with given name
-    template<typename Type>
+    template <typename Type>
     ReturnError ImportValue(BASE_NS::string_view name, BASE_NS::vector<Type>& value)
     {
         ArrayAny<Type> v(value);

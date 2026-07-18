@@ -51,7 +51,7 @@ UNIT_TEST(API_NumberTest, Values, testing::ext::TestSize.Level1)
     EXPECT_EQ(en.Get<MyEnum>(), MyEnum::TWO);
 }
 
-template<class T>
+template <class T>
 void GetSetNumber(const IAny::Ptr& any, T value)
 {
     auto typeId = META_NS::UidFromType<T>();

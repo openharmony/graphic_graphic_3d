@@ -68,9 +68,8 @@ static IDiagnostics::Ptr ImportIrradianceCoefficients(ImportContext& context, ME
             coefficients.push_back(entry.GetValue());
         }
     }
-    auto p = META_NS::ConstructArrayProperty<BASE_NS::Math::Vec3>("IrradianceCoefficients");
+    auto p = META_NS::ConstructArrayProperty<BASE_NS::Math::Vec3>("IrradianceCoefficients", coefficients);
     meta.AddProperty(p.GetProperty());
-    p->SetValue(coefficients);
     return h;
 }
 
@@ -139,15 +138,12 @@ ImportResult ImportEnvironment::Import(ImportContext& context)
     if (!obj) {
         return ImportResult{context.CreateDiagnostics("Failed to create environment template")};
     }
-    auto meta = interface_cast<META_NS::IMetadata>(obj);
+    auto meta = interface_cast<META_NS::IMetadata>(obj.get());
     if (!meta) {
         return ImportResult{context.CreateDiagnostics("Environment template has no metadata")};
     }
 
     ErrorHandler h(context);
-    if (auto err = ImportResourceName(context, *meta); h.Handle(err)) {
-        return ImportResult{err};
-    }
     if (auto err = ImportEnumProperty(context, *meta, "background", "Background", BACKGROUND_TABLE); h.Handle(err)) {
         return ImportResult{err};
     }

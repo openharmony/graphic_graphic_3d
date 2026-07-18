@@ -115,7 +115,7 @@ inline bool RemoveHandler(const IEvent::Ptr& event, IEvent::Token token)
     return event && event->RemoveHandler(token);
 }
 
-template<typename EventType, typename Ret, typename... Args>
+template <typename EventType, typename Ret, typename... Args>
 class IEventCallable : public ICallable {
     META_INTERFACE(ICallable, IEventCallable, EventType::UID)
 public:
@@ -126,7 +126,7 @@ public:
     virtual Ret Invoke(Args...) = 0;
 };
 
-template<typename MyEvent, typename... Args>
+template <typename MyEvent, typename... Args>
 inline auto Invoke(const IEvent::Ptr& event, Args&&... args)
 {
     // interpret null as the event not being constructed as not needed

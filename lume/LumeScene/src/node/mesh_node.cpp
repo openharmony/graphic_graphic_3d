@@ -23,7 +23,6 @@
 
 #include "../ecs_component/entity_owner_component.h"
 #include "../mesh/submesh.h"
-#include "node_owner_util.h"
 
 SCENE_BEGIN_NAMESPACE()
 
@@ -79,7 +78,7 @@ bool MeshNode::Init(const IInternalRenderMesh::Ptr& rmesh)
     auto ecsobj = GetInternalScene()->GetEcsContext().GetEcsObject(ent);
     auto res = Init(ecsobj);
     if (res) {
-        SetEntityOwner(GetEcsObject(), ent);
+        SetOwnedEntity(ent);
     }
     return res;
 }
@@ -102,6 +101,25 @@ bool MeshNode::Init(const IEcsObject::Ptr& ecsobj)
         Morpher()->SetValue(interface_pointer_cast<IMorpher>(morph.front()));
     }
     return true;
+}
+
+void MeshNode::SetOwnedEntity(CORE_NS::Entity ent)
+{
+    if (auto obj = GetEcsObject()) {
+        auto scene = obj->GetScene();
+        if (!scene) {
+            return;
+        }
+        auto ecs = scene->GetEcsContext().GetNativeEcs();
+        auto ownerManager = CORE_NS::GetManager<IEntityOwnerComponentManager>(*ecs);
+        if (ownerManager) {
+            auto nodeEntity = obj->GetEntity();
+            ownerManager->Create(nodeEntity);
+            if (auto ownerHandle = ownerManager->Write(nodeEntity)) {
+                ownerHandle->entity = ecs->GetEntityManager().GetReferenceCounted(ent);
+            }
+        }
+    }
 }
 
 Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
@@ -129,7 +147,7 @@ Future<bool> MeshNode::SetMesh(const IMesh::Ptr& m)
                         prop->SetValue(obj->GetEntity());
                         scene->SyncProperty(prop, META_NS::EngineSyncDirection::TO_ENGINE);
                         mesh_ = mesh;
-                        SetEntityOwner(GetEcsObject(), obj->GetEntity());
+                        SetOwnedEntity(obj->GetEntity());
                         return true;
                     }
                 }

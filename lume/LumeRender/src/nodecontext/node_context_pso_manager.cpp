@@ -31,7 +31,7 @@
 #include "device/shader_manager.h"
 #include "util/log.h"
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::ShaderSpecializationConstantDataView& specialization)
 {
     uint64_t seed = BASE_NS::FNV_OFFSET_BASIS;

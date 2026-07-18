@@ -117,14 +117,14 @@ public:
     }
 };
 
-template<typename... List>
+template <typename... List>
 static void RegisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<List...>)
 {
     (META_NS::RegisterTypeForBuiltinAny<List>(), ...);
     (META_NS::RegisterTypeForBuiltinArrayAny<List>(), ...);
 }
 
-template<typename... List>
+template <typename... List>
 static void UnregisterTypes(META_NS::IPropertyRegister& pr, META_NS::TypeList<List...>)
 {
     (META_NS::UnregisterTypeForBuiltinAny<List>(), ...);

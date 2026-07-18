@@ -47,13 +47,13 @@ BASE_NS::string EscapeSerName(BASE_NS::string_view str)
     return res;
 }
 
-template<typename Obj>
+template <typename Obj>
 bool IsNativeComponent(const Obj& obj)
 {
     return interface_cast<SCENE_NS::IComponent>(obj) && META_NS::IsFlagSet(obj, META_NS::ObjectFlagBits::NATIVE);
 }
 
-template<typename Obj>
+template <typename Obj>
 bool SerialiseAttachment(const Obj& obj)
 {
     return META_NS::IsFlagSet(obj, META_NS::ObjectFlagBits::SERIALIZE) && !interface_cast<META_NS::IEvent>(obj) &&
@@ -306,21 +306,16 @@ META_NS::IObject::Ptr NodeTemplateUpdater::ImportAndApply(
         CORE_LOG_E("Failed to import template");
         return nullptr;
     }
-    auto newNodeObj = interface_pointer_cast<META_NS::IObject>(newNode);
-    if (!newNodeObj) {
-        CORE_LOG_E("Imported template node does not implement IObject");
-        return nullptr;
-    }
     ImporterConfig config = importer_.GetConfig();
     ImportContextParameters params;
     params.scene = scene;
-    params.object = newNodeObj;
+    params.object = interface_pointer_cast<META_NS::IObject>(newNode);
     // User-override paths apply against the just-instantiated subtree, so
     // `/` should anchor at that subtree's root.
     params.importRoot = params.object;
     ImportContext context(config, params, CORE_NS::json::value{});
-    ApplyUserChanges(context, *newNodeObj);
-    return newNodeObj;
+    ApplyUserChanges(context, *interface_cast<META_NS::IObject>(newNode));
+    return interface_pointer_cast<META_NS::IObject>(newNode);
 }
 
 META_NS::IObject::Ptr NodeTemplateUpdater::Update(SCENE_NS::INode::Ptr node, const SCENE_NS::IExternalNode::Ptr& ext)

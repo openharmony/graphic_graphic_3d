@@ -188,7 +188,7 @@ void DumpLimits()
 #endif
 }
 
-template<typename State>
+template <typename State>
 void RegisterDebugCallback(const State& eglState)
 {
 #if RENDER_GL_DEBUG
@@ -2445,9 +2445,6 @@ void DeviceGLES::BindBufferRange(uint32_t target, uint32_t binding, uint32_t buf
 
 void DeviceGLES::BindSampler(uint32_t textureUnit, uint32_t sampler)
 {
-    if (textureUnit >= MAX_SAMPLERS) {
-        return;
-    }
     if ((sampler + 1) != boundSampler_[textureUnit]) {
         boundSampler_[textureUnit] = sampler + 1;
         glBindSampler(textureUnit, sampler);
@@ -2520,9 +2517,6 @@ uint32_t DeviceGLES::BoundTexture(uint32_t textureUnit, uint32_t target) const
 void DeviceGLES::BindImageTexture(
     uint32_t unit, uint32_t texture, uint32_t level, bool layered, uint32_t layer, uint32_t access, uint32_t format)
 {
-    if (unit >= MAX_BOUND_IMAGE) {
-        return;
-    }
     auto& image = boundImage_[unit];
     if ((!image.bound) || (image.texture != texture) || (image.level != level) || (image.layered != layered) ||
         (image.access != access) || (image.format != format)) {
@@ -2919,14 +2913,11 @@ void DeviceGLES::UnBindBufferFromVertexArray(uint32_t buffer)
 
 void DeviceGLES::UnBindSampler(uint32_t sampler)
 {
-    uint32_t unit = 0;
     for (uint32_t& boundSampler : boundSampler_) {
         if ((sampler + 1) == boundSampler) {
-            // boundSampler_ is indexed by texture unit, so the GL unit to unbind is the loop position.
-            glBindSampler(unit, 0);
+            glBindSampler((sampler + 1), 0);
             boundSampler = 0;
         }
-        unit++;
     }
 }
 

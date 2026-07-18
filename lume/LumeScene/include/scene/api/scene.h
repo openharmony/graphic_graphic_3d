@@ -38,7 +38,7 @@ SCENE_BEGIN_NAMESPACE()
 class Scene;
 
 #define SCENE_RESOURCE_FACTORY_CREATE_NODE(NodeName, NodeType, ClassId) \
-    template<const AsyncCallType& CallType = Sync>                      \
+    template <const AsyncCallType& CallType = Sync>                     \
     auto Create##NodeName(BASE_NS::string_view path)                    \
     {                                                                   \
         return CallCreateNode<NodeType, CallType>(path, ClassId);       \
@@ -136,13 +136,13 @@ public:
     }
 
 protected:
-    template<class Type, const META_NS::AsyncCallType& CallType>
+    template <class Type, const META_NS::AsyncCallType& CallType>
     auto CallCreateResource(const SceneResourceParameters& params, META_NS::ObjectId id)
     {
         auto f = CallScene([&](auto& scene) { return scene.CreateObject(id); });
         return Internal::UnwrapFuture<CallType, Type>(BASE_NS::move(f));
     }
-    template<typename Fn>
+    template <typename Fn>
     auto CallScene(Fn&& fn) const
     {
         auto scene = scene_.lock();
@@ -205,7 +205,7 @@ public:
     }
 
 private:
-    template<class Type, const META_NS::AsyncCallType& CallType>
+    template <class Type, const META_NS::AsyncCallType& CallType>
     auto CallCreateNode(const SceneResourceParameters& params, META_NS::ObjectId id)
     {
         auto f = CallScene([&](auto& scene) { return scene.CreateNode(params.path, id); });
@@ -227,7 +227,7 @@ public:
      * @brief Returns a component property with given name.
      * @param name Name of the component property to return.
      */
-    template<typename Type>
+    template <typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);
@@ -240,7 +240,7 @@ public:
      * @note  Equivalent to calling component.GetProperty<BASE_NS::vector<Type>>(name)
      * @param name Name of the component property to return.
      */
-    template<typename Type>
+    template <typename Type>
     auto GetArrayProperty(BASE_NS::string_view name) const
     {
         return GetProperty<BASE_NS::vector<Type>>(name);

@@ -77,7 +77,4 @@ void main(void)
         CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_VIGNETTE], inUv, outColor.rgb, outColor.rgb);
     PostProcessColorConversionBlock(
         CORE_POST_PROCESS_FLAGS, uGlobalData.factors[POST_PROCESS_INDEX_COLOR_CONVERSION], outColor.rgba, outColor.rgba);
-    if (outColor.w > 0) {
-        outColor.xyz = outColor.xyz * outColor.w;
-    }
 }

@@ -106,14 +106,14 @@ using ObjectTypes = TypeList<
 
 namespace Internal {
 
-template<typename... List>
+template <typename... List>
 static void RegisterTypes(IPropertyRegister& pr, TypeList<List...>)
 {
     (pr.RegisterAny(CreateShared<DefaultAnyBuilder<Any<List>>>()), ...);
     (pr.RegisterAny(CreateShared<DefaultAnyBuilder<ArrayAny<List>>>()), ...);
 }
 
-template<typename... List>
+template <typename... List>
 static void UnregisterTypes(IPropertyRegister& pr, TypeList<List...>)
 {
     (pr.UnregisterAny(ArrayAny<List>::StaticGetClassId()), ...);

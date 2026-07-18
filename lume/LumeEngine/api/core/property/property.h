@@ -138,7 +138,7 @@ struct ContainerApi {
  * @param baseName String used as the type's name. typeHash and compareHash are based on this string.
  * @return PropertyTypeDecl for the given type.
  */
-template<typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>>>
+template <typename T, typename = BASE_NS::enable_if_t<!BASE_NS::is_array_v<T>>>
 constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName)
 {
     return CORE_NS::PropertyTypeDecl{false,
@@ -153,7 +153,7 @@ constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName)
  * @param arrayTypeName compareHash is based on this string.
  * @return PropertyTypeDecl for the given type.
  */
-template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_array_v<T>>>
+template <typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_array_v<T>>>
 constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName, const char* arrayTypeName)
 {
     return CORE_NS::PropertyTypeDecl{true,
@@ -174,10 +174,10 @@ constexpr CORE_NS::PropertyTypeDecl MakePropertyTypeDecl(const char* baseName, c
 CORE_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<typename T>
+template <typename T>
 uint64_t hash(const T&);
 
-template<>
+template <>
 inline uint64_t hash(const CORE_NS::PropertyTypeDecl& value)
 {
     return value.compareHash;

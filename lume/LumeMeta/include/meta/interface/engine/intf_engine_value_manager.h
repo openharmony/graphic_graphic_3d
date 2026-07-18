@@ -110,13 +110,13 @@ public:
     /// Check if any engine values exist
     virtual bool HasValues() const = 0;
     /// Construct property from engine value with given name
-    template<typename Type>
+    template <typename Type>
     Property<Type> ConstructProperty(BASE_NS::string_view name)
     {
         return Property<Type>(ConstructProperty(name));
     }
     /// Construct array property from engine value with given name
-    template<typename Type>
+    template <typename Type>
     ArrayProperty<Type> ConstructArrayProperty(BASE_NS::string_view name)
     {
         return ArrayProperty<Type>(ConstructProperty(name));

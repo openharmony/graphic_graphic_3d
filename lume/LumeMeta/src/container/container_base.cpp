@@ -314,7 +314,7 @@ BASE_NS::shared_ptr<IEvent> ContainerBase::EventOnContainerChanged(MetadataQuery
     return impl_->EventOnContainerChanged(q);
 }
 
-template<typename Cont, typename Func>
+template <typename Cont, typename Func>
 static IterationResult IterateImpl(Cont& cont, const Func& func)
 {
     for (auto&& child : cont) {

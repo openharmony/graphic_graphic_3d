@@ -72,7 +72,7 @@ CORE_PROFILER_SYMBOL(FRAME_MARKER, "Render");
 const string_view RENDER_DATA_STORE_DEFAULT_STAGING{"RenderDataStoreDefaultStaging"};
 
 // Helper class for running lambda as a ThreadPool task.
-template<typename Fn>
+template <typename Fn>
 class FunctionTask final : public IThreadPool::ITask {
 public:
     explicit FunctionTask(Fn&& func) : func_(BASE_NS::move(func)){};
@@ -92,7 +92,7 @@ private:
     Fn func_;
 };
 
-template<typename Fn>
+template <typename Fn>
 inline IThreadPool::ITask::Ptr CreateFunctionTask(Fn&& func)
 {
     return IThreadPool::ITask::Ptr{new FunctionTask<Fn>(BASE_NS::move(func))};
@@ -461,7 +461,7 @@ void IterateRenderBackendNodeGraphNodeStores(
     }
 }
 
-template<typename T>
+template <typename T>
 inline bool IsNull(T* ptr)
 {
     return ptr == nullptr;
@@ -499,7 +499,8 @@ void CreateDefaultRenderNodeGraphs(const Device& device, RenderNodeGraphManager&
     rnd.description.queue = {GpuQueue::QueueType::GRAPHICS, 0u};
     rngd.nodes.push_back(move(rnd));
 #if (RENDER_VULKAN_RT_ENABLED == 1)
-    if (device.GetBackendType() == DeviceBackendType::VULKAN || device.GetBackendType() == DeviceBackendType::MALEOON) {
+    if (device.GetBackendType() == DeviceBackendType::VULKAN ||
+        device.GetBackendType() == DeviceBackendType::MALEOON) {
         rnd.typeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING";
         rnd.nodeName = "CORE_RN_DEFAULT_ACCELERATION_STRUCTURE_STAGING_I";
         rnd.description.queue = {GpuQueue::QueueType::GRAPHICS, 0u};

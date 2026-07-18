@@ -29,7 +29,7 @@
 BASE_BEGIN_NAMESPACE()
 /** @ingroup group_containers_arrayview */
 /** Array view */
-template<class T>
+template <class T>
 class array_view {
 public:
     using value_type = T;
@@ -53,19 +53,19 @@ public:
     }
     constexpr array_view(pointer begin, size_type size) noexcept : begin_(begin), size_(size)
     {}
-    template<size_t N>
+    template <size_t N>
     constexpr array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N)
     {}
-    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, U>>>
+    template <class U, class = enable_if_t<is_same_v<remove_const_t<T>, U>>>
     constexpr array_view(const array_view<U>& other) noexcept : begin_(other.begin_), size_(other.size_)
     {}
-    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
+    template <class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
     constexpr array_view(U& container) noexcept : array_view(container.data(), container.size())
     {}
-    template<class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
+    template <class U, class = enable_if_t<is_same_v<remove_const_t<T>, typename U::value_type>>>
     constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())
     {}
-    template<class U = T, class = enable_if_t<is_const_v<U>>>
+    template <class U = T, class = enable_if_t<is_const_v<U>>>
     constexpr array_view(std::initializer_list<T> container) noexcept : array_view(container.begin(), container.end())
     {}
 
@@ -139,26 +139,26 @@ public:
     }
 
 private:
-    template<class U>
+    template <class U>
     friend class array_view;
 
     pointer begin_;
     size_type size_;
 };
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr array_view<T> arrayview(T (&arr)[N]) noexcept
 {
     return array_view<T>(arr, N);
 }
 // Returns a const uint8_t array_view of any object.
-template<typename T>
+template <typename T>
 constexpr array_view<const uint8_t> arrayviewU8(const T& arr) noexcept
 {
     return array_view(reinterpret_cast<const uint8_t*>(&arr), sizeof(arr));
 }
 
-template<typename T>
+template <typename T>
 inline uint64_t hash(const array_view<T>& view)
 {
     return FNV1aHash(view.data(), view.size());

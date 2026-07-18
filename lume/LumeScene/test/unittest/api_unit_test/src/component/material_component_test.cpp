@@ -41,7 +41,7 @@ namespace UTest {
 
 class API_ScenePluginMaterialComponentTest : public ScenePluginComponentTest<CORE3D_NS::IMaterialComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestIMaterialPropertyGetters(T* mat)
     {
         EXPECT_TRUE(mat->Type());

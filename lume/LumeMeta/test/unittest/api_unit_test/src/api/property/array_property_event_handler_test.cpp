@@ -27,7 +27,7 @@ META_BEGIN_NAMESPACE()
 
 namespace UTest {
 
-template<typename Type>
+template <typename Type>
 static void ExpectChanges(ArrayChanges<Type> a1, ArrayChanges<Type> a2)
 {
     EXPECT_EQ(a1.indexesRemoved, a2.indexesRemoved);

@@ -21,8 +21,10 @@
 
 #include "../diagnostics.h"
 #include "../import_helpers.h"
+#include "../resolve_object.h"
 #include "flag_tables.h"
 #include "format_table.h"
+#include "index.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
@@ -263,9 +265,65 @@ static IDiagnostics::Ptr ImportColorTargets(ImportContext& context, SCENE_NS::IC
     return h;
 }
 
+static IDiagnostics::Ptr ImportPostProcessRef(ImportContext& context, SCENE_NS::ICamera& camera)
+{
+    ErrorHandler h(context);
+    auto path = context.GetOptString("path");
+    auto res = ResolveObject(context, context.GetImportParameters().object, path);
+    if (!res) {
+        if (h.Handle(res.error)) {
+            return res.error;
+        }
+        return h;
+    }
+    auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(res.object);
+    if (!pp) {
+        return context.CreateDiagnostics("Referenced object is not a PostProcess");
+    }
+    META_NS::SetValue(camera.PostProcess(), pp);
+    return h;
+}
+
+static IDiagnostics::Ptr ImportInlinePostProcess(ImportContext& context, SCENE_NS::ICamera& camera)
+{
+    ErrorHandler h(context);
+    auto optsCont = GetOptionsData(context, "postProcess");
+    if (optsCont.error) {
+        if (h.Handle(optsCont.error)) {
+            return optsCont.error;
+        }
+        return h;
+    }
+    auto scene = context.GetImportParameters().scene;
+    if (!scene) {
+        return context.CreateDiagnostics("Scene not available for PostProcess creation");
+    }
+    auto pp = scene->CreateObject<SCENE_NS::IPostProcess>(SCENE_NS::ClassId::PostProcess).GetResult();
+    if (!pp) {
+        return context.CreateDiagnostics("Failed to create PostProcess object");
+    }
+    if (optsCont.value) {
+        if (auto ppRes = interface_cast<CORE_NS::IResource>(pp)) {
+            (*optsCont.value)->ApplyOptions(*ppRes, nullptr);
+        }
+    }
+    META_NS::SetValue(camera.PostProcess(), pp);
+    return h;
+}
+
 static IDiagnostics::Ptr ImportCameraPostProcess(ImportContext& context, SCENE_NS::ICamera& camera)
 {
-    return ImportPostProcessProperty(context, camera.PostProcess().GetProperty(), "postProcess");
+    auto ppValue = context.GetOptValue("postProcess");
+    if (ppValue.empty()) {
+        return nullptr;
+    }
+    auto ppContext = context.CreateContext(ppValue);
+    auto type = ppContext.GetOptString("type");
+
+    if (type == "objectRef") {
+        return ImportPostProcessRef(ppContext, camera);
+    }
+    return ImportInlinePostProcess(ppContext, camera);
 }
 
 static IDiagnostics::Ptr ImportCameraViewProps(ImportContext& context, SCENE_NS::ICamera& camera)

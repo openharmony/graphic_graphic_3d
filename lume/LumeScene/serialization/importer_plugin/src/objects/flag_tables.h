@@ -18,14 +18,10 @@
 
 #include <scene/interface/intf_image.h>
 #include <scene/interface/intf_material.h>
-#include <scene/interface/intf_node.h>
-#include <scene/interface/intf_shader.h>
 #include <scene/interface/intf_texture.h>
-#include <scene/interface/mesh_descriptor.h>
 #include <scene/interface/resource/image_info.h>
 
 #include "../import_helpers.h"
-#include "mesh_semantics.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
@@ -71,29 +67,10 @@ static constexpr NamedValue<SCENE_NS::EngineImageCreationFlag> CREATION_FLAGS_TA
 };
 
 static constexpr NamedValue<SCENE_NS::LightingFlags> LIGHTING_FLAGS_TABLE[] = {
-    { "shadowReceiver",                 SCENE_NS::LightingFlags::SHADOW_RECEIVER_BIT },
-    { "shadowCaster",                   SCENE_NS::LightingFlags::SHADOW_CASTER_BIT },
-    { "punctualLightReceiver",          SCENE_NS::LightingFlags::PUNCTUAL_LIGHT_RECEIVER_BIT },
-    { "indirectLightReceiver",          SCENE_NS::LightingFlags::INDIRECT_LIGHT_RECEIVER_BIT },
-    { "indirectIrradianceLightReceiver", SCENE_NS::LightingFlags::INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT },
-    { "lightProbeReceiver",             SCENE_NS::LightingFlags::LIGHT_PROBE_RECEIVER_BIT },
-};
-
-static constexpr NamedValue<SCENE_NS::NodeFlags> NODE_FLAGS_TABLE[] = {
-    { "contributeGI", SCENE_NS::NodeFlags::CONTRIBUTE_GI_BIT },
-};
-
-static constexpr NamedValue<SCENE_NS::CullModeFlags> CULL_MODE_TABLE[] = {
-    { "none",         SCENE_NS::CullModeFlags::NONE },
-    { "front",        SCENE_NS::CullModeFlags::FRONT_BIT },
-    { "back",         SCENE_NS::CullModeFlags::BACK_BIT },
-    { "frontAndBack", SCENE_NS::CullModeFlags::FRONT_AND_BACK },
-};
-
-static constexpr NamedValue<SCENE_NS::PolygonMode> POLYGON_MODE_TABLE[] = {
-    { "fill",  SCENE_NS::PolygonMode::FILL },
-    { "line",  SCENE_NS::PolygonMode::LINE },
-    { "point", SCENE_NS::PolygonMode::POINT },
+    { "shadowReceiver",         SCENE_NS::LightingFlags::SHADOW_RECEIVER_BIT },
+    { "shadowCaster",           SCENE_NS::LightingFlags::SHADOW_CASTER_BIT },
+    { "punctualLightReceiver",  SCENE_NS::LightingFlags::PUNCTUAL_LIGHT_RECEIVER_BIT },
+    { "indirectLightReceiver",  SCENE_NS::LightingFlags::INDIRECT_LIGHT_RECEIVER_BIT },
 };
 
 static constexpr NamedValue<SCENE_NS::SamplerFilter> SAMPLER_FILTER_TABLE[] = {
@@ -107,26 +84,6 @@ static constexpr NamedValue<SCENE_NS::SamplerAddressMode> SAMPLER_ADDRESS_MODE_T
     { "clampToEdge",      SCENE_NS::SamplerAddressMode::CLAMP_TO_EDGE },
     { "clampToBorder",    SCENE_NS::SamplerAddressMode::CLAMP_TO_BORDER },
     { "mirrorClampToEdge", SCENE_NS::SamplerAddressMode::MIRROR_CLAMP_TO_EDGE },
-};
-
-static constexpr NamedValue<SCENE_NS::SubmeshFlag> SUBMESH_FLAG_TABLE[] = {
-    { SCENE_IMP_NS::MeshFlag::TANGENTS,      SCENE_NS::SubmeshFlag::TANGENTS_BIT },
-    { SCENE_IMP_NS::MeshFlag::VERTEX_COLORS, SCENE_NS::SubmeshFlag::VERTEX_COLORS_BIT },
-    { SCENE_IMP_NS::MeshFlag::SKIN,          SCENE_NS::SubmeshFlag::SKIN_BIT },
-};
-
-static constexpr NamedValue<RENDER_NS::IndexType> INDEX_TYPE_TABLE[] = {
-    { "uint16", RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT16 },
-    { "uint32", RENDER_NS::IndexType::CORE_INDEX_TYPE_UINT32 },
-};
-
-static constexpr NamedValue<RENDER_NS::PrimitiveTopology> TOPOLOGY_TABLE[] = {
-    { "pointList",     RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_POINT_LIST },
-    { "lineList",      RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_LINE_LIST },
-    { "lineStrip",     RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_LINE_STRIP },
-    { "triangleList",  RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST },
-    { "triangleStrip", RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP },
-    { "triangleFan",   RENDER_NS::PrimitiveTopology::CORE_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN },
 };
 // clang-format on
 

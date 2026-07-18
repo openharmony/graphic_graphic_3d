@@ -138,7 +138,7 @@ void EcsAnimation::Init()
 }
 
 namespace Internal {
-template<class T>
+template <class T>
 auto GetOrCreateModifier(const META_NS::IAttach::Ptr& attach, META_NS::ObjectId classId)
 {
     // first = modifier, second = value indicating if the modifier already existed (false) or was created (true)

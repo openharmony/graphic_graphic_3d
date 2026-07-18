@@ -41,7 +41,7 @@ public:
      */
     virtual CORE_NS::IComponentManager* FindComponent(BASE_NS::string_view name, CORE_NS::Entity entity) const = 0;
 
-    template<typename ComponentType>
+    template <typename ComponentType>
     CORE_NS::IComponentManager* FindComponent() const
     {
         return FindComponent(CORE_NS::GetName<ComponentType>());

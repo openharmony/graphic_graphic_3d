@@ -29,15 +29,13 @@ RENDER_BEGIN_NAMESPACE()
 GpuSamplerMln::GpuSamplerMln(Device& device, const GpuSamplerDesc& desc) : device_(device), desc_(desc)
 {
     MLN_LOG_INIT("GpuSamplerMln: creating sampler (mag=%u, min=%u, mip=%u, addrUVW=%u/%u/%u)",
-        static_cast<uint32_t>(desc.magFilter),
-        static_cast<uint32_t>(desc.minFilter),
+        static_cast<uint32_t>(desc.magFilter), static_cast<uint32_t>(desc.minFilter),
         static_cast<uint32_t>(desc.mipMapMode),
-        static_cast<uint32_t>(desc.addressModeU),
-        static_cast<uint32_t>(desc.addressModeV),
+        static_cast<uint32_t>(desc.addressModeU), static_cast<uint32_t>(desc.addressModeV),
         static_cast<uint32_t>(desc.addressModeW));
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
 
-    MlnSamplerDescriptor samplerDesc{};
+    MlnSamplerDescriptor samplerDesc {};
     samplerDesc.extensionCount = 0;
     samplerDesc.extensions = nullptr;
     samplerDesc.flags = 0;

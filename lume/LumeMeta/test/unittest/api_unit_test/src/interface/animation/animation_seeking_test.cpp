@@ -29,24 +29,24 @@ namespace UTest {
 
 namespace {
 
-template<typename AnimationType>
+template <typename AnimationType>
 Animation CreateAnimation(const IProperty::WeakPtr& property);
 
-template<>
+template <>
 Animation CreateAnimation<SequentialAnimation>(const IProperty::WeakPtr& property)
 {
     return SequentialAnimation(CreateInstance(ClassId::SequentialAnimation))
         .Add(KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation)));
 }
 
-template<>
+template <>
 Animation CreateAnimation<ParallelAnimation>(const IProperty::WeakPtr& property)
 {
     return ParallelAnimation(CreateInstance(ClassId::ParallelAnimation))
         .Add(KeyframeAnimation<float>(CreateInstance(ClassId::KeyframeAnimation)));
 }
 
-template<>
+template <>
 Animation CreateAnimation<KeyframeAnimation<float>>(const IProperty::WeakPtr& property)
 {
     KeyframeAnimation<float> animation(CreateInstance(ClassId::KeyframeAnimation));
@@ -59,7 +59,7 @@ Animation CreateAnimation<KeyframeAnimation<float>>(const IProperty::WeakPtr& pr
 
 }  // namespace
 
-template<typename AnimationType>
+template <typename AnimationType>
 class API_AnimationSeekingTest : public API_AnimationTestBase {
 public:
     API_AnimationSeekingTest()
@@ -132,31 +132,6 @@ TYPED_TEST(API_AnimationSeekingTest, SeekingTo1000ProgressFinishesAnimation)
     EXPECT_THAT(isRunning, testing::Eq(false));
     EXPECT_THAT(animationRunningChangeInvoke, testing::Eq(true));
     EXPECT_THAT(onFinishedInvoked, testing::Eq(true));
-}
-
-TYPED_TEST(API_AnimationSeekingTest, SeekingNotRunningAnimationToEndDoesNotFinish)
-{
-    // given (animation is NOT started)
-    auto animationRunningChangeInvoke = false;
-    this->animationInterface_->Running().GetProperty()->OnChanged()->AddHandler(
-        MakeCallback<IOnChanged>([&] { animationRunningChangeInvoke = true; }));
-
-    auto onFinishedInvoked = false;
-    this->animationInterface_->OnFinished()->AddHandler(MakeCallback<IOnChanged>([&] { onFinishedInvoked = true; }));
-
-    // when
-    this->startableInterface_->Seek(1.0F);
-
-    // expected: a non-running animation must not be finished by seeking to the end
-    EXPECT_THAT(this->animationInterface_->Running()->GetValue(), testing::Eq(false));
-    EXPECT_THAT(animationRunningChangeInvoke, testing::Eq(false));
-    EXPECT_THAT(onFinishedInvoked, testing::Eq(false));
-
-    // when seeking back, the animation must not be stuck in a finished state
-    this->startableInterface_->Seek(0.5F);
-
-    // expected
-    EXPECT_THAT(onFinishedInvoked, testing::Eq(false));
 }
 
 TYPED_TEST(API_AnimationSeekingTest, SeekingToBeginningDoesNotStopAnimation)

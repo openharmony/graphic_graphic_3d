@@ -36,7 +36,7 @@ public:
         return !!obj_;
     }
 
-    template<typename T>
+    template <typename T>
     auto GetProperty(BASE_NS::string_view name) const
     {
         return META_NS::Metadata(obj_).GetProperty<T>(name);
@@ -47,21 +47,8 @@ public:
         return GetProperty<bool>("Enabled");
     }
 
-protected:
+private:
     META_NS::IObject::Ptr obj_;
-};
-
-class TemplateBloomView : public TemplateEffectView {
-public:
-    using TemplateEffectView::TemplateEffectView;
-
-    /// Bloom's dirt-mask image is stored on the template as a CORE_NS::ResourceId. The
-    /// apply path resolves it against the scene's resource manager and binds the
-    /// resolved IImage::Ptr onto the live IBloom.
-    auto DirtMaskImage() const
-    {
-        return GetProperty<CORE_NS::ResourceId>("DirtMaskImage");
-    }
 };
 
 class PostProcessTemplate : public META_NS::Object {
@@ -95,25 +82,20 @@ public:
         return pp;
     }
 
-    template<typename Type>
+    template <typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);
         return meta.GetProperty<Type>(name);
     }
 
-    auto Name() const
-    {
-        return GetProperty<BASE_NS::string>("Name");
-    }
     TemplateEffectView Tonemap() const
     {
         return GetEffectView("Tonemap");
     }
-    TemplateBloomView Bloom() const
+    TemplateEffectView Bloom() const
     {
-        auto meta = META_NS::Metadata(*this);
-        return TemplateBloomView(META_NS::GetPointer<META_NS::IObject>(meta.GetProperty("Bloom")));
+        return GetEffectView("Bloom");
     }
     TemplateEffectView Blur() const
     {

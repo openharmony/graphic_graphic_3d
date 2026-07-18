@@ -1485,7 +1485,7 @@ void CalculateTangents(const array_view<const uint16_t>& indices, const array_vi
     }
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexcept
 {
     Format format = BASE_FORMAT_UNDEFINED;
@@ -1504,13 +1504,13 @@ constexpr inline IMeshBuilder::DataBuffer FillData(array_view<const T> c) noexce
         format, sizeof(T), {reinterpret_cast<const uint8_t*>(c.data()), c.size() * sizeof(T)}};
 }
 
-template<typename T>
+template <typename T>
 constexpr inline IMeshBuilder::DataBuffer FillData(const vector<T>& c) noexcept
 {
     return FillData(array_view<const T>{c});
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr inline IMeshBuilder::DataBuffer FillData(const T (&c)[N]) noexcept
 {
     return FillData(array_view<const T>{c, N});

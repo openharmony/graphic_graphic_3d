@@ -88,12 +88,12 @@ public:
     {
         return Clone({withValue ? CloneValueType::COPY_VALUE : CloneValueType::DEFAULT_VALUE});
     }
-    template<typename T>
+    template <typename T>
     AnyReturnValue GetValue(T& value) const
     {
         return GetData(UidFromType<T>(), &value, sizeof(T)); /*NOLINT(bugprone-sizeof-expression)*/
     }
-    template<typename T>
+    template <typename T>
     AnyReturnValue SetValue(const T& value)
     {
         return SetData(UidFromType<T>(), &value, sizeof(T)); /*NOLINT(bugprone-sizeof-expression)*/
@@ -118,12 +118,12 @@ public:
 
     virtual IndexType GetSize() const = 0;
 
-    template<typename T>
+    template <typename T>
     AnyReturnValue GetValueAt(IndexType index, T& value) const
     {
         return GetDataAt(index, UidFromType<T>(), &value, sizeof(T)); /*NOLINT(bugprone-sizeof-expression)*/
     }
-    template<typename T>
+    template <typename T>
     AnyReturnValue SetValueAt(IndexType index, const T& value)
     {
         return SetDataAt(index, UidFromType<T>(), &value, sizeof(T)); /*NOLINT(bugprone-sizeof-expression)*/
@@ -140,7 +140,7 @@ inline bool IsArray(const IAny::ConstPtr& any)
     return any && any->GetInterface<IArrayAny>() != nullptr;
 }
 
-template<typename T>
+template <typename T>
 inline T GetValue(const IAny& any, NonDeduced_t<T> defaultValue = {})
 {
     T t;
@@ -150,7 +150,7 @@ inline T GetValue(const IAny& any, NonDeduced_t<T> defaultValue = {})
     return t;
 }
 
-template<typename T>
+template <typename T>
 inline T GetValueAt(const IArrayAny& array, IArrayAny::IndexType index, NonDeduced_t<T> defaultValue = {})
 {
     T t;
@@ -192,7 +192,7 @@ inline bool IsCompatibleWith(
     return false;
 }
 
-template<typename T>
+template <typename T>
 inline bool IsCompatibleWith(const IAny& any, CompatibilityDirection dir = CompatibilityDirection::BOTH)
 {
     return IsCompatible(any, UidFromType<BASE_NS::remove_const_t<BASE_NS::remove_reference_t<T>>>(), dir);
@@ -208,13 +208,13 @@ inline bool IsGetCompatible(const IAny& any, const TypeId& uid)
     return IsCompatible(any, uid, CompatibilityDirection::GET);
 }
 
-template<typename T>
+template <typename T>
 inline bool IsSetCompatibleWith(const IAny& any)
 {
     return IsCompatibleWith<T>(any, CompatibilityDirection::SET);
 }
 
-template<typename T>
+template <typename T>
 inline bool IsGetCompatibleWith(const IAny& any)
 {
     return IsCompatibleWith<T>(any, CompatibilityDirection::GET);

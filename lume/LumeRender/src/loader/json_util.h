@@ -38,7 +38,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 #define RENDER_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                               \
-    template<typename BasicJsonType>                                                                             \
+    template <typename BasicJsonType>                                                                            \
     inline bool FromJson(const BasicJsonType& j, ENUM_TYPE& e)                                                   \
     {                                                                                                            \
         static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                           \
@@ -62,7 +62,7 @@ RENDER_BEGIN_NAMESPACE()
         return false;                                                                                            \
     }
 
-template<class T>
+template <class T>
 struct JsonContext {
     T data;
     BASE_NS::string error;
@@ -82,7 +82,7 @@ inline bool ParseHex(BASE_NS::string_view str, uint32_t& val)
     return false;
 }
 
-template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
+template <class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<T>, bool> = true>
 bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -94,7 +94,8 @@ bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view eleme
     return true;
 }
 
-template<class JsonType, class T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
+template <class JsonType, class T,
+    BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
 bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -106,7 +107,7 @@ bool SafeGetJsonValue(const JsonType& jsonData, const BASE_NS::string_view eleme
     return true;
 }
 
-template<class JsonType, class T>
+template <class JsonType, class T>
 bool SafeGetJsonEnum(const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, T& output)
 {
     if (auto const pos = jsonData.find(element); pos) {
@@ -118,7 +119,7 @@ bool SafeGetJsonEnum(const JsonType& jsonData, const BASE_NS::string_view elemen
     return true;
 }
 
-template<class T, class JsonType>
+template <class T, class JsonType>
 bool SafeGetJsonBitfield(
     const JsonType& jData, const BASE_NS::string_view element, BASE_NS::string& error, uint32_t& output)
 {
@@ -141,7 +142,7 @@ bool SafeGetJsonBitfield(
     return true;
 }
 
-template<class JsonType>
+template <class JsonType>
 bool SafeGetJsonUidValue(
     const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, BASE_NS::Uid& output)
 {
@@ -162,7 +163,7 @@ bool SafeGetJsonUidValue(
     return false;
 }
 
-template<class ArrayType, class JsonType, class ResultType>
+template <class ArrayType, class JsonType, class ResultType>
 void ParseArray(JsonType const& jData, const char* element, BASE_NS::vector<ArrayType>& out, ResultType& res)
 {
     if (auto const array = jData.find(element); array && array->is_array()) {
@@ -178,7 +179,7 @@ void ParseArray(JsonType const& jData, const char* element, BASE_NS::vector<Arra
     }
 }
 
-template<class JsonType>
+template <class JsonType>
 void SafeGetJsonMask(
     const JsonType& jsonData, const BASE_NS::string_view element, BASE_NS::string& error, uint32_t& output)
 {

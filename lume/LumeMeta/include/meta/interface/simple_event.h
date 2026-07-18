@@ -30,10 +30,10 @@ META_BEGIN_NAMESPACE()
  *     using IOnEvent = META_NS::SimpleEvent<IOnEventInfo, void(int myparameter)>;
  * IOnEvent is event type that can be used with META(_IMPLEMENT)_EVENT macros.
  */
-template<typename MyEvent, typename Signature = void()>
+template <typename MyEvent, typename Signature = void()>
 class SimpleEvent;
 
-template<typename MyEvent, typename... Args>
+template <typename MyEvent, typename... Args>
 class SimpleEvent<MyEvent, void(Args...)> : public IEventCallable<MyEvent, void, Args...> {
 public:
     constexpr static char const* NAME{MyEvent::NAME};
@@ -43,7 +43,7 @@ public:
 /**
  * @brief Check if type is an event.
  */
-template<typename Type>
+template <typename Type>
 constexpr bool IsEvent_v = BASE_NS::is_convertible_v<const Type*, const IEvent*>;
 // NOLINTEND(readability-identifier-naming)
 

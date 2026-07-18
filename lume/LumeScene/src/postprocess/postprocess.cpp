@@ -90,7 +90,7 @@ META_NS::IObject::Ptr PostProcess::CreateEffect(
     return object;
 }
 
-template<typename T>
+template <typename T>
 bool PostProcess::InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id)
 {
     using PropertyType = typename T::Ptr;

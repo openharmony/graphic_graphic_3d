@@ -670,7 +670,7 @@ BASE_NS::pair<CORE_NS::EntityReference, CORE_NS::EntityReference> CreateShader(
     return {shader, state};
 }
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {

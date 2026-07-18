@@ -37,14 +37,12 @@ constexpr uint32_t GetAlignedByteSize(const uint32_t byteSize, const uint32_t al
 // ARM GPU (HiSilicon/Mali) typical: minUniformBufferOffsetAlignment=256, minStorageBufferOffsetAlignment=16.
 // Use 256 to cover both UBO and SSBO alignment for ring buffer offset stepping.
 constexpr uint32_t MIN_BUFFER_ALIGNMENT = 256u;
-}  // namespace
+} // namespace
 
 GpuBufferMln::GpuBufferMln(Device& device, const GpuBufferDesc& desc) : device_(device), desc_(desc)
 {
-    MLN_LOG_INIT("GpuBufferMln: creating buffer (size=%u, usage=0x%x, memFlags=0x%x, ringBuf=%d)",
-        desc.byteSize,
-        desc.usageFlags,
-        desc.memoryPropertyFlags,
+    MLN_LOG_INIT("GpuBufferMln: creating buffer (size=%u, usage=0x%x, memFlags=0x%x, ringBuf=%d)", desc.byteSize,
+        desc.usageFlags, desc.memoryPropertyFlags,
         (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER) ? 1 : 0);
     PLUGIN_ASSERT(desc_.byteSize > 0);
 
@@ -73,8 +71,7 @@ GpuBufferMln::GpuBufferMln(Device& device, const GpuBufferDesc& desc) : device_(
     CreateBuffer();
     if (!plat_.resource) {
         MLN_LOG_ERR("GpuBufferMln: CreateBuffer failed — skipping memory allocation (size=%u, usage=0x%x)",
-            plat_.fullByteSize,
-            static_cast<uint32_t>(plat_.usage));
+            plat_.fullByteSize, static_cast<uint32_t>(plat_.usage));
         return;
     }
     AllocateAndBindMemory();
@@ -101,8 +98,7 @@ GpuBufferMln::GpuBufferMln(Device& device, const GpuAccelerationStructureDesc& d
     : device_(device), desc_(desc.bufferDesc), isAccelerationStructure_(true), descAccel_(desc)
 {
     MLN_LOG_INIT("GpuBufferMln(AS): creating AS buffer (type=%u, size=%u)",
-        static_cast<uint32_t>(desc.accelerationStructureType),
-        desc.bufferDesc.byteSize);
+        static_cast<uint32_t>(desc.accelerationStructureType), desc.bufferDesc.byteSize);
     PLUGIN_ASSERT(desc_.byteSize > 0);
 
     // AS buffers are device-local, not ring/mappable.
@@ -139,15 +135,15 @@ GpuBufferMln::GpuBufferMln(Device& device, const GpuAccelerationStructureDesc& d
             ? MLN_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL
             : MLN_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
     const MlnAccelerationStructureDescriptor asDesc{
-        0,                                                // extensionCount
-        nullptr,                                          // extensions
-        0,                                                // flags
-        0,                                                // primitiveCount (Maleoon-specific, driver needs this)
-        plat_.resource,                                   // buffer
-        0,                                                // offset
-        static_cast<MlnDeviceSize>(platAccel_.byteSize),  // size
-        mlnType,                                          // type
-        plat_.deviceAddress,                              // deviceAddress
+        0,                                               // extensionCount
+        nullptr,                                         // extensions
+        0,                                               // flags
+        0,                             // primitiveCount (Maleoon-specific, driver needs this)
+        plat_.resource,                                  // buffer
+        0,                                               // offset
+        static_cast<MlnDeviceSize>(platAccel_.byteSize), // size
+        mlnType,                                         // type
+        plat_.deviceAddress,                             // deviceAddress
     };
 
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
@@ -158,10 +154,10 @@ GpuBufferMln::GpuBufferMln(Device& device, const GpuAccelerationStructureDesc& d
         MLN_LOG_INIT("GpuBufferMln(AS): MlnCreateAccelerationStructure OK (addr=0x%llx)",
             static_cast<unsigned long long>(platAccel_.deviceAddress));
     } else {
-        MLN_LOG_ERR("GpuBufferMln(AS): MlnCreateAccelerationStructure FAILED "
-                    "size=%u, type=%u)",
-            platAccel_.byteSize,
-            static_cast<uint32_t>(mlnType));
+        MLN_LOG_ERR(
+            "GpuBufferMln(AS): MlnCreateAccelerationStructure FAILED "
+            "size=%u, type=%u)",
+            platAccel_.byteSize, static_cast<uint32_t>(mlnType));
     }
 }
 
@@ -354,7 +350,7 @@ void GpuBufferMln::Unmap() const
             range.size = plat_.bindMemoryByteSize;
             MlnFlushMappedMemoryRanges(deviceMln.GetMlnDevice(), 1, &range);
         }
-        return;  // stays mapped
+        return; // stays mapped
     }
 
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);

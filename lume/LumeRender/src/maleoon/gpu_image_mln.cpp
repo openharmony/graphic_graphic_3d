@@ -46,7 +46,7 @@ MlnImageAspectFlags GetImageAspectFlags(Format format)
             return MLN_IMAGE_ASPECT_COLOR_BIT;
     }
 }
-}  // namespace
+} // namespace
 
 GpuImageMln::GpuImageMln(Device& device, const GpuImageDesc& desc) : device_(device), desc_(desc)
 {
@@ -54,18 +54,14 @@ GpuImageMln::GpuImageMln(Device& device, const GpuImageDesc& desc) : device_(dev
         "GpuImageMln: creating image (%ux%u, fmt=%u)", desc.width, desc.height, static_cast<uint32_t>(desc.format));
     CreateImage();
     if (!plat_.resource) {
-        MLN_LOG_ERR("GpuImageMln: CreateImage failed — skipping memory and views (%ux%u, fmt=%u)",
-            desc.width,
-            desc.height,
-            static_cast<uint32_t>(desc.format));
+        MLN_LOG_ERR("GpuImageMln: CreateImage failed — skipping memory and views (%ux%u, fmt=%u)", desc.width,
+            desc.height, static_cast<uint32_t>(desc.format));
         return;
     }
     AllocateAndBindMemory();
     if (!plat_.memory) {
-        MLN_LOG_ERR("GpuImageMln: AllocateAndBindMemory failed — skipping views (%ux%u, fmt=%u)",
-            desc.width,
-            desc.height,
-            static_cast<uint32_t>(desc.format));
+        MLN_LOG_ERR("GpuImageMln: AllocateAndBindMemory failed — skipping views (%ux%u, fmt=%u)", desc.width,
+            desc.height, static_cast<uint32_t>(desc.format));
         return;
     }
     CreateImageViews();
@@ -74,13 +70,8 @@ GpuImageMln::GpuImageMln(Device& device, const GpuImageDesc& desc) : device_(dev
 GpuImageMln::GpuImageMln(Device& device, const GpuImageDesc& desc, const GpuImagePlatformData& platformData)
     : device_(device), desc_(desc)
 {
-    MLN_LOG_INIT("GpuImageMln: wrapping platform image (%ux%u, fmt=%u, depth=%u, mip=%u, layers=%u)",
-        desc.width,
-        desc.height,
-        static_cast<uint32_t>(desc.format),
-        desc.depth,
-        desc.mipCount,
-        desc.layerCount);
+    MLN_LOG_INIT("GpuImageMln: wrapping platform image (%ux%u, fmt=%u, depth=%u, mip=%u, layers=%u)", desc.width,
+        desc.height, static_cast<uint32_t>(desc.format), desc.depth, desc.mipCount, desc.layerCount);
     // Wrapping an existing platform image -- don't create/own the underlying resource
     ownsImage_ = false;
     ownsResources_ = false;
@@ -101,11 +92,13 @@ GpuImageMln::GpuImageMln(Device& device, const GpuImageDesc& desc, const GpuImag
         plat_.resourceView = mlnPlatData.resourceView;
         plat_.resourceViewBase = mlnPlatData.resourceView;
         ownsImageViews_ = false;
-        MLN_LOG_INIT("GpuImageMln: using pre-created resourceView (ownsImageViews_=false)");
+        MLN_LOG_INIT("GpuImageMln: using pre-created resourceView=%p (ownsImageViews_=false)",
+            reinterpret_cast<void*>(plat_.resourceView));
     } else {
         // No pre-created view — create our own
         CreateImageViews();
-        MLN_LOG_INIT("GpuImageMln: created own resourceView (ownsImageViews_=true)");
+        MLN_LOG_INIT("GpuImageMln: created own resourceView=%p (ownsImageViews_=true)",
+            reinterpret_cast<void*>(plat_.resourceView));
     }
 }
 
@@ -172,11 +165,8 @@ void GpuImageMln::CreateImage()
 
     plat_.resource = MlnCreateImageResource(deviceMln.GetMlnDevice(), &imgDesc);
     if (!plat_.resource) {
-        MLN_LOG_ERR("GpuImageMln: MlnCreateImageResource failed (%ux%ux%u, fmt=%u)",
-            desc_.width,
-            desc_.height,
-            desc_.depth,
-            static_cast<uint32_t>(desc_.format));
+        MLN_LOG_ERR("GpuImageMln: MlnCreateImageResource failed (%ux%ux%u, fmt=%u)", desc_.width, desc_.height,
+            desc_.depth, static_cast<uint32_t>(desc_.format));
         return;
     }
 
@@ -218,19 +208,19 @@ void GpuImageMln::CreateImageViews()
     viewDesc.subresourceRange.baseArrayLayer = 0;
     viewDesc.subresourceRange.layerCount = plat_.arrayLayers;
 
-    MLN_LOG_INIT("GpuImageMln::CreateImageViews: BEFORE MlnCreateImageResourceView "
-                 "(viewType=%d, fmt=%d, aspect=0x%x, mips=%u, layers=%u)",
-        static_cast<int>(viewDesc.viewType),
-        static_cast<int>(viewDesc.format),
-        static_cast<uint32_t>(viewDesc.subresourceRange.aspectMask),
-        viewDesc.subresourceRange.levelCount,
+    MLN_LOG_INIT(
+        "GpuImageMln::CreateImageViews: BEFORE MlnCreateImageResourceView "
+        "(dev=%p, res=%p, viewType=%d, fmt=%d, aspect=0x%x, mips=%u, layers=%u)",
+        reinterpret_cast<void*>(mlnDevice), reinterpret_cast<void*>(plat_.resource),
+        static_cast<int>(viewDesc.viewType), static_cast<int>(viewDesc.format),
+        static_cast<uint32_t>(viewDesc.subresourceRange.aspectMask), viewDesc.subresourceRange.levelCount,
         viewDesc.subresourceRange.layerCount);
     plat_.resourceView = MlnCreateImageResourceView(mlnDevice, &viewDesc);
-    MLN_LOG_INIT("GpuImageMln::CreateImageViews: AFTER MlnCreateImageResourceView");
+    MLN_LOG_INIT("GpuImageMln::CreateImageViews: AFTER MlnCreateImageResourceView (view=%p)",
+        reinterpret_cast<void*>(plat_.resourceView));
     if (!plat_.resourceView) {
-        MLN_LOG_ERR("GpuImageMln: MlnCreateImageResourceView failed (fmt=%d, %ux%u)",
-            static_cast<int>(plat_.format),
-            plat_.extent.width,
+        MLN_LOG_ERR("GpuImageMln: MlnCreateImageResourceView failed (res=%p, fmt=%d, %ux%u)",
+            reinterpret_cast<void*>(plat_.resource), static_cast<int>(plat_.format), plat_.extent.width,
             plat_.extent.height);
         return;
     }
@@ -278,11 +268,8 @@ void GpuImageMln::CreateImageViews()
                 mipViewDesc.subresourceRange.layerCount = 1;
                 platViews_.mipImageViews[mipIdx] = MlnCreateImageResourceView(mlnDevice, &mipViewDesc);
                 if (!platViews_.mipImageViews[mipIdx]) {
-                    MLN_LOG_ERR("GpuImageMln: mipImageViews[%u] creation failed (%ux%u fmt=%u)",
-                        mipIdx,
-                        plat_.extent.width,
-                        plat_.extent.height,
-                        static_cast<uint32_t>(plat_.format));
+                    MLN_LOG_ERR("GpuImageMln: mipImageViews[%u] creation failed (%ux%u fmt=%u)", mipIdx,
+                        plat_.extent.width, plat_.extent.height, static_cast<uint32_t>(plat_.format));
                 }
                 if (plat_.arrayLayers > 1u) {
                     MlnImageViewDescriptor mipAllLayerDesc = viewDesc;
@@ -294,10 +281,7 @@ void GpuImageMln::CreateImageViews()
                     platViews_.mipImageAllLayerViews[mipIdx] = MlnCreateImageResourceView(mlnDevice, &mipAllLayerDesc);
                     if (!platViews_.mipImageAllLayerViews[mipIdx]) {
                         MLN_LOG_ERR("GpuImageMln: mipImageAllLayerViews[%u] creation failed (%ux%u fmt=%u layers=%u)",
-                            mipIdx,
-                            plat_.extent.width,
-                            plat_.extent.height,
-                            static_cast<uint32_t>(plat_.format),
+                            mipIdx, plat_.extent.width, plat_.extent.height, static_cast<uint32_t>(plat_.format),
                             plat_.arrayLayers);
                     }
                 }
@@ -314,11 +298,8 @@ void GpuImageMln::CreateImageViews()
                 layerViewDesc.subresourceRange.layerCount = 1;
                 platViews_.layerImageViews[layerIdx] = MlnCreateImageResourceView(mlnDevice, &layerViewDesc);
                 if (!platViews_.layerImageViews[layerIdx]) {
-                    MLN_LOG_ERR("GpuImageMln: layerImageViews[%u] creation failed (%ux%u fmt=%u)",
-                        layerIdx,
-                        plat_.extent.width,
-                        plat_.extent.height,
-                        static_cast<uint32_t>(plat_.format));
+                    MLN_LOG_ERR("GpuImageMln: layerImageViews[%u] creation failed (%ux%u fmt=%u)", layerIdx,
+                        plat_.extent.width, plat_.extent.height, static_cast<uint32_t>(plat_.format));
                 }
             }
         }

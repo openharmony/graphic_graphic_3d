@@ -83,7 +83,7 @@ public:
      * @brief Get the result and try to convert it to given type T. If type mismatch or task was abandoned,
      * returns the value given.
      */
-    template<typename T>
+    template <typename T>
     T GetResultOr(T def) const
     {
         if (auto p = GetResult()) {

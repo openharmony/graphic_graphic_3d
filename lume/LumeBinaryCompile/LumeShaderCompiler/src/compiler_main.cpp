@@ -659,7 +659,6 @@ struct CompilationSettings {
     const std::filesystem::path& shaderSourcePath;
     const std::filesystem::path& compiledShaderDestinationPath;
     FileIncluder& includer;
-    bool vkOnly = false;
 };
 
 constexpr uint8_t REFLECTION_TAG[] = {'r', 'f', 'l', 1};  // last one is version
@@ -682,11 +681,10 @@ struct Inputs {
     bool optimizeSpirv = false;
     bool checkIfChanged = false;
     bool stripDebugInformation = false;
-    bool vkOnly = false;
     ShaderEnv envVersion = ShaderEnv::version_vulkan_1_0;
 };
 
-template<typename InitFun, typename DeinitFun>
+template <typename InitFun, typename DeinitFun>
 class Scope {
 private:
     InitFun* init_;
@@ -914,7 +912,6 @@ std::optional<std::vector<uint32_t>> LinkAndEmitSpirv(
 std::optional<std::vector<uint32_t>> CompileShaderToSpirvBinary(
     std::string_view source, ShaderKind kind, std::string_view sourceName, const CompilationSettings& settings)
 {
-    LUME_LOG_I("CompileShaderToSpirvBinary: vkOnly = %s", settings.vkOnly ? "true" : "false");
     const std::optional<EShLanguage> stage = ConvertShaderKind(kind);
     if (!stage) {
         LUME_LOG_E("Spirv binary compilation failed '%s'", "ShaderKind not recognized");
@@ -1213,7 +1210,7 @@ std::vector<VertexInputAttributeDescription> ReflectVertexInputs(const spirv_cro
     return vertexInputAttributes;
 }
 
-template<typename T>
+template <typename T>
 void Push(std::vector<uint8_t>& buffer, T data)
 {
     buffer.push_back(data & 0xffu);
@@ -1336,10 +1333,8 @@ uint16_t AppendExecutionLocalSize(std::vector<uint8_t>& reflection, const spirv_
     return offsetLocalSize;
 }
 
-std::optional<std::vector<uint8_t>> ReflectSpvBinary(
-    const std::vector<uint32_t>& aBinary, const ShaderKind kind, const bool vkOnly = false)
+std::optional<std::vector<uint8_t>> ReflectSpvBinary(const std::vector<uint32_t>& aBinary, const ShaderKind kind)
 {
-    LUME_LOG_I("ReflectSpvBinary: vkOnly = %s", vkOnly ? "true" : "false");
     const spirv_cross::Compiler compiler(aBinary);
 
     const auto shaderStateFlags = ShaderStageFlags(kind);
@@ -1356,11 +1351,8 @@ std::optional<std::vector<uint8_t>> ReflectSpvBinary(
             }));
     ReflectPushContants(compiler, resources, shaderStateFlags, pipelineLayout.pushConstant);
 
-    // some additional information mainly for GL (skip in Vulkan-only mode to avoid unsupported types)
-    std::vector<Gles::PushConstantReflection> pushConstantReflection;
-    if (!vkOnly) {
-        pushConstantReflection = CreatePushConstantReflection(compiler, resources, shaderStateFlags);
-    }
+    // some additional information mainly for GL
+    const auto pushConstantReflection = CreatePushConstantReflection(compiler, resources, shaderStateFlags);
 
     const auto specializationConstants = ReflectSpecializationConstants(compiler, shaderStateFlags);
 
@@ -1379,12 +1371,9 @@ std::optional<std::vector<uint8_t>> ReflectSpvBinary(
     // allocate size for the five offsets. data will be added after the offsets.
     reflection.resize(reflection.size() + sizeof(uint16_t) * 5u);
 
-    // push constants - use empty reflection in Vulkan-only mode to avoid GLES-specific types
-    const auto pushConstReflView = vkOnly ? array_view<const Gles::PushConstantReflection>{}
-                                          : array_view<const Gles::PushConstantReflection>(
-                                                pushConstantReflection.data(), pushConstantReflection.size());
+    // push constants
     const uint16_t offsetPushConstants =
-        AppendPushConstants(reflection, pipelineLayout.pushConstant.byteSize, pushConstReflView);
+        AppendPushConstants(reflection, pipelineLayout.pushConstant.byteSize, pushConstantReflection);
 
     // specialization constants
     const uint16_t offsetSpecializationConstants = AppendSpecializationConstants(reflection, specializationConstants);
@@ -1603,7 +1592,7 @@ void ProcessShaderModule(Shader& me, const ShaderModuleCreateInfo& createInfo)
     Gles::ConvertConstantToUniform(compiler, me.source_, "CORE_FLIP_NDC");
 }
 
-template<typename T>
+template <typename T>
 bool WriteToFile(const array_view<T>& data, const std::filesystem::path& destinationFile)
 {
     std::ofstream outputStream(destinationFile, std::ios::out | std::ios::binary);
@@ -1787,8 +1776,6 @@ bool OptimizeAndWriteSpirv(std::vector<uint32_t>& spvBinary, const std::string& 
     const std::vector<uint8_t>& reflection, ShaderKind shaderKind, const std::filesystem::path& outputFilename,
     std::string_view inputFilename, const Inputs& params, CompilationSettings& settings)
 {
-    LUME_LOG_I("OptimizeAndWriteSpirv: vkonly = %s", settings.vkOnly ? "true" : "false");
-
     // spirv-opt resets the passes everytime so then need to be setup
     if (params.optimizeSpirv) {
         settings.optimizer->RegisterPerformancePasses();
@@ -1796,21 +1783,15 @@ bool OptimizeAndWriteSpirv(std::vector<uint32_t>& spvBinary, const std::string& 
 
     RegisterStripPreprocessorDebugInfoPass(settings.optimizer);
     settings.optimizer->SetMessageConsumer(MyMessageConsumer);
-
-    if (settings.vkOnly &&
-        !settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary, spvtools::ValidatorOptions{}, true)) {
-        LUME_LOG_E("[VK ONLY] Failed to optimize %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
-        return false;
-    } else if (!settings.vkOnly && !settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
-        LUME_LOG_E("[VK AND GL] Failed to optimize %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
+    if (!settings.optimizer->Run(spvBinary.data(), spvBinary.size(), &spvBinary)) {
+        LUME_LOG_E("Failed to optimize %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
         return false;
     }
 
-    // generate gl and gles shaders from optimized binary but with file names intact but with just preprocessor
-    // extension directives stripped out
-    if (!params.vkOnly) {
-        CreateGlShaders(outputFilename, preProcessedShader, shaderKind, spvBinary, ShaderReflectionData{reflection});
-    }
+    // generate gl and gles shaders from optimized binary but with file names
+    // intact but with just preprocessor extension directives stripped out
+    CreateGlShaders(outputFilename, preProcessedShader, shaderKind, spvBinary, ShaderReflectionData{reflection});
+
     // strip out all other debug information like variable names, function names
     if (params.stripDebugInformation) {
         const bool registerPass = settings.optimizer->RegisterPassFromFlag("--strip-debug");
@@ -1859,7 +1840,6 @@ bool CompileShaderFile(std::string_view inputFilename, const std::filesystem::pa
     const std::string& relativeFilename, const std::filesystem::path& outputBase, std::uint64_t mask,
     ShaderKind shaderKind, CompilationSettings& settings, const Inputs& params)
 {
-    LUME_LOG_I("CompileShaderFile vk only = %s", settings.vkOnly ? "true" : "false");
     std::filesystem::path outputMetaFilename = outputBase;
     outputMetaFilename += ".meta";
 
@@ -1899,7 +1879,7 @@ bool CompileShaderFile(std::string_view inputFilename, const std::filesystem::pa
     }
     auto spvBinary = *std::move(spvBinaryOpt);
 
-    auto reflectionOpt = ReflectSpvBinary(spvBinary, shaderKind, settings.vkOnly);
+    auto reflectionOpt = ReflectSpvBinary(spvBinary, shaderKind);
     if (!reflectionOpt) {
         LUME_LOG_E("Failed to reflect %.*s", static_cast<int>(inputFilename.size()), inputFilename.data());
         return false;
@@ -2092,12 +2072,6 @@ constexpr Args ARGS[] = {
             }
             return true;
         }},
-    {"--vkonly",
-        0,
-        [](Inputs& params, char* /* argv */[]) {
-            params.vkOnly = true;
-            return true;
-        }},
 };
 
 std::optional<Inputs> Parse(const int argc, char* argv[])
@@ -2264,8 +2238,7 @@ int CompilerMain(int argc, char* argv[])
         {},
         params->shaderSourcesPath,
         params->compiledShaderDestinationPath,
-        fileIncluder,
-        params->vkOnly};
+        fileIncluder};
 
     {
         spv_target_env targetEnv = spv_target_env::SPV_ENV_VULKAN_1_0;

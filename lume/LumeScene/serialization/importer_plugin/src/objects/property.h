@@ -24,10 +24,8 @@ class ImportContext;
 
 /// Import property based on "name" and look it up from object
 IDiagnostics::Ptr ImportProperty(ImportContext& context, META_NS::IObject& object);
-/// Import property. `object` is the wrapper the property was queried from
-/// (needed for correct readonly detection on forwarded properties).
-IDiagnostics::Ptr ImportProperty(
-    ImportContext& context, META_NS::IObject& object, const META_NS::IProperty::Ptr& property);
+/// Import property
+IDiagnostics::Ptr ImportProperty(ImportContext& context, META_NS::IProperty& property);
 IDiagnostics::Ptr ImportProperties(ImportContext& context, META_NS::IObject& object);
 
 SCENE_IMP_END_NAMESPACE()

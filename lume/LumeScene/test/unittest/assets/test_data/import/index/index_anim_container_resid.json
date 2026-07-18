@@ -5,6 +5,7 @@
 		"index": [
 			{
 				"resourceId": { "name": "child-anim" },
+				"name": "child animation",
 				"type": "trackAnimation",
 				"options": {
 					"name": "resolvedChild",
@@ -13,6 +14,7 @@
 			},
 			{
 				"resourceId": { "name": "seq-anim" },
+				"name": "sequential animation",
 				"type": "sequentialAnimation",
 				"options": {
 					"name": "seqWithRef",

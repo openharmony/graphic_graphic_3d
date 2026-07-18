@@ -86,10 +86,10 @@ constexpr auto RG = 2;
 constexpr auto RGB = 3;
 constexpr auto RGBA = 4;
 
-template<typename Container>
+template <typename Container>
 using ContainerValueType = typename remove_reference_t<Container>::value_type;
 
-template<typename Container>
+template <typename Container>
 constexpr const auto SIZE_OF_VALUE_TYPE_V = sizeof(ContainerValueType<Container>);
 
 constexpr size_t Align(size_t value, size_t align) noexcept
@@ -149,7 +149,7 @@ struct OutputBuffer {
     BASE_NS::Math::Vec4 defaultValue;
 };
 
-template<typename T, size_t N, size_t M>
+template <typename T, size_t N, size_t M>
 inline void GatherMin(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
@@ -157,7 +157,7 @@ inline void GatherMin(T (&minimum)[N], const T (&value)[M]) noexcept
     }
 }
 
-template<typename T, size_t N, size_t M>
+template <typename T, size_t N, size_t M>
 inline void GatherMax(T (&minimum)[N], const T (&value)[M]) noexcept
 {
     for (size_t i = 0; i < Math::min(N, M); ++i) {
@@ -166,7 +166,7 @@ inline void GatherMax(T (&minimum)[N], const T (&value)[M]) noexcept
 }
 
 // floating point to signed normalized integer
-template<typename T, typename = enable_if_t<is_signed_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Snorm(float v) noexcept
 {
     const float round = v >= 0.f ? +.5f : -.5f;
@@ -175,14 +175,14 @@ constexpr inline T Snorm(float v) noexcept
 }
 
 // signed normalized integer to floating point
-template<typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
 constexpr inline float Snorm(T v) noexcept
 {
     return static_cast<float>(v) / static_cast<float>(std::numeric_limits<T>::max());
 }
 
 // floating point to unsigned normalized integer
-template<typename T, typename = enable_if_t<is_unsigned_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T>>>
 constexpr inline T Unorm(float v) noexcept
 {
     v = v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
@@ -190,14 +190,14 @@ constexpr inline T Unorm(float v) noexcept
 }
 
 // unsigned normalized integer to floating point
-template<typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
 constexpr inline float Unorm(T v) noexcept
 {
     return static_cast<float>(v) / static_cast<float>(std::numeric_limits<T>::max());
 }
 
 // floating point to signed integer
-template<typename T, typename = enable_if_t<is_signed_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T>>>
 constexpr inline T Sint(float v) noexcept
 {
     const float round = v >= 0.f ? +.5f : -.5f;
@@ -208,14 +208,14 @@ constexpr inline T Sint(float v) noexcept
 }
 
 // signed integer to floating point
-template<typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_signed_v<T> && is_integral_v<T>>>
 constexpr inline float Sint(T v) noexcept
 {
     return static_cast<float>(v);
 }
 
 // floating point to unsigned integer
-template<typename T, typename = enable_if_t<is_unsigned_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T>>>
 constexpr inline T Uint(float v) noexcept
 {
     constexpr auto h = static_cast<float>(std::numeric_limits<T>::max());
@@ -224,14 +224,14 @@ constexpr inline T Uint(float v) noexcept
 }
 
 // unsigned integer to floating point
-template<typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
+template <typename T, typename = enable_if_t<is_unsigned_v<T> && is_integral_v<T>>>
 constexpr inline float Uint(T v) noexcept
 {
     return static_cast<float>(v);
 }
 
 // helpers for ingeter - integer conversions
-template<typename T, typename U>
+template <typename T, typename U>
 struct IntegerNorm {
     using InType = T;
     using OutType = U;
@@ -249,7 +249,7 @@ struct IntegerNorm {
     }
 };
 
-template<typename T, typename U>
+template <typename T, typename U>
 struct IntegerToInt {
     using InType = T;
     using OutType = U;
@@ -260,7 +260,7 @@ struct IntegerToInt {
     }
 };
 
-template<typename Converter, size_t components>
+template <typename Converter, size_t components>
 void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
@@ -274,7 +274,7 @@ void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t sr
 }
 
 // helpers for type T - float - type U conversions
-template<typename T>
+template <typename T>
 struct Norm {
     using Type = T;
 
@@ -297,7 +297,7 @@ struct Norm {
     }
 };
 
-template<typename T>
+template <typename T>
 struct Int {
     using Type = T;
 
@@ -320,7 +320,7 @@ struct Int {
     }
 };
 
-template<typename T>
+template <typename T>
 struct Float {
     using Type = T;
 
@@ -345,7 +345,7 @@ struct Float {
     }
 };
 
-template<typename SourceFn, typename DestFn, size_t components>
+template <typename SourceFn, typename DestFn, size_t components>
 void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t srcStride, size_t elements) noexcept
 {
     while (elements--) {
@@ -358,13 +358,13 @@ void Convert(uint8_t* dstPtr, size_t dstStride, const uint8_t* srcPtr, size_t sr
     }
 }
 
-template<typename SourceFn>
+template <typename SourceFn>
 float From(const uint8_t* src) noexcept
 {
     return SourceFn::From(reinterpret_cast<const typename SourceFn::Type*>(src)[R]);
 }
 
-template<typename DestFn>
+template <typename DestFn>
 void To(uint8_t* dst, float f) noexcept
 {
     reinterpret_cast<typename DestFn::Type*>(dst)[R] = DestFn::To(f);
@@ -408,7 +408,7 @@ static constexpr const FormatProperties DATA_FORMATS[] = {
     {4, 4, BASE_FORMAT_R32G32B32A32_SFLOAT, false, true, From<Float<float>>, To<Float<float>>},
 };
 
-template<class It, class T, class Pred>
+template <class It, class T, class Pred>
 constexpr It LowerBound(It first, const It last, const T& val, Pred pred) noexcept
 {
     auto count = std::distance(first, last);
@@ -725,7 +725,7 @@ constexpr uint32_t GetPrimitiveTopologyAdvanceCount(const PrimitiveTopology pt) 
     }
 }
 
-template<typename T>
+template <typename T>
 inline void CalculateAndAddFaceNormal(
     const Math::Vec3* posPtr, Math::Vec3* norPtr, uint32_t vertexCount, T aa, T bb) noexcept
 {
@@ -739,7 +739,7 @@ inline void CalculateAndAddFaceNormal(
     norPtr[bb] += faceNorm;
 }
 
-template<typename T>
+template <typename T>
 inline void CalculateAndAddFaceNormal(
     const Math::Vec3* posPtr, Math::Vec3* norPtr, uint32_t vertexCount, T aa, T bb, T cc) noexcept
 {
@@ -755,7 +755,7 @@ inline void CalculateAndAddFaceNormal(
     norPtr[cc] += faceNorm;
 }
 
-template<typename T>
+template <typename T>
 void SmoothNormal(const PrimitiveTopology pt, array_view<const T> indices, const Math::Vec3* posPtr, Math::Vec3* norPtr,
     uint32_t vertexCount) noexcept
 {
@@ -954,16 +954,6 @@ inline Math::Vec3 ConvertAttribute(
     return value;
 }
 
-// Record a consistent end offset for targets that received no deltas, so the morph buffer size in
-// SetMorphTargetData does not underflow from a zero-initialized trailing offset.
-inline void FillRemainingMorphTargets(MeshBuilder::SubmeshExt& submesh, uint32_t fromTarget, uint32_t targetOffset)
-{
-    for (uint32_t trg = fromTarget; trg < submesh.info.morphTargetCount; trg++) {
-        submesh.morphTargets[trg].offset = targetOffset;
-        submesh.morphTargets[trg].byteSize = 0U;
-    }
-}
-
 void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint32_t baseOffset, uint32_t indexOffset,
     uint32_t targetSize, const MeshBuilder::DataBuffer& targetPositions)
 {
@@ -978,7 +968,6 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         auto target = startTarget;
         const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
         if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes()) {
-            FillRemainingMorphTargets(submesh, trg, targetOffset);
             break;
         }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
@@ -1018,7 +1007,6 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
         if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
             lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes()) {
-            FillRemainingMorphTargets(submesh, trg, targetOffset);
             break;
         }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
@@ -1068,7 +1056,6 @@ void GatherDeltasR32G32B32(MeshBuilder::SubmeshExt& submesh, uint8_t* dst, uint3
         if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
             lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes() ||
             lastElementPos * targetTangents.stride > targetTangents.buffer.size_bytes()) {
-            FillRemainingMorphTargets(submesh, trg, targetOffset);
             break;
         }
         for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
@@ -1664,13 +1651,9 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
             submesh, buffer, baseOffset, indexOffset, targetSize, targetPositions, targetNormals, targetTangents);
     }
 
-    // Buffer size from the morph index region to the end of the last gathered target. The index and
-    // base-data regions are always written, so floor the end there: un-gathered targets leave their
-    // end offset zero, which would otherwise underflow the subtraction.
-    const uint32_t baseRegionEnd = baseOffset + targetSize;
-    const auto& lastMorphTarget = submesh.morphTargets[submesh.info.morphTargetCount - 1];
-    const uint32_t lastMorphEnd = lastMorphTarget.offset + lastMorphTarget.byteSize;
-    submesh.morphTargetBufferSize = ((lastMorphEnd > baseRegionEnd) ? lastMorphEnd : baseRegionEnd) - indexOffset;
+    // Actual buffer size based on the offset and size of the last morph target.
+    submesh.morphTargetBufferSize = submesh.morphTargets[submesh.info.morphTargetCount - 1].offset - indexOffset +
+                                    submesh.morphTargets[submesh.info.morphTargetCount - 1].byteSize;
 
     // Clamp to actual size which might be less than what was asked for before gathering the non-zero deltas.
     targetDataSize_ = submesh.morphTargetBufferOffset + submesh.morphTargetBufferSize;
@@ -2094,11 +2077,6 @@ void MeshBuilder::GatherDeltasP(SubmeshExt& submesh, uint8_t* dst, uint32_t base
             submesh.morphTargets[trg].offset = targetOffset;
             const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
             auto target = startTarget;
-            const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
-            if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes()) {
-                FillRemainingMorphTargets(submesh, trg, targetOffset);
-                break;
-            }
             for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
                 // for each vertex in target check that position, normal and tangent deltas are non-zero.
                 const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);
@@ -2149,12 +2127,6 @@ void MeshBuilder::GatherDeltasPN(SubmeshExt& submesh, uint8_t* dst, uint32_t bas
             submesh.morphTargets[trg].offset = targetOffset;
             const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
             auto target = startTarget;
-            const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
-            if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
-                lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes()) {
-                FillRemainingMorphTargets(submesh, trg, targetOffset);
-                break;
-            }
             for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
                 // for each vertex in target check that position and normal deltas are non-zero.
                 const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);
@@ -2225,13 +2197,6 @@ void MeshBuilder::GatherDeltasPNT(SubmeshExt& submesh, uint8_t* dst, uint32_t ba
             submesh.morphTargets[trg].offset = targetOffset;
             const auto startTarget = reinterpret_cast<MorphInputData*>(dst + targetOffset);
             auto target = startTarget;
-            const size_t lastElementPos = static_cast<size_t>(trg + 1) * submesh.info.vertexCount;
-            if (lastElementPos * targetPositions.stride > targetPositions.buffer.size_bytes() ||
-                lastElementPos * targetNormals.stride > targetNormals.buffer.size_bytes() ||
-                lastElementPos * targetTangents.stride > targetTangents.buffer.size_bytes()) {
-                FillRemainingMorphTargets(submesh, trg, targetOffset);
-                break;
-            }
             for (uint32_t vertex = 0; vertex < submesh.info.vertexCount; ++vertex) {
                 // for each vertex in target check that position, normal and tangent deltas are non-zero.
                 const auto vertexIndex = vertex + (trg * submesh.info.vertexCount);

@@ -44,19 +44,19 @@ constexpr auto NODE_INDEX = 0U;
 constexpr auto LOCAL_INDEX = 1U;
 constexpr auto WORLD_INDEX = 2U;
 
-template<typename ListType, typename ValueType>
+template <typename ListType, typename ValueType>
 inline auto Find(ListType&& list, ValueType&& value)
 {
     return std::find(list.begin(), list.end(), BASE_NS::forward<ValueType>(value));
 }
 
-template<typename ListType, typename Predicate>
+template <typename ListType, typename Predicate>
 inline auto FindIf(ListType&& list, Predicate&& pred)
 {
     return std::find_if(list.begin(), list.end(), BASE_NS::forward<Predicate>(pred));
 }
 
-template<class T>
+template <class T>
 T* LookupNodeByPath(T& node, array_view<const string_view> path)
 {
     T* current = &node;
@@ -79,7 +79,7 @@ T* LookupNodeByPath(T& node, array_view<const string_view> path)
     return nullptr;
 }
 
-template<class T>
+template <class T>
 T* LookupNodeByName(T& node, string_view name)
 {
     BASE_NS::vector<T*> stack(1U, &node);
@@ -100,7 +100,7 @@ T* LookupNodeByName(T& node, string_view name)
     return nullptr;
 }
 
-template<class T>
+template <class T>
 bool LookupNodesByComponent(
     T& node, const IComponentManager& componentManager, vector<T*>& results, bool singleNodeLookup)
 {

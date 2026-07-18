@@ -135,7 +135,7 @@ inline RenderHandleReference CreateGeneralDataUniformBuffer(IRenderNodeGpuResour
         UBO_OFFSET_ALIGNMENT * DefaultMaterialLightingConstants::MAX_SHADOW_COUNT});
 }
 
-template<typename RenderDataStoreType>
+template <typename RenderDataStoreType>
 RenderDataStoreType* GetRenderDataStore(
     const IRenderNodeRenderDataStoreManager& renderDataStoreManager, const string_view name)
 {

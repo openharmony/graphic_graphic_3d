@@ -22,7 +22,7 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<typename Interface>
+template <typename Interface>
 typename Interface::Ptr GetComponent(const INode::Ptr& node)
 {
     auto obj = interface_cast<META_NS::IAttach>(node);

@@ -102,7 +102,7 @@ public:
         GetObjectRegistry().DisposeObject(instanceId_);
     }
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr GetSelf() const
     {
         return interface_pointer_cast<Interface>(GetSelf());

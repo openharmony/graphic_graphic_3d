@@ -63,7 +63,7 @@ inline BASE_NS::shared_ptr<const CORE_NS::IInterface> GetPointer(const IAny::Con
 }
 
 /// Get interface pointer from an any, or nullptr if not compatible
-template<typename Interface>
+template <typename Interface>
 inline BASE_NS::shared_ptr<Interface> GetPointer(const IAny& any)
 {
     return interface_pointer_cast<Interface>(GetPointer(any));
@@ -84,14 +84,14 @@ inline BASE_NS::shared_ptr<const CORE_NS::IInterface> GetConstPointer(const IPro
 }
 
 /// Returns interface pointer if property contains a pointer that can be converted to it.
-template<typename Interface>
+template <typename Interface>
 inline BASE_NS::shared_ptr<Interface> GetPointer(const IProperty::ConstPtr& p)
 {
     return interface_pointer_cast<Interface>(GetPointer(p));
 }
 
 /// Returns interface pointer if property contains a pointer that can be converted to it.
-template<typename Interface>
+template <typename Interface>
 inline BASE_NS::shared_ptr<const Interface> GetConstPointer(const IProperty::ConstPtr& p)
 {
     return interface_pointer_cast<Interface>(GetConstPointer(p));
@@ -154,7 +154,7 @@ inline bool SetPointer(const IProperty::Ptr& p, const BASE_NS::shared_ptr<const 
 }
 
 /// Set IIinterface pointer for property if it is compatible
-template<typename Interface>
+template <typename Interface>
 inline bool SetPointer(const IProperty::Ptr& p, const BASE_NS::shared_ptr<Interface>& ptr)
 {
     return SetPointer(p, interface_pointer_cast<CORE_NS::IInterface>(ptr));
@@ -183,51 +183,51 @@ inline IProperty::Ptr DuplicatePropertyType(IObjectRegistry& obr, IProperty::Con
 }
 
 /// Get value of property or given default value if property not set or incompatible
-template<typename Type>
+template <typename Type>
 Type GetValue(const Property<Type>& p, NonDeduced_t<BASE_NS::remove_const_t<Type>> defaultValue = {}) noexcept
 {
     return p ? p->GetValue() : BASE_NS::move(defaultValue);
 }
 /// Get value of property or given default value if property not set or incompatible
-template<typename Type>
+template <typename Type>
 Type GetValue(const IProperty::ConstPtr& p, NonDeduced_t<BASE_NS::remove_const_t<Type>> defaultValue = {}) noexcept
 {
     return GetValue(Property<Type>(p), BASE_NS::move(defaultValue));
 }
 /// Get value of property or given default value if property not set or incompatible
-template<typename Type>
+template <typename Type>
 Type GetValue(const IProperty::ConstWeakPtr& p, NonDeduced_t<BASE_NS::remove_const_t<Type>> defaultValue = {}) noexcept
 {
     return GetValue<Type>(p.lock(), BASE_NS::move(defaultValue));
 }
 // to disambiguate
 /// Get value of property or given default value if property not set or incompatible
-template<typename Type>
+template <typename Type>
 Type GetValue(const IProperty::Ptr& p, NonDeduced_t<BASE_NS::remove_const_t<Type>> defaultValue = {}) noexcept
 {
     return GetValue(Property<Type>(p), BASE_NS::move(defaultValue));
 }
 // to disambiguate
 /// Get value of property or given default value if property not set or incompatible
-template<typename Type>
+template <typename Type>
 Type GetValue(const IProperty::WeakPtr& p, NonDeduced_t<BASE_NS::remove_const_t<Type>> defaultValue = {}) noexcept
 {
     return GetValue<Type>(p.lock(), BASE_NS::move(defaultValue));
 }
 /// Set value for property, true on success
-template<typename Type>
+template <typename Type>
 bool SetValue(Property<Type> property, const NonDeduced_t<Type>& value) noexcept
 {
     return property && property->SetValue(value);
 }
 /// Set value for property, true on success
-template<typename Type>
+template <typename Type>
 bool SetValue(IProperty::Ptr p, const NonDeduced_t<Type>& value) noexcept
 {
     return SetValue(Property<Type>(p), value);
 }
 /// Set value for property, true on success
-template<typename Type>
+template <typename Type>
 bool SetValue(IProperty::WeakPtr p, const NonDeduced_t<Type>& value) noexcept
 {
     return SetValue<Type>(p.lock(), value);
@@ -241,7 +241,7 @@ inline void ResetValue(const IProperty::Ptr& property) noexcept
     }
 }
 /// Reset value of property
-template<typename Type>
+template <typename Type>
 void ResetValue(Property<Type> property) noexcept
 {
     ResetValue(property.GetProperty());
@@ -271,7 +271,7 @@ inline bool IsCompatible(
     return prop && IsCompatible(*prop, id, dir);
 }
 /// Check if property is compatible with type and direction
-template<typename T>
+template <typename T>
 inline bool IsCompatibleWith(const IProperty::ConstPtr& prop, CompatibilityDirection dir = CompatibilityDirection::BOTH)
 {
     return IsCompatible(prop, GetTypeId<BASE_NS::remove_const_t<BASE_NS::remove_reference_t<T>>>(), dir);
@@ -287,13 +287,13 @@ inline bool IsGetCompatible(const IProperty::ConstPtr& prop, const TypeId& id)
     return IsCompatible(prop, id, CompatibilityDirection::GET);
 }
 /// Check if property is compatible to set value with type
-template<typename T>
+template <typename T>
 inline bool IsSetCompatibleWith(const IProperty::ConstPtr& prop)
 {
     return IsCompatibleWith<T>(prop, CompatibilityDirection::SET);
 }
 /// Check if property is compatible to get value with type
-template<typename T>
+template <typename T>
 inline bool IsGetCompatibleWith(const IProperty::ConstPtr& prop)
 {
     return IsCompatibleWith<T>(prop, CompatibilityDirection::GET);
@@ -342,7 +342,7 @@ inline bool IsModifierGetCompatible(const IAny& any, const IModifier& value)
     return false;
 }
 /// Returns the top most value interface from property that implements Interface or nullptr if no such
-template<typename Interface>
+template <typename Interface>
 typename Interface::Ptr GetFirstValueFromProperty(const IProperty::ConstPtr& p)
 {
     if (auto i = interface_cast<IStackProperty>(p)) {

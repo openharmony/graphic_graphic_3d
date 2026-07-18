@@ -24,7 +24,7 @@
 META_BEGIN_NAMESPACE()
 
 /// Helper to have events with array property element changes
-template<typename ValueType>
+template <typename ValueType>
 class ArrayPropertyChangedEventHandler {
 public:
     ArrayPropertyChangedEventHandler() = default;
@@ -33,7 +33,7 @@ public:
     using ArrayChange = ArrayChanges<ValueType>;
     using FunctionType = void(const ArrayChange&);
 
-    template<typename T>
+    template <typename T>
     bool Subscribe(const Property& property, T* instance, void (T::*callback)(const ArrayChange&))
     {
         changesRecognizer_.SetValue(property);
@@ -47,7 +47,7 @@ public:
         return handler_.Subscribe(property, [=]() { callback(changesRecognizer_.OnArrayPropertyChanged(property)); });
     }
 
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, FunctionType>>
+    template <typename Func, typename = EnableIfCanInvokeWithArguments<Func, FunctionType>>
     bool Subscribe(const Property& property, Func func, const ITaskQueue::Ptr& queue = nullptr)
     {
         changesRecognizer_.SetValue(property);
@@ -57,7 +57,7 @@ public:
             queue);
     }
 
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, FunctionType>>
+    template <typename Func, typename = EnableIfCanInvokeWithArguments<Func, FunctionType>>
     bool Subscribe(const Property& property, Func func, const BASE_NS::Uid& queueId)
     {
         changesRecognizer_.SetValue(property);

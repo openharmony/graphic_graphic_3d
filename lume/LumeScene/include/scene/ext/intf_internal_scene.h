@@ -78,14 +78,14 @@ public:
     virtual void SetResourceGroups(ResourceGroupBundle) = 0;
 
 public:
-    template<typename Func>
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
         AddTask(Func&& func)
     {
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     [[deprecated(
         "use correct variant instead AddTaskFuture,AddTaskOrRunDirectly,RunDirectlyOrInTask")]] [[nodiscard]] auto
         AddTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
@@ -93,45 +93,45 @@ public:
         return AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), queue);
     }
 
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func) const
     {
         return AddTaskFuture(BASE_NS::forward<Func>(func), GetContext()->GetRenderQueue());
     }
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskFuture(Func&& func, const META_NS::ITaskQueue::Ptr& queue) const
     {
         return META_NS::Future<META_NS::PlainType_t<decltype(func())>>(
             queue->AddWaitableTask(META_NS::CreateWaitableTask(BASE_NS::move(func))));
     }
 
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func)
     {
         return GetContext()->AddTaskOrRunDirectly(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     [[nodiscard]] auto AddTaskOrRunDirectly(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return GetContext()->AddTaskOrRunDirectly(BASE_NS::forward<Func>(func), queue);
     }
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func)
     {
         return GetContext()->RunDirectlyOrInTask(BASE_NS::forward<Func>(func));
     }
-    template<typename Func>
+    template <typename Func>
     auto RunDirectlyOrInTask(Func&& func, const META_NS::ITaskQueue::Ptr& queue)
     {
         return GetContext()->RunDirectlyOrInTask(BASE_NS::forward<Func>(func), queue);
     }
 
-    template<typename Func>
+    template <typename Func>
     void PostUserNotification(Func&& func)
     {
         GetContext()->PostUserNotification(BASE_NS::forward<Func>(func));
     }
-    template<typename MyEvent, typename... Args>
+    template <typename MyEvent, typename... Args>
     void InvokeUserNotification(const META_NS::IEvent::Ptr& event, Args... args)
     {
         GetContext()->InvokeUserNotification<MyEvent>(event, BASE_NS::move(args)...);

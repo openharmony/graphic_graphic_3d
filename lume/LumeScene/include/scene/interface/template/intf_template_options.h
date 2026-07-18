@@ -16,8 +16,6 @@
 #ifndef SCENE_INTERFACE_TEMPLATE_ITEMPLATE_OPTIONS_H
 #define SCENE_INTERFACE_TEMPLATE_ITEMPLATE_OPTIONS_H
 
-#include <cstdint>
-
 #include <scene/base/namespace.h>
 
 #include <core/plugin/intf_interface.h>
@@ -25,13 +23,6 @@
 #include <meta/base/interface_macros.h>
 
 SCENE_BEGIN_NAMESPACE()
-
-/**
- * @brief Object-flag bit marking objects, properties, and attachments whose state originated from a
- *        template application (rather than scene-local edits). Query with
- *        META_NS::IsFlagSet(object, IMPORTED_FROM_TEMPLATE_BIT).
- */
-constexpr uint64_t IMPORTED_FROM_TEMPLATE_BIT = 128;
 
 /**
  * @brief Internal protocol used by the importer to mark a typed template options object

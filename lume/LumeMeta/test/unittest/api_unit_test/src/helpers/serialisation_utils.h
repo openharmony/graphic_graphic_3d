@@ -36,13 +36,13 @@ struct TestSerialiser {
     bool Export(const IObject::Ptr& object);
     IObject::Ptr Import();
 
-    template<typename Interface>
+    template <typename Interface>
     bool Export(const BASE_NS::shared_ptr<Interface>& p)
     {
         return Export(interface_pointer_cast<IObject>(p));
     }
 
-    template<typename Interface>
+    template <typename Interface>
     typename Interface::Ptr Import()
     {
         return interface_pointer_cast<Interface>(Import());

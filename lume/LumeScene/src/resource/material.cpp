@@ -543,7 +543,7 @@ static void CopyTextureData(
         for (size_t i = 0; i != arr->GetSize(); ++i) {
             if (auto in = interface_cast<META_NS::IMetadata>(arr->GetValueAt(i))) {
                 if (auto out = interface_cast<META_NS::IMetadata>(tex->GetValueAt(i))) {
-                    META_NS::CopyToDefault(*in, *out);
+                    META_NS::CopyToDefaultAndReset(*in, *out);
                 }
             }
         }
@@ -588,7 +588,7 @@ bool MaterialTemplateAccess::SetValuesFromTemplate(
                 } else if (prop->GetName() == "CustomProperties") {
                     // skip for now
                 } else {
-                    META_NS::CopyToDefault(prop, *m);
+                    META_NS::CopyToDefaultAndReset(prop, *m);
                 }
             }
         }

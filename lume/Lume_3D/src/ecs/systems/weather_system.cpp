@@ -79,6 +79,7 @@ static constexpr string_view RIPPLE_TEXTURE_NAME_0{"RIPPLE_RENDER_NODE_TEXTURE_0
 static constexpr string_view RIPPLE_TEXTURE_NAME_1{"RIPPLE_RENDER_NODE_TEXTURE_1_"};
 #endif
 static constexpr string_view RIPPLE_INPUT_BUFFER_NAME{"RIPPLE_RENDER_NODE_INPUTBUFFER"};
+static constexpr uint32_t MAX_REFLECTION_CAMERAS = 16U;
 static constexpr float MIN_CLOUD_COVERAGE = 0.01f;
 static constexpr float MIN_CLOUD_DENSITY = 0.0001f;
 static constexpr uint32_t WEATHER_QUERY_NODE_INDEX = 1U;
@@ -556,7 +557,7 @@ void WeatherSystem::Initialize()
     waterPlaneQuery_.SetEcsListenersEnabled(false);
     waterPlaneQuery_.SetupQuery(planarReflectionManager_, waterPlaneOps, true);
     // NOTE: data store is done deferred way in the update
-    screenPercentages_.clear();
+    screenPercentages_.resize(MAX_REFLECTION_CAMERAS);
 }
 
 void WeatherSystem::Uninitialize()
@@ -802,8 +803,10 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         maxRes.y = maxRes.y / resDevider;
         bool reflectionChanged = false;
 
-        screenPercentages_.resize(planarCount, -1.0f);
         for (IComponentManager::ComponentId id = 0; id < planarCount; ++id) {
+            if (id >= screenPercentages_.size()) {
+                break;
+            }
             ScopedHandle<const PlanarReflectionComponent> handle = planarReflectionManager_.Read(id);
             const PlanarReflectionComponent& component = *handle;
             if (screenPercentages_[id] != component.screenPercentage) {

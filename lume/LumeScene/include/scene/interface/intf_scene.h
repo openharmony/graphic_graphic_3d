@@ -151,13 +151,13 @@ public:
         return RemoveObject(interface_pointer_cast<META_NS::IObject>(animation));
     }
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> CreateNode(BASE_NS::string_view path, META_NS::ObjectId id = {})
     {
         return CreateNode(path, id).Then([](INode::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);
     }
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> FindNode(BASE_NS::string_view path, META_NS::ObjectId id = {}) const
     {
         return FindNode(path, id).Then([](INode::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);
@@ -165,7 +165,7 @@ public:
 
     virtual Future<META_NS::IObject::Ptr> CreateObject(META_NS::ObjectId id) = 0;
 
-    template<class T>
+    template <class T>
     Future<typename T::Ptr> CreateObject(META_NS::ObjectId id)
     {
         return CreateObject(id).Then([](META_NS::IObject::Ptr d) { return interface_pointer_cast<T>(d); }, nullptr);

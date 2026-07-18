@@ -170,65 +170,6 @@ EntityReference EnvironmentBlenderTest(UTest::TestResources& res)
     return blendEnvEntity;
 }
 
-// Drive the full MAX blend count so the camera controller runs GetMultiEnvironmentIndices at multiEnvCount == 4.
-EntityReference EnvironmentBlenderMaxEnvTest(UTest::TestResources& res)
-{
-    auto& gpuResManager = res.GetRenderContext().GetDevice().GetGpuResourceManager();
-    Cubemaps maps = CreateEnvironmentCubemaps(gpuResManager);
-
-    auto& ecs = res.GetEcs();
-    IEntityManager& em = ecs.GetEntityManager();
-
-    auto nodeSystem = GetSystem<INodeSystem>(ecs);
-    const Entity sceneRoot = nodeSystem->CreateNode()->GetEntity();
-
-    auto* envManager = GetManager<IEnvironmentComponentManager>(ecs);
-    auto* blendManager = GetManager<IDynamicEnvironmentBlenderComponentManager>(ecs);
-    auto& sceneUtil = res.GetGraphicsContext().GetSceneUtil();
-
-    EntityReference blendEntity = em.CreateReferenceCounted();
-    EntityReference blendEnvEntity = em.CreateReferenceCounted();
-
-    IRenderConfigurationComponentManager* rccm = GetManager<IRenderConfigurationComponentManager>(ecs);
-    rccm->Create(sceneRoot);
-    ScopedHandle<RenderConfigurationComponent> renderConfiguration = rccm->Write(sceneRoot);
-    renderConfiguration->renderingFlags |= RenderConfigurationComponent::CREATE_RNGS_BIT;
-
-    envManager->Create(blendEnvEntity);
-    if (auto envDataHandle = envManager->Write(blendEnvEntity); envDataHandle) {
-        envDataHandle->blendEnvironments = blendEntity;
-    }
-    blendManager->Create(blendEntity);
-    if (auto blendHandle = blendManager->Write(blendEntity); blendHandle) {
-        blendHandle->environments.clear();
-        for (uint32_t i = 0; i < DefaultMaterialCameraConstants::MAX_CAMERA_MULTI_ENVIRONMENT_COUNT; ++i) {
-            Entity envEntity = em.Create();
-            envManager->Create(envEntity);
-            if (auto envDataHandle = envManager->Write(envEntity); envDataHandle) {
-                envDataHandle->background = EnvironmentComponent::Background::CUBEMAP;
-                envDataHandle->envMap = GetOrCreateEntityReference(ecs, (i % 2u) ? maps.green : maps.red);
-            }
-            blendHandle->environments.push_back(envEntity);
-        }
-    }
-    renderConfiguration->environment = blendEnvEntity;
-
-    const Entity cameraEntity = sceneUtil.CreateCamera(ecs,
-        Math::Vec3(0.0f, 2.75f, 3.5f),
-        Math::AngleAxis((Math::DEG2RAD * -5.0f), Math::Vec3(1.0f, 0.0f, 0.0f)),
-        0.1f,
-        100.0f,
-        60.0f);
-    if (auto cameraComponent = GetManager<ICameraComponentManager>(ecs)->Write(cameraEntity); cameraComponent) {
-        cameraComponent->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
-        cameraComponent->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
-        cameraComponent->environment = blendEnvEntity;
-    }
-    sceneUtil.UpdateCameraViewport(
-        ecs, cameraEntity, {res.GetWindowWidth(), res.GetWindowHeight()}, true, Math::DEG2RAD * 90.0f, 1.0f);
-    return blendEnvEntity;
-}
-
 void Validate(array_view<uint8_t> data)
 {
     for (uint32_t i = 0; i < data.size(); i += 4) {  // 4: offset
@@ -272,23 +213,6 @@ UNIT_TEST(API_GfxTest, EnvironmentBlenderTestVulkan, testing::ext::TestSize.Leve
         }
     }
 
-    res.ShutdownTest();
-}
-
-/**
- * @tc.name: EnvironmentBlenderMaxEnvTestVulkan
- * @tc.desc: Renders with MAX_CAMERA_MULTI_ENVIRONMENT_COUNT blend environments so GetMultiEnvironmentIndices
- *           runs at multiEnvCount == 4 and stays within the UVec4.
- * @tc.type: FUNC
- */
-UNIT_TEST(API_GfxTest, EnvironmentBlenderMaxEnvTestVulkan, testing::ext::TestSize.Level1)
-{
-    UTest::TestResources res(4, 4, DeviceBackendType::VULKAN);
-    {
-        res.LiftTestUp(static_cast<int32_t>(res.GetWindowWidth()), static_cast<int32_t>(res.GetWindowHeight()));
-        auto keepAliveRef = EnvironmentBlenderMaxEnvTest(res);
-        res.TickTest(10);
-    }
     res.ShutdownTest();
 }
 #endif  // RENDER_HAS_VULKAN_BACKEND

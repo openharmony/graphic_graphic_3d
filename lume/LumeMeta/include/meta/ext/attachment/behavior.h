@@ -97,7 +97,7 @@ protected:
     /**
      * @brief Templated helper for GetObject, returning the target object casted to given type.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr GetObject() const
     {
         return interface_pointer_cast<T>(object_);
@@ -105,7 +105,7 @@ protected:
     /**
      * @brief Templated helper for GetObject, returning the context object casted to given type.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr GetContext() const
     {
         return interface_pointer_cast<T>(context_);
@@ -197,7 +197,7 @@ private:
  *        };
  * @endcode
  */
-template<class... Interfaces>
+template <class... Interfaces>
 class Behavior : public IntroduceInterfaces<Internal::BehaviorBase, Interfaces...> {};
 
 META_END_NAMESPACE()

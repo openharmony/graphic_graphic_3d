@@ -94,7 +94,7 @@ void LogRenderBuildInfo()
     PLUGIN_LOG_I("RENDER_PERF_ENABLED=" RENDER_TO_STRING(RENDER_PERF_ENABLED));
 }
 
-template<class RenderDataStoreType>
+template <class RenderDataStoreType>
 RenderDataStoreTypeInfo FillRenderDataStoreTypeInfo()
 {
     return {
@@ -118,7 +118,7 @@ void RegisterCoreRenderDataStores(RenderDataStoreManager& renderDataStoreManager
     renderDataStoreManager.AddRenderDataStoreFactory(FillRenderDataStoreTypeInfo<RenderDataStoreRenderPostProcesses>());
 }
 
-template<typename DataStoreType>
+template <typename DataStoreType>
 refcnt_ptr<IRenderDataStore> CreateDataStore(IRenderDataStoreManager& renderDataStoreManager, const string_view name)
 {
     refcnt_ptr<IRenderDataStore> renderDataStore = renderDataStoreManager.Create(DataStoreType::UID, name.data());

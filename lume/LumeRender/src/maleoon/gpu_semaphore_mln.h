@@ -39,10 +39,10 @@ public:
 
 private:
     Device& device_;
-    MlnTimeline timeline_{MLN_NULL_HANDLE};
-    bool ownsResources_{true};
+    MlnTimeline timeline_ { MLN_NULL_HANDLE };
+    bool ownsResources_ { true };
 };
 
 RENDER_END_NAMESPACE()
 
-#endif  // MALEOON_GPU_SEMAPHORE_MLN_H
+#endif // MALEOON_GPU_SEMAPHORE_MLN_H

@@ -20,9 +20,6 @@
 #include <3d/ecs/components/environment_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/systems/intf_node_system.h>
-#include <render/datastore/intf_render_data_store_pod.h>
-
-#include <cmath>
 
 #include "mrt_system.h"
 
@@ -32,12 +29,6 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
-
-namespace {
-constexpr string_view POD_DATA_STORE_NAME{"RenderDataStorePod"};
-constexpr string_view MRT_RENDER_DATA_STORE_TYPE{"MRTRenderDataStorePod"};
-constexpr string_view VERTEX_INPUT_DECLARATIONS{"VertexInputDeclarations"};
-}  // namespace
 
 MRTSystem::MRTSystem(IEcs& ecs) : ecs_(ecs)
 {
@@ -89,37 +80,15 @@ void MRTSystem::SetActive(bool state)
 
 void MRTSystem::Initialize()
 {
-    if (renderContext_) {
-        auto dataStore = refcnt_ptr<IRenderDataStorePod>(
-            renderContext_->GetRenderDataStoreManager().GetRenderDataStore(POD_DATA_STORE_NAME));
-        if (dataStore) {
-            auto pod = refcnt_ptr<IRenderDataStorePod>(dataStore.get());
-            BASE_NS::string_view vertexInputDeclarations =
-                "mrtvertexinputdeclarations://mrt_high_precision_uv.shadervid";
-            const array_view<const uint8_t> dataView = {
-                reinterpret_cast<const uint8_t*>(vertexInputDeclarations.data()), vertexInputDeclarations.length()};
-            pod->CreatePod(MRT_RENDER_DATA_STORE_TYPE, VERTEX_INPUT_DECLARATIONS, dataView);
-        } else {
-            CORE_LOG_E("MRTSystem::Initialize get null data store");
-        }
-    }
-    CORE_LOG_I("MRTSystem::Initialize()");
+    CORE_LOG_E("MRTSystem::Initialize()");
 }
 
 void MRTSystem::Uninitialize()
 {
-    if (renderContext_) {
-        auto dataStore = refcnt_ptr<IRenderDataStorePod>(
-            renderContext_->GetRenderDataStoreManager().GetRenderDataStore(POD_DATA_STORE_NAME));
-        if (dataStore) {
-            auto pod = refcnt_ptr<IRenderDataStorePod>(dataStore.get());
-            pod->DestroyPod(MRT_RENDER_DATA_STORE_TYPE, VERTEX_INPUT_DECLARATIONS);
-        }
-    }
-    CORE_LOG_I("MRTSystem::Uninitialize()");
+    CORE_LOG_E("MRTSystem::Uninitialize()");
 }
 
-void MRTSystem::UpdateShaders(float zNear, float zFar, bool updateNearFarOnly)
+void MRTSystem::UpdateShaders(float zNear, float zFar)
 {
     auto cameraManager = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs_);
 
@@ -147,26 +116,13 @@ void MRTSystem::UpdateShaders(float zNear, float zFar, bool updateNearFarOnly)
                 if (!materialHandle) {
                     continue;
                 }
+                materialHandle->materialShader.shader = GetOrCreateEntityReference(
+                    ecs_, shaderMgr.GetShaderHandle("mrt_rofs://shaders/shader/mrt_dm_fw.shader"));
 
-                // assume the recontructed gltf file does not have any specular material
-                // then use specular slot to pass the nearPlane and far Plane into the shader
+                // use specular slot to pass the nearPlane and far Plane into the shader
                 materialHandle->textures[MaterialComponent::TextureIndex::SPECULAR].factor = {zNear, zFar, 1.0f, 1.0f};
-
-                if (!updateNearFarOnly) {
-                    materialHandle->materialShader.shader = GetOrCreateEntityReference(
-                        ecs_, shaderMgr.GetShaderHandle("mrt_rofs://shaders/shader/mrt_dm_fw.shader"));
-                    materialHandle->materialShader.graphicsState =
-                        createGfxState("mrtshaderstates://mrt_mpi_dm_fw.shadergs", "TRANSLUCENT_FW_DS");
-                    // get sampler of base color, i.e. the "real" material of gltf
-                    auto samplerEntity = ecs_.GetEntityManager().CreateReferenceCounted();
-                    auto renderHandleManager = GetManager<IRenderHandleComponentManager>(ecs_);
-                    renderHandleManager->Create(samplerEntity);
-                    renderHandleManager->Write(samplerEntity)->reference =
-                        renderContext_->GetDevice().GetGpuResourceManager().GetSamplerHandle(
-                            "CORE_DEFAULT_SAMPLER_NEAREST_CLAMP");
-
-                    materialHandle->textures[MaterialComponent::TextureIndex::BASE_COLOR].sampler = samplerEntity;
-                }
+                materialHandle->materialShader.graphicsState =
+                    createGfxState("mrtshaderstates://mrt_mpi_dm_fw.shadergs", "TRANSLUCENT_FW_DS");
             }
         }
     }
@@ -180,44 +136,33 @@ void MRTSystem::UpdateShaders(float zNear, float zFar, bool updateNearFarOnly)
         auto cameraEntity = cameraManager->GetEntity(0);
         auto cameraHandle = cameraManager->Write(cameraEntity);
 
-        if (!cameraHandle) {
-            // avoid crash, may let the buffer to be black
-            CORE_LOG_E("MRTSystem:: Apply shaders to environment cameraHandle is NULL");
-        } else if (auto envDataHandle = envManager->Write(cameraHandle->environment); envDataHandle) {
+        if (auto envDataHandle = envManager->Write(cameraHandle->environment); envDataHandle) {
             EnvironmentComponent& envComponent = *envDataHandle;
             envComponent.shader = GetOrCreateEntityReference(
                 ecs_, shaderMgr.GetShaderHandle("mrt_rofs://shaders/shader/mrt_dm_env.shader"));
         }
     }
-
-    inited_ = true;
 }
 
 bool MRTSystem::Update(bool frameRenderingQueued, uint64_t time, uint64_t delta)
 {
     float zNear = 0.0f;
     float zFar = 0.0f;
-    bool updateNearFar = false;
-    // replace rng
-    auto cameraManager = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs_);
-    if (cameraManager->GetComponentCount() > 0) {
-        auto cameraEntity = cameraManager->GetEntity(0);
-        if (auto cameraHandle = cameraManager->Write(cameraEntity); cameraHandle) {
-            CORE3D_NS::CameraComponent& cameraComponent = *cameraHandle;
-            cameraComponent.customRenderNodeGraphFile = "mrt_rofs://rendernodegraphs/mrt_rng_cam_scene_lwrp.rng";
-            updateNearFar =
-                fabs(cameraComponent.zNear - zNear_) > 0.001f || fabs(cameraComponent.zFar - zFar_) > 0.001f;
-            zNear = cameraComponent.zNear;
-            zFar = cameraComponent.zFar;
+    if (!inited_) {
+        // replace rng
+        auto cameraManager = CORE_NS::GetManager<CORE3D_NS::ICameraComponentManager>(ecs_);
+        if (cameraManager->GetComponentCount() > 0) {
+            auto cameraEntity = cameraManager->GetEntity(0);
+            if (auto cameraHandle = cameraManager->Write(cameraEntity); cameraHandle) {
+                CORE3D_NS::CameraComponent& cameraComponent = *cameraHandle;
+                cameraComponent.customRenderNodeGraphFile = "mrt_rofs://rendernodegraphs/mrt_rng_cam_scene_lwrp.rng";
+                zNear = cameraComponent.zNear;
+                zFar = cameraComponent.zFar;
+            }
         }
+        UpdateShaders(zNear, zFar);
+        inited_ = true;
     }
-
-    if (!inited_ || updateNearFar) {
-        UpdateShaders(zNear, zFar, inited_ && updateNearFar);  // init and updateNearFar, then update near far only
-        zNear_ = zNear;
-        zFar_ = zFar;
-    }
-
     return true;
 }
 

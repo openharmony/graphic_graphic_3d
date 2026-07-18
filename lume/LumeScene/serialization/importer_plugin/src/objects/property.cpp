@@ -19,7 +19,6 @@
 
 #include <meta/api/array_util.h>
 #include <meta/api/metadata_util.h>
-#include <meta/api/util.h>
 
 #include "../import_any.h"
 #include "../import_context.h"
@@ -99,45 +98,6 @@ static void DeferObjectRef(
         });
 }
 
-// Query readonly from the wrapper object the property was looked up on.
-// IProperty::GetOwner() is unreliable for forwarded properties — it returns
-// the underlying component, not the wrapper, so its metadata may not carry
-// the same readonly flag.
-static bool IsReadOnly(const META_NS::IObject& object, const META_NS::IProperty& prop)
-{
-    if (auto meta = interface_cast<META_NS::IMetadata>(&object)) {
-        return meta->GetMetadata(META_NS::MetadataType::PROPERTY, prop.GetName()).readOnly;
-    }
-    return false;
-}
-
-// A read-only object-pointer property (the RenderConfiguration pattern) cannot be
-// assigned. Recurse into the object it already points to and import the nested
-// "properties" onto it. `objectUid` is verified against the live object's class id.
-static IDiagnostics::Ptr ImportReadOnlyProperty(
-    ImportContext& context, const META_NS::IProperty::Ptr& prop, const CORE_NS::json::value& value)
-{
-    const auto& name = prop->GetName();
-    if (!value.is_object()) {
-        CORE_LOG_E("Read-only property '%s' expects a nested object value", name.c_str());
-        return context.CreateDiagnostics("Read-only property '" + name + "' expects a nested object value");
-    }
-    auto ncont = context.CreateContext(value);
-    ObjectIdent ident;
-    if (auto err = ReadObjectIdent(ncont, ident)) {
-        return err;
-    }
-    auto obj = META_NS::GetPointer<META_NS::IObject>(prop);
-    if (!obj) {
-        CORE_LOG_E("Cannot modify read-only property '%s' of non-object type", name.c_str());
-        return context.CreateDiagnostics("Cannot modify read-only property '" + name + "' of non-object type");
-    }
-    if (auto err = MatchClassId(ncont, *obj, ident)) {
-        return err;
-    }
-    return ImportProperties(ncont, *obj);
-}
-
 static IDiagnostics::Ptr ImportProperty(
     ImportContext& context, META_NS::IObject& object, const BASE_NS::string& name, const CORE_NS::json::value& value)
 {
@@ -153,9 +113,6 @@ static IDiagnostics::Ptr ImportProperty(
     if (!prop) {
         CORE_LOG_E("No such property '%s' on object '%s'", name.c_str(), object.GetName().c_str());
         return context.CreateDiagnostics("No such property '" + name + "' on object '" + object.GetName() + "'");
-    }
-    if (IsReadOnly(object, *prop)) {
-        return ImportReadOnlyProperty(context, prop, value);
     }
     if (auto err = SetPropertyValue(context, *prop, value)) {
         if (CanDeferObjectRef(context, value)) {
@@ -181,22 +138,14 @@ IDiagnostics::Ptr ImportProperty(ImportContext& context, META_NS::IObject& objec
     return ImportProperty(context, object, name, value);
 }
 
-IDiagnostics::Ptr ImportProperty(
-    ImportContext& context, META_NS::IObject& object, const META_NS::IProperty::Ptr& property)
+IDiagnostics::Ptr ImportProperty(ImportContext& context, META_NS::IProperty& property)
 {
     auto value = context.GetOptValue("value");
     if (!value) {
-        CORE_LOG_E("Invalid or missing value for property: %s", property->GetName().c_str());
-        return context.CreateDiagnostics("Invalid or missing value for property: " + property->GetName());
+        CORE_LOG_E("Invalid or missing value for property: %s", property.GetName().c_str());
+        return context.CreateDiagnostics("Invalid or missing value for property: " + property.GetName());
     }
-    if (IsReadOnly(object, *property)) {
-        return ImportReadOnlyProperty(context, property, value);
-    }
-    if (auto err = SetPropertyValue(context, *property, value)) {
-        if (CanDeferObjectRef(context, value)) {
-            DeferObjectRef(context, property, value);
-            return nullptr;
-        }
+    if (auto err = SetPropertyValue(context, property, value)) {
         return err;
     }
     return nullptr;

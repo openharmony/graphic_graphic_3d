@@ -196,7 +196,7 @@ void AnimationState::Seek(float position)
     const auto seekedTime = state_.GetBaseDuration().ToSecondsFloat() * position;
     state_.SetTime(TimeSpan::Seconds(seekedTime));
     auto state = state_.animationState_;
-    if (position >= 1.f && IsRunning()) {
+    if (position >= 1.f) {
         state = IAnimationInternal::AnimationTargetState::FINISHED;
     }
     Move(IAnimationInternal::MoveParams::FromProgress(position, state));

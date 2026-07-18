@@ -20,7 +20,7 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<uint32_t Bit>
+template <uint32_t Bit>
 struct PPEffectEnabledConverter {
     PPEffectEnabledConverter(META_NS::ConstProperty<uint32_t> flags) : flags_(flags)
     {}

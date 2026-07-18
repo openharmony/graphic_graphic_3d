@@ -41,7 +41,7 @@ namespace {
 bool EnsureJpgPlugin()
 {
     static bool loaded = []() {
-        constexpr Uid jpg[]{JPGPlugin::UID_JPG_PLUGIN};
+        constexpr Uid jpg[] { JPGPlugin::UID_JPG_PLUGIN };
         return GetPluginRegister().LoadPlugins(jpg);
     }();
     return loaded;
@@ -83,7 +83,7 @@ void CheckImage(CORE_NS::IImageLoaderManager* imageManager, const string_view aT
 {
     string messageStr =
         "Test: '" +
-        aTest;  //+"' image: '" + std::string_view(aTestImage.imageUri.data(), aTestImage.imageUri.size()) + "'";
+        aTest; //+"' image: '" + std::string_view(aTestImage.imageUri.data(), aTestImage.imageUri.size()) + "'";
     auto message = std::string_view(messageStr.data(), messageStr.size());
 
     auto& fileManager = CORE_NS::UTest::GetTestEnv()->fileManager;
@@ -201,7 +201,7 @@ void CheckImageData(const char* aTest, const IImageContainer& aImage, uint32_t a
 constexpr IImageContainer::ImageType TYPE_2D = IImageContainer::ImageType::TYPE_2D;
 constexpr IImageContainer::ImageViewType VTYPE_2D = IImageContainer::ImageViewType::VIEW_TYPE_2D;
 constexpr uint32_t lrgb = IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT;
-}  // namespace
+} // namespace
 
 class API_JpgLoaderTest : public ::testing::Test {
 protected:
@@ -212,7 +212,7 @@ protected:
         ASSERT_NE(m_imageLoaderManager, nullptr);
     }
 
-    IImageLoaderManager* m_imageLoaderManager{nullptr};
+    IImageLoaderManager* m_imageLoaderManager { nullptr };
 };
 
 /**
@@ -251,36 +251,10 @@ UNIT_TEST_F(API_JpgLoaderTest, JpgPluginLoaded, testing::ext::TestSize.Level1)
 UNIT_TEST_F(API_JpgLoaderTest, LoadImages, testing::ext::TestSize.Level1)
 {
     const TestImage testImages[] = {
-        {"test://image/canine_284x323.jpg",
-            284,
-            323,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb},
-        {"test://image/canine_512x512.jpg",
-            512,
-            512,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb},
+        { "test://image/canine_284x323.jpg", 284, 323, 1, 1, 1, 1, 32, 1, 1, 0, Format::BASE_FORMAT_R8G8B8A8_UNORM,
+            TYPE_2D, VTYPE_2D, lrgb },
+        { "test://image/canine_512x512.jpg", 512, 512, 1, 1, 1, 1, 32, 1, 1, 0, Format::BASE_FORMAT_R8G8B8A8_UNORM,
+            TYPE_2D, VTYPE_2D, lrgb },
     };
 
     for (const auto& testInput : testImages) {

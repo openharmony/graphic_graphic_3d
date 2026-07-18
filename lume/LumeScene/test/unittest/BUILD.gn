@@ -74,7 +74,6 @@ ohos_unittest("lume_scene_api_test") {
     "${LUME_META_PATH}:lume_meta_api_config",
     "${LUME_RENDER_PATH}:lume_render_api",
     "${LUME_SCENE_PATH}:lume_scene_api_config",
-    "${LUME_SCENE_PATH}:lume_scene_importer_config",
     "${LUME_SCENE_PATH}:lume_scene_metadata_importer_config",
     "${LUME_PNG_PATH}:lume_png_api",
     "${LUME_JPG_PATH}:lume_jpg_api",
@@ -97,7 +96,6 @@ ohos_unittest("lume_scene_api_test") {
 
     # API
     "api_unit_test/src/api/effect_test.cpp",
-    "api_unit_test/src/api/resource_utils_test.cpp",
     "api_unit_test/src/api/scene_api_test.cpp",
     "api_unit_test/src/api/scene_import_test.cpp",
 
@@ -116,20 +114,12 @@ ohos_unittest("lume_scene_api_test") {
 
     # Core
     "api_unit_test/src/core/animation_test.cpp",
-    "api_unit_test/src/core/asset_object_test.cpp",
     "api_unit_test/src/core/create_object_test.cpp",
     "api_unit_test/src/core/ecs_object_test.cpp",
     "api_unit_test/src/core/image_test.cpp",
     "api_unit_test/src/core/postprocess_test.cpp",
     "api_unit_test/src/core/render_configuration_test.cpp",
     "api_unit_test/src/core/resource_type_test.cpp",
-
-    # Import
-    "api_unit_test/src/import/node_template_import_test.cpp",
-    "api_unit_test/src/import/object_ref_import_test.cpp",
-    "api_unit_test/src/import/resource_import_test.cpp",
-    "api_unit_test/src/import/resource_options_test.cpp",
-    "api_unit_test/src/import/scene_import_test.cpp",
 
     # Mesh
     "api_unit_test/src/mesh/material_test.cpp",
@@ -145,18 +135,10 @@ ohos_unittest("lume_scene_api_test") {
     "api_unit_test/src/node/node_test.cpp",
 
     # Scene
-    "api_unit_test/src/scene/legacy_options_compat_test.cpp",
     "api_unit_test/src/scene/scene_node_template_test.cpp",
     "api_unit_test/src/scene/scene_ser_compat_test.cpp",
     "api_unit_test/src/scene/scene_serialisation_test.cpp",
     "api_unit_test/src/scene/scene_test.cpp",
-
-    # Template
-    "api_unit_test/src/template/animation_template_test.cpp",
-    "api_unit_test/src/template/environment_template_test.cpp",
-    "api_unit_test/src/template/image_template_test.cpp",
-    "api_unit_test/src/template/material_template_test.cpp",
-    "api_unit_test/src/template/postprocess_template_test.cpp",
   ]
 
   # External deps

@@ -215,7 +215,7 @@ public:
      */
     META_EVENT(IOnChildChanged, OnContainerChanged)
 
-    template<class T>
+    template <class T>
     typename T::Ptr FindAny(BASE_NS::string_view name, TraversalType order) const
     {
         return interface_pointer_cast<T>(FindAny({BASE_NS::string(name), order, {T::UID}, false}));
@@ -223,7 +223,7 @@ public:
     /**
      * @brief A helper template for finding a child item in this container that matches the name.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr FindByName(BASE_NS::string_view name) const
     {
         return interface_pointer_cast<T>(FindByName(name));
@@ -232,7 +232,7 @@ public:
      * @brief A helper template for finding a child item in this container that matches the name and implements
      *        the interface given as a template parameter.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr FindAnyFromHierarchy(BASE_NS::string_view name) const
     {
         return interface_pointer_cast<T>(
@@ -241,7 +241,7 @@ public:
     /**
      * @brief Typed helper for IContainer::GetAll, returns all children which implement T.
      */
-    template<class T>
+    template <class T>
     BASE_NS::vector<typename T::Ptr> GetAll() const
     {
         return PtrArrayCast<T>(GetAll());
@@ -257,7 +257,7 @@ public:
     /**
      * @brief Typed helper for IContainer::GetAt, returns object at index converted to T::Ptr.
      */
-    template<class T>
+    template <class T>
     typename T::Ptr GetAt(SizeType index) const
     {
         return interface_pointer_cast<T>(GetAt(index));
@@ -265,7 +265,7 @@ public:
     /**
      * @brief Typed helper for IContainer::Add
      */
-    template<class T>
+    template <class T>
     bool Add(const T& object)
     {
         return Add(interface_pointer_cast<IObject>(object));
@@ -273,7 +273,7 @@ public:
     /**
      * @brief Typed helper for IContainer::Insert
      */
-    template<class T>
+    template <class T>
     bool Insert(SizeType index, const T& object)
     {
         return Insert(index, interface_pointer_cast<IObject>(object));
@@ -281,7 +281,7 @@ public:
     /**
      * @brief Typed helper for IContainer::Remove
      */
-    template<class T, class = BASE_NS::enable_if_t<IsInterfacePtr_v<T>>>
+    template <class T, class = BASE_NS::enable_if_t<IsInterfacePtr_v<T>>>
     bool Remove(const T& child)
     {
         return Remove(interface_pointer_cast<IObject>(child));
@@ -289,7 +289,7 @@ public:
     /**
      * @brief Typed helper for IContainer::Replace
      */
-    template<class T1, class T2>
+    template <class T1, class T2>
     bool Replace(const T1& child, const T2& replaceWith, bool addAlways = false)
     {
         return Replace(interface_pointer_cast<IObject>(child), interface_pointer_cast<IObject>(replaceWith), addAlways);
@@ -299,7 +299,7 @@ public:
 /**
  * @brief Typed helper for IContainer::GetAll. Returns all children which implement T from container.
  */
-template<class T>
+template <class T>
 BASE_NS::vector<typename T::Ptr> GetAll(const META_NS::IContainer::ConstPtr& container)
 {
     if (!container) {
@@ -318,7 +318,7 @@ BASE_NS::vector<typename T::Ptr> GetAll(const META_NS::IContainer::ConstPtr& con
  * @param child The child to find.
  * @return True if the child can be found in the container, false otherwise.
  */
-template<class T, class = BASE_NS::enable_if_t<IsInterfacePtr_v<T>>>
+template <class T, class = BASE_NS::enable_if_t<IsInterfacePtr_v<T>>>
 bool ContainsObject(const META_NS::IContainer::ConstPtr& container, const T& child)
 {
     bool found = false;

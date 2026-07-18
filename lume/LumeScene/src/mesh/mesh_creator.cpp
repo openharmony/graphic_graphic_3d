@@ -67,7 +67,7 @@ static IMesh::Ptr CreateMesh(const IInternalScene::Ptr& scene, CORE_NS::Entity e
     return mesh;
 }
 
-template<typename T>
+template <typename T>
 constexpr static CORE3D_NS::IMeshBuilder::DataBuffer FillData(const BASE_NS::vector<T>& c) noexcept
 {
     using namespace BASE_NS;

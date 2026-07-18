@@ -5,6 +5,7 @@
         "type": "nodeTemplate",
         "node": {
             "type": "external",
+            "name": "outer",
             "source": {
                 "type": "nodeTemplate",
                 "url": "node_template_att_child.json"

@@ -27,7 +27,7 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief Callable implementation for continuation functions used with futures.
  */
-template<typename Func>
+template <typename Func>
 class ContinuationFunction : public IntroduceInterfaces<IFutureContinuation> {
     META_INTERFACE(
         IntroduceInterfaces<IFutureContinuation>, ContinuationFunction, "f4736552-7365-4c8f-bbe9-a065e2c30382");
@@ -55,39 +55,39 @@ private:
  * @brief Create continuation function from callable entity (e.g. lambda).
  * The callable entity has to take IAny::Ptr as parameter which is the value from the future.
  */
-template<typename Func>
+template <typename Func>
 IFutureContinuation::Ptr CreateContinuation(Func func)
 {
     return IFutureContinuation::Ptr(new ContinuationFunction(BASE_NS::move(func)));
 }
 
-template<typename Param>
+template <typename Param>
 struct ContinuationTypedFuntionTypeImpl {
     using Type = void(Param);
 };
 
-template<>
+template <>
 struct ContinuationTypedFuntionTypeImpl<void> {
     using Type = void();
 };
 
-template<typename Param>
+template <typename Param>
 using ContinuationTypedFuntionType = typename ContinuationTypedFuntionTypeImpl<Param>::Type;
 
-template<typename Func, typename Param>
+template <typename Func, typename Param>
 struct ResultTypeImpl {
     using Type = decltype(BASE_NS::declval<Func>()(BASE_NS::declval<Param>()));
 };
 
-template<typename Func>
+template <typename Func>
 struct ResultTypeImpl<Func, void> {
     using Type = decltype(BASE_NS::declval<Func>()());
 };
 
-template<typename Func, typename ParamType>
+template <typename Func, typename ParamType>
 using ResultType = typename ResultTypeImpl<Func, ParamType>::Type;
 
-template<typename Result, typename Param, typename Func>
+template <typename Result, typename Param, typename Func>
 Result CallResultHelper(Func func, const IAny::Ptr& v)
 {
     if constexpr (!BASE_NS::is_same_v<Param, void>) {
@@ -106,7 +106,7 @@ Result CallResultHelper(Func func, const IAny::Ptr& v)
     }
 }
 
-template<typename Type>
+template <typename Type>
 class Future {
 public:
     using StateType = IFuture::StateType;
@@ -142,13 +142,13 @@ public:
         return Then(func, nullptr);
     }
     /// Helper function which enables specifying the continuation task as a lambda function
-    template<typename Func, typename = EnableIfCanInvokeWithArguments<Func, IFutureContinuation::FunctionType>>
+    template <typename Func, typename = EnableIfCanInvokeWithArguments<Func, IFutureContinuation::FunctionType>>
     auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue) -> Future<decltype(func(nullptr))>
     {
         return fut_ ? fut_->Then(CreateContinuation(func), queue) : nullptr;
     }
     /// Helper function which enables specifying the continuation task as a lambda function
-    template<typename Func, typename ParamType = Type,
+    template <typename Func, typename ParamType = Type,
         typename = EnableIfCanInvokeWithArguments<Func, ContinuationTypedFuntionType<ParamType>>>
     auto Then(Func func, const BASE_NS::shared_ptr<ITaskQueue>& queue, int = 0) -> Future<ResultType<Func, ParamType>>
     {
@@ -159,7 +159,7 @@ public:
         return fut_ ? fut_->Then(cont, queue) : nullptr;
     }
     /// Helper function which enables specifying the continuation task as a lambda function
-    template<typename Func>
+    template <typename Func>
     auto Then(Func func)
     {
         return Then(BASE_NS::move(func), nullptr);
@@ -190,7 +190,7 @@ private:
     IFuture::Ptr fut_;
 };
 
-template<typename Type>
+template <typename Type>
 Type GetResultOr(const Future<Type>& f, NonDeduced_t<Type> def)
 {
     auto fut = f.GetFuture();

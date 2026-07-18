@@ -2,7 +2,6 @@
 	"version": "1.0",
 	"data": {
 		"type": "image",
-		"name": "MyImage",
 		"loadFlags": ["generateMips", "forceSrgb"],
 		"info": {
 			"usageFlags": ["sampled", "transferDestination"],

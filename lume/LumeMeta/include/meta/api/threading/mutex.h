@@ -78,7 +78,7 @@ private:
 /**
  * @brief General-purpose mutex ownership wrapper, allows to transfer ownership by moving.
  */
-template<class Mutex>
+template <class Mutex>
 class UniqueLock {
 public:
     META_NO_COPY(UniqueLock)

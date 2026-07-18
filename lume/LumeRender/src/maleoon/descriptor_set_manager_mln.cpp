@@ -37,7 +37,7 @@ MlnBindingType ToMlnBindingType(DescriptorType type)
     return static_cast<MlnBindingType>(type);
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 DescriptorSetManagerMln::DescriptorSetManagerMln(Device& device) : DescriptorSetManager(device)
 {
@@ -99,10 +99,8 @@ void DescriptorSetManagerMln::BeginBackendFrame()
 void DescriptorSetManagerMln::CreateDescriptorSets(const uint32_t arrayIndex, const uint32_t descriptorSetCount,
     const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
 {
-    MLN_LOG_GRAPH("DescriptorSetManagerMln::CreateDescriptorSets (arrayIdx=%u, count=%u, bindings=%zu)",
-        arrayIndex,
-        descriptorSetCount,
-        descriptorSetLayoutBindings.size());
+    MLN_LOG_GRAPH("DescriptorSetManagerMln::CreateDescriptorSets (arrayIdx=%u, count=%u, bindings=%zu)", arrayIndex,
+        descriptorSetCount, descriptorSetLayoutBindings.size());
     // Ensure gpuDescriptorSets_ is sized to match base class descriptorSets_
     if (arrayIndex >= gpuDescriptorSets_.size()) {
         gpuDescriptorSets_.resize(arrayIndex + 1);
@@ -211,7 +209,7 @@ bool DescriptorSetManagerMln::UpdateDescriptorSetGpuHandle(const RenderHandle& h
         if (gpuSet.dirtyFramesRemaining > 0) {
             gpuSet.dirtyFramesRemaining--;
         }
-        return true;  // needs GPU update
+        return true; // needs GPU update
     }
     return false;
 }

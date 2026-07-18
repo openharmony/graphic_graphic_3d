@@ -54,10 +54,8 @@ public:
 protected:
     bool ValidateResourceType(const CORE_NS::IResource& res) const override;
 
-    // Override the apply to handle animation-specific property mappings. Animation does not
-    // use the asDefault flag — its property/modifier/container application is identical for the
-    // standalone and ApplyOptions paths.
-    bool ApplyToTarget(META_NS::IObject& target, bool asDefault) const override;
+    // Override ApplyTo to handle animation-specific property mappings.
+    bool ApplyTo(META_NS::IObject& target) const override;
 
 private:
     static void ApplyDuration(const META_NS::IMetadata& meta, META_NS::IAnimation& anim);

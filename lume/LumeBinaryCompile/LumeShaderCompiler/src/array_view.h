@@ -23,7 +23,7 @@
 
 /** @ingroup group_containers_arrayview */
 /** Array view */
-template<class T>
+template <class T>
 class array_view {
 public:
     struct Iterator {
@@ -87,17 +87,17 @@ public:
     }
     constexpr array_view(pointer aBegin, size_type aSize) noexcept : begin_(aBegin), size_(aSize), end_(aBegin + aSize)
     {}
-    template<size_t N>
+    template <size_t N>
     constexpr explicit array_view(value_type (&arr)[N]) noexcept : begin_(arr), size_(N), end_(arr + N)
     {}
-    template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, U>::value>>
+    template <class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, U>::value>>
     constexpr explicit array_view(const array_view<U>& other) noexcept
         : begin_(other.begin_), size_(other.size_), end_(other.end_)
     {}
-    template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
+    template <class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
     constexpr explicit array_view(U& container) noexcept : array_view(container.data(), container.size())
     {}
-    template<class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
+    template <class U, class = std::enable_if_t<std::is_same<std::remove_const_t<T>, typename U::value_type>::value>>
     constexpr array_view(const U& container) noexcept : array_view(container.data(), container.size())
     {}
     ~array_view() = default;
@@ -171,7 +171,7 @@ public:
     }
 
 private:
-    template<class U>
+    template <class U>
     friend class array_view;
 
     pointer begin_;
@@ -179,18 +179,18 @@ private:
     pointer end_;
 };
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr size_t countof(T (&)[N]) noexcept
 {
     return N;
 }
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr array_view<T> arrayview(T (&arr)[N]) noexcept
 {
     return array_view<T>(arr, N);
 }
 // Returns a const uint8_t array_view of any object.
-template<typename T>
+template <typename T>
 constexpr array_view<const uint8_t> arrayviewU8(const T& arr) noexcept
 {
     return array_view(reinterpret_cast<const uint8_t*>(&arr), sizeof(arr));

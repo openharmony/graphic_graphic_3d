@@ -1174,7 +1174,6 @@ UNIT_TEST_F(API_ScenePlugin, EditorSceneLoad, testing::ext::TestSize.Level1)
     }
 }
 
-#ifndef __OHOS__
 /**
  * @tc.name: JsonImporterV1DispatchLoads
  * @tc.desc: project.json with importVersion "JsonImporter v1" routes to the new
@@ -1199,7 +1198,6 @@ UNIT_TEST_F(API_ScenePlugin, JsonImporterV1DispatchLoads, testing::ext::TestSize
     EXPECT_TRUE(info.id.IsValid());
     EXPECT_EQ(info.type, SCENE_NS::ClassId::MaterialResource.Id().ToUid());
 }
-#endif
 
 /**
  * @tc.name: JsonImporterV1DispatchVersionMismatch

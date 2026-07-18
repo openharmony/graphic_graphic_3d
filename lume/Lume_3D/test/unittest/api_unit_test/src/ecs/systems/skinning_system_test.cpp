@@ -16,8 +16,6 @@
 #include <algorithm>
 
 #include <3d/ecs/components/joint_matrices_component.h>
-#include <3d/ecs/components/mesh_component.h>
-#include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/skin_component.h>
 #include <3d/ecs/components/skin_ibm_component.h>
 #include <3d/ecs/components/skin_joints_component.h>
@@ -26,7 +24,6 @@
 #include <3d/util/intf_mesh_util.h>
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
-#include <base/containers/vector.h>
 #include <base/math/matrix_util.h>
 #include <base/math/quaternion_util.h>
 #include <base/math/vector_util.h>
@@ -178,46 +175,6 @@ UNIT_TEST(API_EcsSkinningSystem, CreateInvalidInstanceTest, testing::ext::TestSi
 }
 
 /**
- * @tc.name: CreateInstanceJointCountClampedTest
- * @tc.desc: A skin with more joints than the fixed array must not write out of bounds.
- * @tc.type: FUNC
- */
-UNIT_TEST(API_EcsSkinningSystem, CreateInstanceJointCountClampedTest, testing::ext::TestSize.Level1)
-{
-    UTest::TestContext* testContext = UTest::GetTestContext();
-    auto ecs = testContext->ecs;
-
-    auto skinningSystem = GetSystem<ISkinningSystem>(*ecs);
-    ASSERT_NE(nullptr, skinningSystem);
-    auto skinJointsManager = GetManager<ISkinJointsComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinJointsManager);
-    auto skinIbmManager = GetManager<ISkinIbmComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinIbmManager);
-
-    // Far more joints than the fixed jointEntities array can hold; matrices and joints sizes match
-    // so the bone-count check passes, exercising the unclamped count = matrices.size() write.
-    constexpr size_t hugeJointCount = 1024u;
-    Entity entity = ecs->GetEntityManager().Create();
-    Entity skeleton = ecs->GetEntityManager().Create();
-    Entity skinIbm = ecs->GetEntityManager().Create();
-    Entity joint = ecs->GetEntityManager().Create();
-
-    skinIbmManager->Create(skinIbm);
-    if (auto scopedHandle = skinIbmManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->matrices.resize(hugeJointCount);
-    }
-
-    vector<Entity> joints(hugeJointCount, joint);
-    skinningSystem->CreateInstance(skinIbm, {joints.data(), joints.size()}, entity, skeleton);
-
-    // The instance is created and its joint count is clamped to the fixed array capacity.
-    ASSERT_TRUE(skinJointsManager->HasComponent(entity));
-    if (auto scopedHandle = skinJointsManager->Read(entity); scopedHandle) {
-        EXPECT_LE(scopedHandle->count, countof(scopedHandle->jointEntities));
-    }
-}
-
-/**
  * @tc.name: SkinTasksTest
  * @tc.desc: Tests for Skin Tasks Test. [AUTO-GENERATED]
  * @tc.type: FUNC
@@ -294,142 +251,4 @@ UNIT_TEST(API_EcsSkinningSystem, SkinTasksTest, testing::ext::TestSize.Level1)
             }
         }
     }
-}
-
-/**
- * @tc.name: UpdateJointBoundsOverflowTest
- * @tc.desc: An oversized MeshComponent::jointBounds vector must not drive an out-of-bounds access on the fixed-size
- *           JointMatricesComponent arrays during skinning Update.
- * @tc.type: FUNC
- */
-UNIT_TEST(API_EcsSkinningSystem, UpdateJointBoundsOverflowTest, testing::ext::TestSize.Level1)
-{
-    UTest::TestContext* testContext = UTest::GetTestContext();
-    auto ecs = testContext->ecs;
-
-    auto skinningSystem = GetSystem<ISkinningSystem>(*ecs);
-    ASSERT_NE(nullptr, skinningSystem);
-    skinningSystem->SetActive(true);
-
-    auto skinJointsManager = GetManager<ISkinJointsComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinJointsManager);
-    auto skinIbmManager = GetManager<ISkinIbmComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinIbmManager);
-    auto jointMatricesManager = GetManager<IJointMatricesComponentManager>(*ecs);
-    ASSERT_NE(nullptr, jointMatricesManager);
-    auto worldMatrixManager = GetManager<IWorldMatrixComponentManager>(*ecs);
-    ASSERT_NE(nullptr, worldMatrixManager);
-    auto renderMeshManager = GetManager<IRenderMeshComponentManager>(*ecs);
-    ASSERT_NE(nullptr, renderMeshManager);
-    auto meshManager = GetManager<IMeshComponentManager>(*ecs);
-    ASSERT_NE(nullptr, meshManager);
-
-    constexpr uint32_t numJoints = 16u;
-
-    Entity entity = ecs->GetEntityManager().Create();
-    Entity skeleton = ecs->GetEntityManager().Create();
-    Entity skinIbm = ecs->GetEntityManager().Create();
-
-    Entity joint = ecs->GetEntityManager().Create();
-    worldMatrixManager->Create(joint);
-    if (auto scopedHandle = worldMatrixManager->Write(joint); scopedHandle) {
-        scopedHandle->matrix = Math::Mat4X4{1.0f};
-    }
-
-    skinIbmManager->Create(skinIbm);
-    if (auto scopedHandle = skinIbmManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->matrices.resize(numJoints, Math::Mat4X4{1.0f});
-    }
-    skinJointsManager->Create(skinIbm);
-    if (auto scopedHandle = skinJointsManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->count = numJoints;
-        for (uint32_t i = 0; i < numJoints; ++i) {
-            scopedHandle->jointEntities[i] = joint;
-        }
-    }
-
-    skinningSystem->CreateInstance(skinIbm, entity, skeleton);
-    ASSERT_TRUE(jointMatricesManager->HasComponent(entity));
-
-    // Mesh with far more jointBounds joints (6 floats each) than the fixed JointMatricesComponent arrays hold.
-    Entity mesh = ecs->GetEntityManager().Create();
-    meshManager->Create(mesh);
-    if (auto scopedHandle = meshManager->Write(mesh); scopedHandle) {
-        const size_t overflowBounds = (static_cast<size_t>(CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT) + 64u) * 6u;
-        scopedHandle->jointBounds.resize(overflowBounds, 0.0f);
-    }
-    renderMeshManager->Create(entity);
-    if (auto scopedHandle = renderMeshManager->Write(entity); scopedHandle) {
-        scopedHandle->mesh = mesh;
-    }
-
-    // Must not read/write out of bounds; the joint count stays clamped to the skin's.
-    skinningSystem->Update(true, 1u, 1u);
-
-    if (auto scopedHandle = jointMatricesManager->Read(entity); scopedHandle) {
-        EXPECT_EQ(static_cast<size_t>(numJoints), scopedHandle->count);
-    }
-}
-
-/**
- * @tc.name: CreateInstanceThreeArgJointCountOverflowTest
- * @tc.desc: The three-argument CreateInstance must clamp the unbounded source SkinJointsComponent::count when
- *           building the validation view and copying, never reading/writing past the fixed jointEntities array.
- * @tc.type: FUNC
- */
-UNIT_TEST(API_EcsSkinningSystem, CreateInstanceThreeArgJointCountOverflowTest, testing::ext::TestSize.Level1)
-{
-    UTest::TestContext* testContext = UTest::GetTestContext();
-    auto ecs = testContext->ecs;
-
-    auto skinningSystem = GetSystem<ISkinningSystem>(*ecs);
-    ASSERT_NE(nullptr, skinningSystem);
-
-    auto skinManager = GetManager<ISkinComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinManager);
-    auto skinJointsManager = GetManager<ISkinJointsComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinJointsManager);
-    auto skinIbmManager = GetManager<ISkinIbmComponentManager>(*ecs);
-    ASSERT_NE(nullptr, skinIbmManager);
-
-    // One past the fixed jointEntities capacity.
-    const size_t overflowCount = static_cast<size_t>(CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT) + 1u;
-
-    Entity skeleton = ecs->GetEntityManager().Create();
-    Entity skinIbm = ecs->GetEntityManager().Create();
-    Entity joint = ecs->GetEntityManager().Create();
-
-    skinIbmManager->Create(skinIbm);
-    if (auto scopedHandle = skinIbmManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->matrices.resize(overflowCount);
-    }
-    // Force count past the array capacity; only the in-bounds slots are written.
-    skinJointsManager->Create(skinIbm);
-    if (auto scopedHandle = skinJointsManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->count = overflowCount;
-        for (uint32_t i = 0; i < CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT; ++i) {
-            scopedHandle->jointEntities[i] = joint;
-        }
-    }
-
-    // The clamped 256-joint view no longer matches the 257 matrices, so the instance is rejected (no OOB read/copy).
-    Entity entity3 = ecs->GetEntityManager().Create();
-    skinningSystem->CreateInstance(skinIbm, entity3, skeleton);
-    EXPECT_FALSE(skinManager->HasComponent(entity3));
-    EXPECT_FALSE(skinJointsManager->HasComponent(entity3));
-
-    // A source whose count and matrices are both exactly at the capacity is valid and must instance.
-    if (auto scopedHandle = skinIbmManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->matrices.resize(CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT);
-    }
-    if (auto scopedHandle = skinJointsManager->Write(skinIbm); scopedHandle) {
-        scopedHandle->count = CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT;
-    }
-    Entity entityOk = ecs->GetEntityManager().Create();
-    skinningSystem->CreateInstance(skinIbm, entityOk, skeleton);
-    EXPECT_TRUE(skinManager->HasComponent(entityOk));
-    if (auto scopedHandle = skinJointsManager->Read(entityOk); scopedHandle) {
-        EXPECT_EQ(static_cast<size_t>(CORE_DEFAULT_MATERIAL_MAX_JOINT_COUNT), scopedHandle->count);
-    }
-    skinningSystem->DestroyInstance(entityOk);
 }

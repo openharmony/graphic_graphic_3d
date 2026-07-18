@@ -15,12 +15,9 @@
 
 #include "import_any.h"
 
-#include <core/json/json.h>
-
 #include <meta/api/array_util.h>
 #include <meta/base/type_traits.h>
 #include <meta/interface/detail/any.h>
-#include <meta/interface/resource/intf_resource.h>
 
 #include "import_context.h"
 #include "import_helpers.h"
@@ -31,7 +28,7 @@
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
-template<typename Type, typename Option, typename... Options>
+template <typename Type, typename Option, typename... Options>
 static bool SetNumberValue(META_NS::IAny& any, const Type& v)
 {
     if (META_NS::IsSetCompatible(any, META_NS::GetTypeId<Option>())) {
@@ -70,47 +67,27 @@ static IDiagnostics::Ptr SetArray(ImportContext& context, META_NS::IAny& any, co
         "Failed to import array property (element type mismatch or missing 'values' array)");
 }
 
-IDiagnostics::Ptr ReadObjectIdent(ImportContext& context, ObjectIdent& out)
-{
-    out.type = context.GetOptString("type");
-    out.objectUid = GetOptObjectId(context, "objectUid");
-    return out.objectUid.error;
-}
-
-IDiagnostics::Ptr MatchClassId(ImportContext& context, const META_NS::IObject& obj, const ObjectIdent& ident)
-{
-    if (!ident.objectUid.value) {
-        return nullptr;
-    }
-    const auto& expected = *ident.objectUid.value;
-    auto actual = obj.GetClassId();
-    if (actual == expected) {
-        return nullptr;
-    }
-    CORE_LOG_E("Annotated objectUid does not match live object class (annotated: %s, actual: %s)",
-        expected.ToString().c_str(),
-        actual.ToString().c_str());
-    return context.CreateDiagnostics("Annotated objectUid '" + expected.ToString() +
-                                     "' does not match live object class '" + actual.ToString() + "'");
-}
-
 ImportResult ImportObject(ImportContext& context)
 {
     ErrorHandler h(context);
-    ObjectIdent ident;
-    if (auto err = ReadObjectIdent(context, ident); h.Handle(err)) {
-        return ImportResult{err};
+    auto type = context.GetOptString("type");
+    auto id = GetOptObjectId(context, "objectUid");
+    if (h.HandleOptValue(id)) {
+        if (id.error) {
+            return ImportResult{id.error};
+        }
     }
-    if (ident.type.empty() && !ident.objectUid.value) {
+    if (type.empty() && !id.value) {
         CORE_LOG_E("Object missing both 'type' and 'objectUid'");
         return ImportResult{context.CreateDiagnostics("Object missing both 'type' and 'objectUid'")};
     }
-    if (ident.objectUid.value) {
-        auto obj = META_NS::GetObjectRegistry().Create(*ident.objectUid.value);
+    if (id.value) {
+        auto obj = META_NS::GetObjectRegistry().Create(*id.value);
         if (!obj) {
-            CORE_LOG_E("Failed to create attachment (id: %s)", ident.objectUid.value->ToString().c_str());
-            return ImportResult{
-                context.CreateDiagnostics("Failed to create attachment: " + ident.objectUid.value->ToString())};
+            CORE_LOG_E(
+                "Failed to create attachment (id: %s)", id.value.value_or(META_NS::ObjectId{}).ToString().c_str());
+            return ImportResult{context.CreateDiagnostics(
+                "Failed to create attachment: " + id.value.value_or(META_NS::ObjectId{}).ToString())};
         }
         if (auto err = ImportProperties(context, *obj); h.Handle(err)) {
             return ImportResult{err};
@@ -119,33 +96,7 @@ ImportResult ImportObject(ImportContext& context)
         result.error = h;
         return result;
     }
-    return context.ImportSubType(ident.type, context.GetJsonValue());
-}
-
-// A resourceId builtin can target a resource-pointer property (a material/image/shader/mesh
-// slot). The raw id cannot be assigned to a pointer any, so resolve it through the resource
-// manager and assign the live resource instead. `handled` is set when the builtin actually
-// carried a valid resourceId, regardless of whether resolving it succeeded.
-static IDiagnostics::Ptr SetResourceIdPointer(
-    ImportContext& context, IBuiltinContainer& builtin, META_NS::IAny& any, bool& handled)
-{
-    handled = false;
-    CORE_NS::ResourceId rid;
-    auto src = builtin.GetAny();
-    if (!src || !src->GetValue(rid) || !rid.IsValid()) {
-        return nullptr;
-    }
-    handled = true;
-    auto resource = ResolveDeferredResource(context.GetImportParameters(), context.GetRenderContext(), rid);
-    if (!resource) {
-        CORE_LOG_E("No such resource: %s", rid.ToString().c_str());
-        return context.CreateDiagnostics("No such resource: " + rid.ToString());
-    }
-    if (!META_NS::SetPointer(any, interface_pointer_cast<CORE_NS::IInterface>(resource))) {
-        CORE_LOG_E("Mismatch of property type (resourceId '%s')", rid.ToString().c_str());
-        return context.CreateDiagnostics("Mismatch of property type (resourceId '" + rid.ToString() + "')");
-    }
-    return nullptr;
+    return context.ImportSubType(type, context.GetJsonValue());
 }
 
 static IDiagnostics::Ptr SetObject(ImportContext& context, META_NS::IAny& any)
@@ -158,14 +109,10 @@ static IDiagnostics::Ptr SetObject(ImportContext& context, META_NS::IAny& any)
         if (object->SetToAny(any)) {
             return res.error;
         }
-        // SetToAny fails when a resourceId builtin targets a resource-pointer property:
-        // resolve the id to a live resource and assign that instead.
-        bool handled = false;
-        if (auto err = SetResourceIdPointer(context, *object, any, handled); handled) {
-            return err;
+    } else {
+        if (META_NS::SetPointer(any, interface_pointer_cast<CORE_NS::IInterface>(res.object))) {
+            return res.error;
         }
-    } else if (META_NS::SetPointer(any, interface_pointer_cast<CORE_NS::IInterface>(res.object))) {
-        return res.error;
     }
     CORE_LOG_E("Mismatch of property type");
     return context.CreateDiagnostics("Mismatch of property type");
@@ -174,7 +121,7 @@ static IDiagnostics::Ptr SetObject(ImportContext& context, META_NS::IAny& any)
 IDiagnostics::Ptr SetAnyValue(ImportContext& context, META_NS::IAny& any, const CORE_NS::json::value& value)
 {
     if (value.is_string()) {
-        if (any.SetValue(CORE_NS::json::unescape(value.string_))) {
+        if (any.SetValue(BASE_NS::string(value.string_))) {
             return nullptr;
         }
     } else if (value.is_boolean()) {
@@ -241,11 +188,7 @@ static IDiagnostics::Ptr GetObject(ImportContext& context, META_NS::IAny::Ptr& r
     if (!res) {
         return res.error;
     }
-    if (auto bc = interface_cast<IBuiltinContainer>(res.object)) {
-        result = bc->GetAny();
-    } else {
-        result = META_NS::ConstructAny<META_NS::IObject::Ptr>(BASE_NS::move(res.object));
-    }
+    result = META_NS::ConstructAny<META_NS::IObject::Ptr>(BASE_NS::move(res.object));
     return res.error;
 }
 

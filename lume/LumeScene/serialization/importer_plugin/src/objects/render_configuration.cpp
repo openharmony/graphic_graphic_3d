@@ -43,7 +43,7 @@ constexpr NamedValue<SCENE_NS::SceneShadowSmoothness> SHADOW_SMOOTHNESS_TABLE[] 
 };
 // clang-format on
 
-template<typename Enum, size_t N>
+template <typename Enum, size_t N>
 IDiagnostics::Ptr ApplyEnum(ImportContext& ctx, BASE_NS::string_view jsonName, const NamedValue<Enum> (&table)[N],
     const META_NS::Property<Enum>& target)
 {
@@ -63,7 +63,7 @@ IDiagnostics::Ptr ApplyEnum(ImportContext& ctx, BASE_NS::string_view jsonName, c
     return h;
 }
 
-template<typename T, typename V>
+template <typename T, typename V>
 IDiagnostics::Ptr ApplyValue(ErrorHandler& h, OptValue<V> value, const META_NS::Property<T>& target)
 {
     if (!h.HandleOptValue(value)) {
@@ -93,7 +93,7 @@ IDiagnostics::Ptr ImportShadowSettings(ImportContext& ctx, SCENE_NS::IRenderConf
     if (auto err = ApplyValue(h, GetOptFloat(ctx, "variablePcfRadius"), rc.VariablePcfRadius())) {
         return err;
     }
-    if (auto err = ApplyValue(h, GetOptUInt(ctx, "variablePcfSampleCount"), rc.VariablePcfSampleCount())) {
+    if (auto err = ApplyValue(h, GetOptInt(ctx, "variablePcfSampleCount"), rc.VariablePcfSampleCount())) {
         return err;
     }
     return nullptr;

@@ -2,7 +2,6 @@
 	"version": "1.0",
 	"data": {
 		"type": "metallicRoughnessMaterial",
-		"name": "MyMaterial",
 		"alphaCutoff": 0.5,
 		"lightingFlags": ["shadowCaster"],
 		"renderSort": {

@@ -40,52 +40,10 @@
 							}
 						},
 						{
-							"name": "UVec3",
-							"value": {
-								"type": "uvec3",
-								"value": [10, 20, 30]
-							}
-						},
-						{
-							"name": "UVec4",
-							"value": {
-								"type": "uvec4",
-								"value": [11, 22, 33, 44]
-							}
-						},
-						{
-							"name": "IVec2",
-							"value": {
-								"type": "ivec2",
-								"value": [-1, 2]
-							}
-						},
-						{
-							"name": "IVec3",
-							"value": {
-								"type": "ivec3",
-								"value": [-1, 2, -3]
-							}
-						},
-						{
-							"name": "IVec4",
-							"value": {
-								"type": "ivec4",
-								"value": [-1, 2, -3, 4]
-							}
-						},
-						{
 							"name": "Mat4x4",
 							"value": {
 								"type": "mat4x4",
 								"value": [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 1]]
-							}
-						},
-						{
-							"name": "Duration",
-							"value": {
-								"type": "timeSpan",
-								"value": 1500
 							}
 						}
 					]

@@ -30,7 +30,7 @@ META_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template<typename Type>
+template <typename Type>
 static Type ReadValueFromEngine(const EnginePropertyParams& params)
 {
     Type res{};

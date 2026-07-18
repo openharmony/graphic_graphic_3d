@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#define JSON2_IMPL
 #include "json_input.h"
 
 #include <base/containers/vector.h>
@@ -30,22 +29,18 @@ META_BEGIN_NAMESPACE()
 
 namespace Serialization {
 
-namespace json = CORE_NS::json2;
-
 constexpr Version CURRENT_JSON_VERSION(2, 0);
 constexpr int UID_SIZE = 36;
 
-ISerNode::Ptr JsonInput::ImportRef(const json::view& ref)
+ISerNode::Ptr JsonInput::ImportRef(const json::value& ref)
 {
     if (ref.is_string()) {
         RefUri uri;
-        // as_string() returns the unescaped value
-        const auto str = ref.as_string();
         // check for backward compatibility
-        if (str.substr(0, 4) == "ref:") {
-            uri = RefUri(str);
+        if (ref.string_.substr(0, 4) == "ref:") {
+            uri = RefUri(CORE_NS::json::unescape(ref.string_));
         } else {
-            uri.SetBaseObjectUid(BASE_NS::StringToUid(str));
+            uri.SetBaseObjectUid(BASE_NS::StringToUid(CORE_NS::json::unescape(ref.string_)));
         }
         if (uri.IsValid()) {
             return ISerNode::Ptr(new RefNode(BASE_NS::move(uri)));
@@ -54,26 +49,23 @@ ISerNode::Ptr JsonInput::ImportRef(const json::view& ref)
     return nullptr;
 }
 
-BASE_NS::string ReadString(BASE_NS::string_view name, const json::view& value)
+BASE_NS::string ReadString(BASE_NS::string_view name, const json::value& value)
 {
     BASE_NS::string str;
-    if (const auto v = value.find(name)) {
+    if (const auto& v = value.find(name)) {
         if (v->is_string()) {
-            str = v->as_string();
+            str = CORE_NS::json::unescape(v->string_);
         }
     }
     return str;
 }
 
-BASE_NS::Uid ReadUid(BASE_NS::string_view name, const json::view& value)
+BASE_NS::Uid ReadUid(BASE_NS::string_view name, const json::value& value)
 {
     BASE_NS::Uid uid;
-    if (const auto id = value.find(name)) {
-        if (id->is_string()) {
-            const auto str = id->as_string();
-            if (str.size() == UID_SIZE) {
-                uid = BASE_NS::StringToUid(str);
-            }
+    if (const auto& id = value.find(name)) {
+        if (id->is_string() && id->string_.size() == UID_SIZE) {
+            uid = BASE_NS::StringToUid(id->string_);
         }
     }
     return uid;
@@ -84,7 +76,7 @@ static bool IsValidName(const BASE_NS::string_view& name)
     return !name.empty() && name[0] != '$';
 }
 
-ISerNode::Ptr JsonInput::ImportObject(const json::view& value)
+ISerNode::Ptr JsonInput::ImportObject(const json::value& value)
 {
     BASE_NS::string className = ReadString(ClassNameName, value);
     BASE_NS::string name = ReadString(NameName, value);
@@ -92,8 +84,8 @@ ISerNode::Ptr JsonInput::ImportObject(const json::view& value)
     InstanceId iid = ReadUid(InstanceIdName, value);
 
     BASE_NS::vector<NamedNode> members;
-    for (auto&& p : value.as_object()) {
-        auto key = RewriteReservedName(p.escapedKey.escaped);
+    for (auto&& p : value.object_) {
+        auto key = RewriteReservedName(p.key);
         if (!IsValidName(key)) {
             // Skip empty keys and keys starting with $
             continue;
@@ -112,7 +104,7 @@ ISerNode::Ptr JsonInput::ImportObject(const json::view& value)
     return map;
 }
 
-ISerNode::Ptr JsonInput::ImportArray(const json::view::array_t& arr)
+ISerNode::Ptr JsonInput::ImportArray(const json::value::array& arr)
 {
     BASE_NS::vector<ISerNode::Ptr> nodes;
     nodes.reserve(arr.size());
@@ -126,7 +118,7 @@ ISerNode::Ptr JsonInput::ImportArray(const json::view::array_t& arr)
     return ISerNode::Ptr(new ArrayNode(BASE_NS::move(nodes)));
 }
 
-ISerNode::Ptr JsonInput::Import(const json::view& value)
+ISerNode::Ptr JsonInput::Import(const json::value& value)
 {
     static constexpr uint32_t MAX_DEPTH = 256u;
 
@@ -136,21 +128,21 @@ ISerNode::Ptr JsonInput::Import(const json::view& value)
     }
     ISerNode::Ptr result;
 
-    switch (value.type()) {
+    switch (value.type) {
         case json::type::boolean:
-            result = ISerNode::Ptr(new BoolNode(value.as_boolean()));
+            result = ISerNode::Ptr(new BoolNode(value.boolean_));
             break;
         case json::type::floating_point:
-            result = ISerNode::Ptr(new DoubleNode(value.as_strict_floating_point()));
+            result = ISerNode::Ptr(new DoubleNode(value.float_));
             break;
         case json::type::signed_int:
-            result = ISerNode::Ptr(new IntNode(value.as_strict_signed_int()));
+            result = ISerNode::Ptr(new IntNode(value.signed_));
             break;
         case json::type::unsigned_int:
-            result = ISerNode::Ptr(new UIntNode(value.as_strict_unsigned_int()));
+            result = ISerNode::Ptr(new UIntNode(value.unsigned_));
             break;
         case json::type::string:
-            result = ISerNode::Ptr(new StringNode(value.as_string()));
+            result = ISerNode::Ptr(new StringNode(CORE_NS::json::unescape(value.string_)));
             break;
         case json::type::object:
             if (auto ref = value.find("$ref")) {
@@ -160,7 +152,7 @@ ISerNode::Ptr JsonInput::Import(const json::view& value)
             }
             break;
         case json::type::array:
-            result = ImportArray(value.as_array());
+            result = ImportArray(value.array_);
             break;
         case json::type::null:
             result = ISerNode::Ptr(new NilNode);
@@ -173,11 +165,11 @@ ISerNode::Ptr JsonInput::Import(const json::view& value)
     return result;
 }
 
-bool JsonInput::ReadMetadata(const json::view& value)
+bool JsonInput::ReadMetadata(const json::value& value)
 {
     if (auto v = value.find("meta-version")) {
         if (v->is_string()) {
-            auto ver = Version(v->as_string());
+            auto ver = Version(CORE_NS::json::unescape(v->string_));
             if (ver == Version()) {
                 CORE_LOG_E(
                     "Invalid file version: %s != %s", ver.ToString().c_str(), CURRENT_JSON_VERSION.ToString().c_str());
@@ -187,14 +179,15 @@ bool JsonInput::ReadMetadata(const json::view& value)
         }
     }
     if (metaVersion_ != Version()) {
-        for (auto&& v : value.as_object()) {
+        for (auto&& v : value.object_) {
             if (v.value.is_string()) {
-                metadata_.push_back(SerMetadataEntity{BASE_NS::string(v.escapedKey.escaped), v.value.as_string()});
+                metadata_.push_back(
+                    SerMetadataEntity{BASE_NS::string(v.key), CORE_NS::json::unescape(v.value.string_)});
             }
         }
     } else {
         if (auto v = value.find("version")) {
-            if (v->is_string() && Version(v->as_string()) == Version(1, 0)) {
+            if (v->is_string() && Version(CORE_NS::json::unescape(v->string_)) == Version(1, 0)) {
                 metaVersion_ = Version(1, 0);
             }
         }
@@ -202,7 +195,7 @@ bool JsonInput::ReadMetadata(const json::view& value)
     return true;
 }
 
-ISerNode::Ptr JsonInput::ImportRootObject(const json::view& value)
+ISerNode::Ptr JsonInput::ImportRootObject(const json::value& value)
 {
     // see if we have meta data
     if (auto v = value.find("$meta")) {
@@ -211,7 +204,7 @@ ISerNode::Ptr JsonInput::ImportRootObject(const json::view& value)
         }
     }
 
-    json::view root;
+    json::value root;
 
     // is it legacy version?
     if (metaVersion_ == Version{}) {
@@ -234,7 +227,7 @@ ISerNode::Ptr JsonInput::Process(BASE_NS::string_view data)
 {
     depth_ = 0;
     ISerNode::Ptr res;
-    auto json = json::parse(data);
+    auto json = CORE_NS::json::parse(data.data());
     if (json.is_object()) {
         res = ImportRootObject(json);
     }

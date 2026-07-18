@@ -27,7 +27,7 @@ namespace Details {
 /**
  * @brief Generic capture conversion.
  */
-template<typename Type>
+template <typename Type>
 Type&& CaptureWrap(Type&& obj)
 {
     return BASE_NS::forward<Type>(obj);
@@ -36,7 +36,7 @@ Type&& CaptureWrap(Type&& obj)
 /**
  * @brief Helper to keep wrap type info.
  */
-template<typename T>
+template <typename T>
 struct CaptureWrapper {
     T value;
 };
@@ -44,7 +44,7 @@ struct CaptureWrapper {
 /**
  * @brief Capture conversion for shared_ptr.
  */
-template<typename Type>
+template <typename Type>
 CaptureWrapper<BASE_NS::weak_ptr<Type>> CaptureWrap(BASE_NS::shared_ptr<Type> p)
 {
     return {p};
@@ -53,7 +53,7 @@ CaptureWrapper<BASE_NS::weak_ptr<Type>> CaptureWrap(BASE_NS::shared_ptr<Type> p)
 /**
  * @brief Capture conversion for weak_ptr.
  */
-template<typename Type>
+template <typename Type>
 CaptureWrapper<BASE_NS::weak_ptr<Type>> CaptureWrap(BASE_NS::weak_ptr<Type> p)
 {
     return {BASE_NS::move(p)};
@@ -62,7 +62,7 @@ CaptureWrapper<BASE_NS::weak_ptr<Type>> CaptureWrap(BASE_NS::weak_ptr<Type> p)
 /**
  * @brief Helper to keep unwrapped type info.
  */
-template<typename T>
+template <typename T>
 struct CaptureUnWrapper {
     T value;
     bool valid{true};
@@ -72,7 +72,7 @@ struct CaptureUnWrapper {
  * @brief Generic unwrap function that is called before the object is passed to the actual target function.
  * This should be overloaded for wrapped types.
  */
-template<typename Type>
+template <typename Type>
 CaptureUnWrapper<Type> CaptureUnWrap(Type&& obj)
 {
     return CaptureUnWrapper<Type>{BASE_NS::forward<Type>(obj)};
@@ -81,7 +81,7 @@ CaptureUnWrapper<Type> CaptureUnWrap(Type&& obj)
 /**
  * @brief Capture conversion for wrapped type to shared_ptr.
  */
-template<typename Type>
+template <typename Type>
 CaptureUnWrapper<BASE_NS::shared_ptr<Type>> CaptureUnWrap(const CaptureWrapper<BASE_NS::weak_ptr<Type>>& p)
 {
     auto v = p.value.lock();
@@ -92,9 +92,9 @@ CaptureUnWrapper<BASE_NS::shared_ptr<Type>> CaptureUnWrap(const CaptureWrapper<B
  * @brief Invokes a captured function.
  * @tparam Check Decides if captured parameters should be valid before func is invoked.
  */
-template<bool Check, typename... Other>
+template <bool Check, typename... Other>
 struct CaptureCallImpl {
-    template<typename Func, typename... Args>
+    template <typename Func, typename... Args>
     static auto Call(Func& func, Other&&... other, Args&&... args)
     {
         if constexpr (Check) {
@@ -111,7 +111,7 @@ struct CaptureCallImpl {
     }
 };
 
-template<bool Check, typename Lambda, typename... Args>
+template <bool Check, typename Lambda, typename... Args>
 auto CaptureImpl(Lambda func, Args&&... args)
 {
     return [f = BASE_NS::move(func), args...](auto&&... other) {
@@ -132,7 +132,7 @@ auto CaptureImpl(Lambda func, Args&&... args)
  *             All shared pointers in it will be replaced by weak pointers.
  * @return Capture call which will not extend the lifetime of resources pointed by shared pointers provided as args.
  */
-template<typename Lambda, typename... Args>
+template <typename Lambda, typename... Args>
 decltype(auto) Capture(Lambda func, Args&&... args)
 {
     return Details::CaptureImpl<false>(BASE_NS::move(func), Details::CaptureWrap(BASE_NS::forward<Args>(args))...);
@@ -151,13 +151,13 @@ decltype(auto) Capture(Lambda func, Args&&... args)
  *
  * @see Capture
  */
-template<typename Lambda, typename... Args>
+template <typename Lambda, typename... Args>
 decltype(auto) CaptureSafe(Lambda func, Args&&... args)
 {
     return Details::CaptureImpl<true>(BASE_NS::move(func), Details::CaptureWrap(BASE_NS::forward<Args>(args))...);
 }
 
-template<typename Lambda, typename Ret, typename... Args>
+template <typename Lambda, typename Ret, typename... Args>
 void AssureCaptureTypeAndNoCapture()
 {
     using fp = Ret (*)(Args...);

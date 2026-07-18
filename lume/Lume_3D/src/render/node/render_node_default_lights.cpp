@@ -43,7 +43,7 @@ using namespace BASE_NS;
 using namespace RENDER_NS;
 
 namespace {
-template<typename DataType>
+template <typename DataType>
 DataType* MapBuffer(IRenderNodeGpuResourceManager& gpuResourceManager, const RenderHandle handle)
 {
     return reinterpret_cast<DataType*>(gpuResourceManager.MapBuffer(handle));

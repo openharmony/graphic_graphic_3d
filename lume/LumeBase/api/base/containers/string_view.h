@@ -26,13 +26,13 @@
 #include <base/util/log.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class CharT>
+template <class CharT>
 class basic_string_view;
 
 using string_view = BASE_NS::basic_string_view<char>;
 using wstring_view = BASE_NS::basic_string_view<wchar_t>;
 
-template<class CharT>
+template <class CharT>
 class basic_string_view {
 public:
     using value_type = CharT;
@@ -160,7 +160,7 @@ private:
     size_type size_{0};
 };
 
-template<class CharT>
+template <class CharT>
 constexpr size_t constexpr_strlen(const CharT* const str) noexcept
 {
     if (!str) {
@@ -173,121 +173,121 @@ constexpr size_t constexpr_strlen(const CharT* const str) noexcept
     return static_cast<size_t>(tmp - str);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr basic_string_view<CharT>::basic_string_view(const CharT* const s, size_type count) : begin_(s), size_(count)
 {}
 
-template<class CharT>
+template <class CharT>
 constexpr basic_string_view<CharT>::basic_string_view(const CharT* const s) : begin_(s), size_(constexpr_strlen(s))
 {}
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_iterator basic_string_view<CharT>::begin() const noexcept
 {
     return const_iterator(begin_);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_iterator basic_string_view<CharT>::cbegin() const noexcept
 {
     return const_iterator(begin_);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_iterator basic_string_view<CharT>::end() const noexcept
 {
     return const_iterator(begin_ + size_);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_iterator basic_string_view<CharT>::cend() const noexcept
 {
     return const_iterator(begin_ + size_);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reverse_iterator basic_string_view<CharT>::rbegin() const noexcept
 {
     return const_reverse_iterator(const_iterator(begin_ + size_));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reverse_iterator basic_string_view<CharT>::crbegin() const noexcept
 {
     return const_reverse_iterator(const_iterator(begin_ + size_));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reverse_iterator basic_string_view<CharT>::rend() const noexcept
 {
     return const_reverse_iterator(const_iterator(begin_));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reverse_iterator basic_string_view<CharT>::crend() const noexcept
 {
     return const_reverse_iterator(const_iterator(begin_));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_pointer basic_string_view<CharT>::data() const noexcept
 {
     return begin_;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reference basic_string_view<CharT>::operator[](size_type pos) const
 {
     BASE_ASSERT(pos < size_);
     return begin_[pos];
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reference basic_string_view<CharT>::at(size_type pos) const
 {
     BASE_ASSERT(pos < size_);
     return begin_[pos];
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reference basic_string_view<CharT>::front() const
 {
     BASE_ASSERT(size_ > 0);
     return begin_[0];
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::const_reference basic_string_view<CharT>::back() const
 {
     BASE_ASSERT(size_ > 0);
     return begin_[size_ - 1];
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::size() const noexcept
 {
     return size_;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::length() const noexcept
 {
     return size_;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::max_size() const noexcept
 {
     return npos - 1;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::empty() const noexcept
 {
     return !size_;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr void basic_string_view<CharT>::remove_prefix(size_type n)
 {
     if (n > size_) {
@@ -299,7 +299,7 @@ constexpr void basic_string_view<CharT>::remove_prefix(size_type n)
     }
 }
 
-template<class CharT>
+template <class CharT>
 constexpr void basic_string_view<CharT>::remove_suffix(size_type n)
 {
     if (n > size_) {
@@ -309,7 +309,7 @@ constexpr void basic_string_view<CharT>::remove_suffix(size_type n)
     }
 }
 
-template<class CharT>
+template <class CharT>
 constexpr void basic_string_view<CharT>::swap(basic_string_view& v) noexcept
 {
     basic_string_view sv(v);
@@ -317,7 +317,7 @@ constexpr void basic_string_view<CharT>::swap(basic_string_view& v) noexcept
     *this = sv;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::copy(
     CharT* dest, size_type count, size_type pos) const
 {
@@ -334,7 +334,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return copy;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr basic_string_view<CharT> basic_string_view<CharT>::substr(size_type pos, size_type count) const
 {
     if (pos > size_) {
@@ -347,7 +347,7 @@ constexpr basic_string_view<CharT> basic_string_view<CharT>::substr(size_type po
     }
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(basic_string_view v) const noexcept
 {
     const auto size = (size_ < v.size_) ? size_ : v.size_;
@@ -368,20 +368,20 @@ constexpr int basic_string_view<CharT>::compare(basic_string_view v) const noexc
     return 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(size_type pos1, size_type count1, basic_string_view v) const
 {
     return substr(pos1, count1).compare(v);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(
     size_type pos1, size_type count1, basic_string_view v, size_type pos2, size_type count2) const
 {
     return substr(pos1, count1).compare(v.substr(pos2, count2));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(const CharT* const s) const
 {
     const auto size = size_;
@@ -402,20 +402,20 @@ constexpr int basic_string_view<CharT>::compare(const CharT* const s) const
     return 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(size_type pos1, size_type count1, const CharT* const s) const
 {
     return substr(pos1, count1).compare(s);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr int basic_string_view<CharT>::compare(
     size_type pos1, size_type count1, const CharT* const s, size_type count2) const
 {
     return substr(pos1, count1).compare(basic_string_view(s, count2));
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator==(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     if (lhs.size() != rhs.size()) {
@@ -424,7 +424,7 @@ constexpr bool operator==(const basic_string_view<CharT> lhs, const basic_string
     return lhs.compare(rhs) == 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator==(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
@@ -434,7 +434,7 @@ constexpr bool operator==(
     return lhs.compare(rhs) == 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator==(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
@@ -444,7 +444,7 @@ constexpr bool operator==(
     return lhs.compare(rhs) == 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator!=(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     if (lhs.size() != rhs.size()) {
@@ -453,7 +453,7 @@ constexpr bool operator!=(const basic_string_view<CharT> lhs, const basic_string
     return lhs.compare(rhs) != 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator!=(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
@@ -463,7 +463,7 @@ constexpr bool operator!=(
     return lhs.compare(rhs) != 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator!=(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
@@ -473,87 +473,87 @@ constexpr bool operator!=(
     return lhs.compare(rhs) != 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator<(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) < 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator<(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return lhs.compare(rhs) < 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator<(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) < 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator<=(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) <= 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator<=(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return lhs.compare(rhs) <= 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator<=(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) <= 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator>(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) > 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator>(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return lhs.compare(rhs) > 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator>(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) > 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool operator>=(const basic_string_view<CharT> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) >= 0;
 }
 
-template<class CharT, int = 1>
+template <class CharT, int = 1>
 constexpr bool operator>=(
     const basic_string_view<CharT> lhs, const type_identity_t<basic_string_view<CharT>> rhs) noexcept
 {
     return lhs.compare(rhs) >= 0;
 }
 
-template<class CharT, int = 2>
+template <class CharT, int = 2>
 constexpr bool operator>=(
     const type_identity_t<basic_string_view<CharT>> lhs, const basic_string_view<CharT> rhs) noexcept
 {
     return lhs.compare(rhs) >= 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find(
     const CharT str, size_type pos) const noexcept
 {
@@ -574,7 +574,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     }
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find(
     const basic_string_view& str, size_type pos) const noexcept
 {
@@ -610,14 +610,14 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return string_view::npos;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::rfind(
     const CharT str, size_type pos) const noexcept
 {
     return find_last_of(str, pos);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::rfind(
     const basic_string_view& str, size_type pos) const noexcept
 {
@@ -651,7 +651,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return string_view::npos;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find_first_of(
     const basic_string_view& str, size_type pos) const noexcept
 {
@@ -675,7 +675,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return string_view::npos;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find_first_of(
     CharT ch, size_type pos) const noexcept
 {
@@ -695,7 +695,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return string_view::npos;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find_last_of(
     const basic_string_view& str, size_type pos) const noexcept
 {
@@ -723,7 +723,7 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     }
     return string_view::npos;
 }
-template<class CharT>
+template <class CharT>
 constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>::find_last_of(
     CharT ch, size_type pos) const noexcept
 {
@@ -748,19 +748,19 @@ constexpr typename basic_string_view<CharT>::size_type basic_string_view<CharT>:
     return string_view::npos;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::starts_with(basic_string_view sv) const noexcept
 {
     return compare(0U, sv.size_, sv) == 0;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::starts_with(CharT ch) const noexcept
 {
     return (size_) && (*begin_ == ch);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::starts_with(const CharT* s) const
 {
     if (!s) {
@@ -777,25 +777,25 @@ constexpr bool basic_string_view<CharT>::starts_with(const CharT* s) const
     return !(*ptr2);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::ends_with(basic_string_view sv) const noexcept
 {
     return (size_ >= sv.size_) && (compare(size_ - sv.size_, sv.size_, sv) == 0);
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::ends_with(CharT ch) const noexcept
 {
     return size_ && *(begin_ + size_ - 1U) == ch;
 }
 
-template<class CharT>
+template <class CharT>
 constexpr bool basic_string_view<CharT>::ends_with(const CharT* s) const
 {
     return ends_with(basic_string_view(s));
 }
 
-template<>
+template <>
 inline uint64_t hash(const string_view& value)
 {
     return BASE_NS::FNV1aHash(value.data(), value.size());

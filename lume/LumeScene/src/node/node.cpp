@@ -464,7 +464,7 @@ Future<INode::Ptr> Node::ImportTemplate(
         });
 }
 
-template<typename Func>
+template <typename Func>
 static META_NS::IterationResult IterateImpl(const BASE_NS::vector<INode::Ptr>& cont, const Func& func)
 {
     for (auto&& child : cont) {

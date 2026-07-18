@@ -64,13 +64,13 @@ class API_ScenePluginPostprocessComponentTest
     : public ScenePluginComponentTest<CORE3D_NS::IPostProcessComponentManager> {
 public:
 protected:
-    template<typename Interface>
+    template <typename Interface>
     void TestInterface(Interface* interface)
     {
         ASSERT_TRUE(interface);
     }
 
-    template<>
+    template <>
     void TestInterface(IBloom* interface)
     {
         ASSERT_TRUE(interface);
@@ -87,7 +87,7 @@ protected:
         EXPECT_TRUE(interface->ScaleFactor());
     }
 
-    template<>
+    template <>
     void TestInterface(IBlur* interface)
     {
         ASSERT_TRUE(interface);
@@ -96,19 +96,19 @@ protected:
         EXPECT_TRUE(interface->FilterSize());
         EXPECT_TRUE(interface->MaxMipmapLevel());
     }
-    template<>
+    template <>
     void TestInterface(IColorConversion* interface)
     {
         EXPECT_TRUE(interface->Function());
         EXPECT_TRUE(interface->MultiplyWithAlpha());
     }
 
-    template<>
+    template <>
     void TestInterface(IColorFringe* interface)
     {
         EXPECT_TRUE(interface->DistanceCoefficient());
     }
-    template<>
+    template <>
     void TestInterface(IDepthOfField* interface)
     {
         EXPECT_TRUE(interface->FocusPoint());
@@ -120,20 +120,20 @@ protected:
         EXPECT_TRUE(interface->NearPlane());
         EXPECT_TRUE(interface->FarPlane());
     }
-    template<>
+    template <>
     void TestInterface(IFxaa* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Sharpness());
     }
-    template<>
+    template <>
     void TestInterface(ILensFlare* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Intensity());
         EXPECT_TRUE(interface->FlarePosition());
     }
-    template<>
+    template <>
     void TestInterface(IMotionBlur* interface)
     {
         EXPECT_TRUE(interface->Quality());
@@ -141,13 +141,13 @@ protected:
         EXPECT_TRUE(interface->Alpha());
         EXPECT_TRUE(interface->VelocityCoefficient());
     }
-    template<>
+    template <>
     void TestInterface(ITaa* interface)
     {
         EXPECT_TRUE(interface->Quality());
         EXPECT_TRUE(interface->Sharpness());
     }
-    template<>
+    template <>
     void TestInterface(IColorAdjustments* interface)
     {
         EXPECT_TRUE(interface->FilterColor());
@@ -156,13 +156,13 @@ protected:
         EXPECT_TRUE(interface->Brightness());
         EXPECT_TRUE(interface->Contrast());
     }
-    template<>
+    template <>
     void TestInterface(ITonemap* interface)
     {
         EXPECT_TRUE(interface->Type());
         EXPECT_TRUE(interface->Exposure());
     }
-    template<>
+    template <>
     void TestInterface(IUpscale* interface)
     {
         EXPECT_TRUE(interface->SmoothScale());
@@ -170,20 +170,20 @@ protected:
         EXPECT_TRUE(interface->EdgeSharpness());
         EXPECT_TRUE(interface->Ratio());
     }
-    template<>
+    template <>
     void TestInterface(IVignette* interface)
     {
         EXPECT_TRUE(interface->Coefficient());
         EXPECT_TRUE(interface->Power());
     }
-    template<>
+    template <>
     void TestInterface(IWhiteBalance* interface)
     {
         EXPECT_TRUE(interface->Temperature());
         EXPECT_TRUE(interface->Tint());
     }
 
-    template<typename Interface>
+    template <typename Interface>
     void TestPPComponent(META_NS::ObjectId classId)
     {
         auto& reg = META_NS::GetObjectRegistry();

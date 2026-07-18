@@ -64,7 +64,12 @@ void main(void)
 
     outColor = unlitBasic();
 
-    // do not need post process
+    if (CORE_POST_PROCESS_FLAGS > 0) {
+        vec2 fragUv;
+        CORE_GET_FRAGCOORD_UV(fragUv, gl_FragCoord.xy, uGeneralData.viewportSizeInvViewportSize.zw);
+
+        InplacePostProcess(fragUv, outColor);
+    }
 
     const uint cameraIdx = GetUnpackFlatIndicesCameraIdx(inIndices);
     //CORE_RELAXEDP const vec4 projpos = uCameras[cameraIdx].viewProj * vec4(inPos.xyz, 1.0);

@@ -41,7 +41,7 @@ namespace {
 bool EnsurePngPlugin()
 {
     static bool loaded = []() {
-        constexpr Uid png[]{PNGPlugin::UID_PNG_PLUGIN};
+        constexpr Uid png[] { PNGPlugin::UID_PNG_PLUGIN };
         return GetPluginRegister().LoadPlugins(png);
     }();
     return loaded;
@@ -204,7 +204,7 @@ constexpr uint32_t premult =
     IImageLoaderManager::IMAGE_LOADER_FORCE_LINEAR_RGB_BIT | IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA;
 constexpr uint32_t premultS =
     IImageLoaderManager::IMAGE_LOADER_FORCE_SRGB_BIT | IImageLoaderManager::IMAGE_LOADER_PREMULTIPLY_ALPHA;
-}  // namespace
+} // namespace
 
 class API_PngLoaderTest : public ::testing::Test {
 protected:
@@ -215,7 +215,7 @@ protected:
         ASSERT_NE(m_imageLoaderManager, nullptr);
     }
 
-    IImageLoaderManager* m_imageLoaderManager{nullptr};
+    IImageLoaderManager* m_imageLoaderManager { nullptr };
 };
 
 /**
@@ -250,178 +250,58 @@ UNIT_TEST_F(API_PngLoaderTest, LoadImages, testing::ext::TestSize.Level1)
 {
     // The test_image contains the following RGBA pixel data:
     const uint8_t pixelDataRGBA8[] = {
-        0x00,
-        0x00,
-        0x00,
-        0xff,  // [black]
-        0xff,
-        0xff,
-        0xff,
-        0xff,  // [white]
-        0x80,
-        0x80,
-        0x80,
-        0xff,  // [gray]
-        0xff,
-        0x00,
-        0x00,
-        0xff,  // [red]
-        0x00,
-        0xff,
-        0x00,
-        0xff,  // [green]
-        0x00,
-        0x00,
-        0xff,
-        0xff,  // [blue]
-        0xff,
-        0xff,
-        0xff,
-        0x80,  // [50% transparent white] (not premultiplied)
-        0x00,
-        0x00,
-        0x00,
-        0x00,  // [100% transparent]
+        0x00, 0x00, 0x00, 0xff, // [black]
+        0xff, 0xff, 0xff, 0xff, // [white]
+        0x80, 0x80, 0x80, 0xff, // [gray]
+        0xff, 0x00, 0x00, 0xff, // [red]
+        0x00, 0xff, 0x00, 0xff, // [green]
+        0x00, 0x00, 0xff, 0xff, // [blue]
+        0xff, 0xff, 0xff, 0x80, // [50% transparent white] (not premultiplied)
+        0x00, 0x00, 0x00, 0x00, // [100% transparent]
     };
 
     const uint16_t pixelDataRGBA16[] = {
-        0x0000,
-        0x0000,
-        0x0000,
-        0xffff,  // [black]
-        0xffff,
-        0xffff,
-        0xffff,
-        0xffff,  // [white]
-        0x80 << 8,
-        0x80 << 8,
-        0x80 << 8,
-        0xffff,  // [gray]
-        0xffff,
-        0x0000,
-        0x0000,
-        0xffff,  // [red]
-        0x0000,
-        0xffff,
-        0x0000,
-        0xffff,  // [green]
-        0x0000,
-        0x0000,
-        0xffff,
-        0xffff,  // [blue]
-        0xffff,
-        0xffff,
-        0xffff,
-        0x80 << 8,  // [50% transparent white] (not premultiplied)
-        0x0000,
-        0x0000,
-        0x0000,
-        0x00 << 8,  // [100% transparent]
+        0x0000, 0x0000, 0x0000, 0xffff,          // [black]
+        0xffff, 0xffff, 0xffff, 0xffff,          // [white]
+        0x80 << 8, 0x80 << 8, 0x80 << 8, 0xffff, // [gray]
+        0xffff, 0x0000, 0x0000, 0xffff,          // [red]
+        0x0000, 0xffff, 0x0000, 0xffff,          // [green]
+        0x0000, 0x0000, 0xffff, 0xffff,          // [blue]
+        0xffff, 0xffff, 0xffff, 0x80 << 8,       // [50% transparent white] (not premultiplied)
+        0x0000, 0x0000, 0x0000, 0x00 << 8,       // [100% transparent]
     };
 
     const uint8_t pixelDataRGBA8Premultiplied[] = {
-        0x00,
-        0x00,
-        0x00,
-        0xff,  // [black]
-        0xff,
-        0xff,
-        0xff,
-        0xff,  // [white]
-        0x80,
-        0x80,
-        0x80,
-        0xff,  // [gray]
-        0xff,
-        0x00,
-        0x00,
-        0xff,  // [red]
-        0x00,
-        0xff,
-        0x00,
-        0xff,  // [green]
-        0x00,
-        0x00,
-        0xff,
-        0xff,  // [blue]
-        0x80,
-        0x80,
-        0x80,
-        0x80,  // [50% transparent white] (premultiplied)
-        0x00,
-        0x00,
-        0x00,
-        0x00,  // [100% transparent]
+        0x00, 0x00, 0x00, 0xff, // [black]
+        0xff, 0xff, 0xff, 0xff, // [white]
+        0x80, 0x80, 0x80, 0xff, // [gray]
+        0xff, 0x00, 0x00, 0xff, // [red]
+        0x00, 0xff, 0x00, 0xff, // [green]
+        0x00, 0x00, 0xff, 0xff, // [blue]
+        0x80, 0x80, 0x80, 0x80, // [50% transparent white] (premultiplied)
+        0x00, 0x00, 0x00, 0x00, // [100% transparent]
     };
 
     const uint16_t pixelDataRGBA16Premultiplied[] = {
-        0x0000,
-        0x0000,
-        0x0000,
-        0xffff,  // [black]
-        0xffff,
-        0xffff,
-        0xffff,
-        0xffff,  // [white]
-        0x80 << 8,
-        0x80 << 8,
-        0x80 << 8,
-        0xffff,  // [gray]
-        0xffff,
-        0x0000,
-        0x0000,
-        0xffff,  // [red]
-        0x0000,
-        0xffff,
-        0x0000,
-        0xffff,  // [green]
-        0x0000,
-        0x0000,
-        0xffff,
-        0xffff,  // [blue]
-        0x8000,
-        0x8000,
-        0x8000,
-        0x8000,  // [50% transparent white] (premultiplied)
-        0x0000,
-        0x0000,
-        0x0000,
-        0x0000,  // [100% transparent]
+        0x0000, 0x0000, 0x0000, 0xffff,          // [black]
+        0xffff, 0xffff, 0xffff, 0xffff,          // [white]
+        0x80 << 8, 0x80 << 8, 0x80 << 8, 0xffff, // [gray]
+        0xffff, 0x0000, 0x0000, 0xffff,          // [red]
+        0x0000, 0xffff, 0x0000, 0xffff,          // [green]
+        0x0000, 0x0000, 0xffff, 0xffff,          // [blue]
+        0x8000, 0x8000, 0x8000, 0x8000,          // [50% transparent white] (premultiplied)
+        0x0000, 0x0000, 0x0000, 0x0000,          // [100% transparent]
     };
 
     const uint8_t pixelDataSRGBA8Premultiplied[] = {
-        0x00,
-        0x00,
-        0x00,
-        0xff,  // [black]
-        0xff,
-        0xff,
-        0xff,
-        0xff,  // [white]
-        0x80,
-        0x80,
-        0x80,
-        0xff,  // [gray]
-        0xff,
-        0x00,
-        0x00,
-        0xff,  // [red]
-        0x00,
-        0xff,
-        0x00,
-        0xff,  // [green]
-        0x00,
-        0x00,
-        0xff,
-        0xff,  // [blue]
-        0xBC,
-        0xBC,
-        0xBC,
-        0x80,  // [50% transparent white] (premultiplied)
-        0x00,
-        0x00,
-        0x00,
-        0x00,  // [100% transparent]
+        0x00, 0x00, 0x00, 0xff, // [black]
+        0xff, 0xff, 0xff, 0xff, // [white]
+        0x80, 0x80, 0x80, 0xff, // [gray]
+        0xff, 0x00, 0x00, 0xff, // [red]
+        0x00, 0xff, 0x00, 0xff, // [green]
+        0x00, 0x00, 0xff, 0xff, // [blue]
+        0xBC, 0xBC, 0xBC, 0x80, // [50% transparent white] (premultiplied)
+        0x00, 0x00, 0x00, 0x00, // [100% transparent]
     };
 
     // 256 pixel width gradient. The first pixel value in the image is 0x00 and the last 0xff.
@@ -438,334 +318,56 @@ UNIT_TEST_F(API_PngLoaderTest, LoadImages, testing::ext::TestSize.Level1)
 
     const TestImage testImages[] = {
         // Pixel-verified 8bpc and 16bpc RGBA images
-        {"test://image/test_image_8x1_RGBA.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb,
-            {{0, (void*)pixelDataRGBA8}}},
-        {"test://image/test_image_8x1_RGBA.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            srgb,
-            {{0, (void*)pixelDataRGBA8}}},
-        {"test://image/test_image_8x1_RGBA16.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            64,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16G16B16A16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb,
-            {{0, (void*)pixelDataRGBA16}}},
-        {"test://image/gradient_256x1_R8.png",
-            256,
-            1,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb,
-            {{0, (void*)gradientPixelDataR8}}},
-        {"test://image/gradient_256x256_R16.png",
-            256,
-            256,
-            1,
-            1,
-            1,
-            1,
-            16,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb,
-            {{0, (void*)gradientPixelDataR16}}},
+        { "test://image/test_image_8x1_RGBA.png", 8, 1, 1, 1, 1, 1, 32, 1, 1, 0, Format::BASE_FORMAT_R8G8B8A8_UNORM,
+            TYPE_2D, VTYPE_2D, lrgb, { { 0, (void*)pixelDataRGBA8 } } },
+        { "test://image/test_image_8x1_RGBA.png", 8, 1, 1, 1, 1, 1, 32, 1, 1, 0, Format::BASE_FORMAT_R8G8B8A8_SRGB,
+            TYPE_2D, VTYPE_2D, srgb, { { 0, (void*)pixelDataRGBA8 } } },
+        { "test://image/test_image_8x1_RGBA16.png", 8, 1, 1, 1, 1, 1, 64, 1, 1, 0,
+            Format::BASE_FORMAT_R16G16B16A16_UNORM, TYPE_2D, VTYPE_2D, lrgb, { { 0, (void*)pixelDataRGBA16 } } },
+        { "test://image/gradient_256x1_R8.png", 256, 1, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_UNORM, TYPE_2D,
+            VTYPE_2D, lrgb, { { 0, (void*)gradientPixelDataR8 } } },
+        { "test://image/gradient_256x256_R16.png", 256, 256, 1, 1, 1, 1, 16, 1, 1, 0, Format::BASE_FORMAT_R16_UNORM,
+            TYPE_2D, VTYPE_2D, lrgb, { { 0, (void*)gradientPixelDataR16 } } },
         // Premultiplied alpha
-        {"test://image/test_image_8x1_RGBA.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT,
-            Format::BASE_FORMAT_R8G8B8A8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            premult,
-            {{0, (void*)pixelDataRGBA8Premultiplied}}},
-        {"test://image/test_image_8x1_RGBA16.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            64,
-            1,
-            1,
-            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT,
-            Format::BASE_FORMAT_R16G16B16A16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            premult,
-            {{0, (void*)pixelDataRGBA16Premultiplied}}},
-        {"test://image/test_image_8x1_RGBA.png",
-            8,
-            1,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            premultS,
-            {{0, (void*)pixelDataSRGBA8Premultiplied}}},
+        { "test://image/test_image_8x1_RGBA.png", 8, 1, 1, 1, 1, 1, 32, 1, 1,
+            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT, Format::BASE_FORMAT_R8G8B8A8_UNORM, TYPE_2D,
+            VTYPE_2D, premult, { { 0, (void*)pixelDataRGBA8Premultiplied } } },
+        { "test://image/test_image_8x1_RGBA16.png", 8, 1, 1, 1, 1, 1, 64, 1, 1,
+            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT, Format::BASE_FORMAT_R16G16B16A16_UNORM, TYPE_2D,
+            VTYPE_2D, premult, { { 0, (void*)pixelDataRGBA16Premultiplied } } },
+        { "test://image/test_image_8x1_RGBA.png", 8, 1, 1, 1, 1, 1, 32, 1, 1,
+            IImageContainer::ImageFlags::FLAGS_PREMULTIPLIED_ALPHA_BIT, Format::BASE_FORMAT_R8G8B8A8_SRGB, TYPE_2D,
+            VTYPE_2D, premultS, { { 0, (void*)pixelDataSRGBA8Premultiplied } } },
         // 512x512 canine
-        {"test://image/canine_512x512.png",
-            512,
-            512,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            lrgb},
+        { "test://image/canine_512x512.png", 512, 512, 1, 1, 1, 1, 32, 1, 1, 0, Format::BASE_FORMAT_R8G8B8A8_UNORM,
+            TYPE_2D, VTYPE_2D, lrgb },
         // 8bpc channel variants (default flags → sRGB)
-        {"test://image/png/canine_128x128_R8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            0},
-        {"test://image/png/canine_128x128_RG8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            0},  // gray+alpha → RGBA
-        {"test://image/png/canine_128x128_RGB8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            0},  // RGB → RGBA
-        {"test://image/png/canine_128x128_RGBA8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            32,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8G8B8A8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            0},
+        { "test://image/png/canine_128x128_R8.png", 128, 128, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_SRGB,
+            TYPE_2D, VTYPE_2D, 0 },
+        { "test://image/png/canine_128x128_RG8.png", 128, 128, 1, 1, 1, 1, 32, 1, 1, 0,
+            Format::BASE_FORMAT_R8G8B8A8_SRGB, TYPE_2D, VTYPE_2D, 0 }, // gray+alpha → RGBA
+        { "test://image/png/canine_128x128_RGB8.png", 128, 128, 1, 1, 1, 1, 32, 1, 1, 0,
+            Format::BASE_FORMAT_R8G8B8A8_SRGB, TYPE_2D, VTYPE_2D, 0 }, // RGB → RGBA
+        { "test://image/png/canine_128x128_RGBA8.png", 128, 128, 1, 1, 1, 1, 32, 1, 1, 0,
+            Format::BASE_FORMAT_R8G8B8A8_SRGB, TYPE_2D, VTYPE_2D, 0 },
         // 16bpc channel variants
-        {"test://image/png/canine_128x128_R16.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            16,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            0},
-        {"test://image/png/canine_128x128_RG16.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            64,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16G16B16A16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            0},  // gray+alpha → RGBA
-        {"test://image/png/canine_128x128_RGB16.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            64,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16G16B16A16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            0},  // RGB → RGBA
-        {"test://image/png/canine_128x128_RGBA16.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            64,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R16G16B16A16_UNORM,
-            TYPE_2D,
-            VTYPE_2D,
-            0},
+        { "test://image/png/canine_128x128_R16.png", 128, 128, 1, 1, 1, 1, 16, 1, 1, 0, Format::BASE_FORMAT_R16_UNORM,
+            TYPE_2D, VTYPE_2D, 0 },
+        { "test://image/png/canine_128x128_RG16.png", 128, 128, 1, 1, 1, 1, 64, 1, 1, 0,
+            Format::BASE_FORMAT_R16G16B16A16_UNORM, TYPE_2D, VTYPE_2D, 0 }, // gray+alpha → RGBA
+        { "test://image/png/canine_128x128_RGB16.png", 128, 128, 1, 1, 1, 1, 64, 1, 1, 0,
+            Format::BASE_FORMAT_R16G16B16A16_UNORM, TYPE_2D, VTYPE_2D, 0 }, // RGB → RGBA
+        { "test://image/png/canine_128x128_RGBA16.png", 128, 128, 1, 1, 1, 1, 64, 1, 1, 0,
+            Format::BASE_FORMAT_R16G16B16A16_UNORM, TYPE_2D, VTYPE_2D, 0 },
         // Force grayscale
-        {"test://image/png/canine_128x128_R8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT},
-        {"test://image/png/canine_128x128_RG8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT},
-        {"test://image/png/canine_128x128_RGB8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT},
-        {"test://image/png/canine_128x128_RGBA8.png",
-            128,
-            128,
-            1,
-            1,
-            1,
-            1,
-            8,
-            1,
-            1,
-            0,
-            Format::BASE_FORMAT_R8_SRGB,
-            TYPE_2D,
-            VTYPE_2D,
-            IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT},
+        { "test://image/png/canine_128x128_R8.png", 128, 128, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_SRGB,
+            TYPE_2D, VTYPE_2D, IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT },
+        { "test://image/png/canine_128x128_RG8.png", 128, 128, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_SRGB,
+            TYPE_2D, VTYPE_2D, IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT },
+        { "test://image/png/canine_128x128_RGB8.png", 128, 128, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_SRGB,
+            TYPE_2D, VTYPE_2D, IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT },
+        { "test://image/png/canine_128x128_RGBA8.png", 128, 128, 1, 1, 1, 1, 8, 1, 1, 0, Format::BASE_FORMAT_R8_SRGB,
+            TYPE_2D, VTYPE_2D, IImageLoaderManager::IMAGE_LOADER_FORCE_GRAYSCALE_BIT },
     };
 
     for (const auto& testInput : testImages) {

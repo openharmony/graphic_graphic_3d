@@ -28,7 +28,7 @@
 
 RENDER_BEGIN_NAMESPACE()
 
-template<typename T, BASE_NS::enable_if_t<BASE_NS::is_same_v<bool, T>, bool> = true>
+template <typename T, BASE_NS::enable_if_t<BASE_NS::is_same_v<bool, T>, bool> = true>
 inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
 {
     if (jsonData.is_boolean()) {
@@ -38,7 +38,7 @@ inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
     return false;
 }
 
-template<typename T, BASE_NS::enable_if_t<!BASE_NS::is_same_v<bool, T> && BASE_NS::is_arithmetic_v<T>, bool> = true>
+template <typename T, BASE_NS::enable_if_t<!BASE_NS::is_same_v<bool, T> && BASE_NS::is_arithmetic_v<T>, bool> = true>
 inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
 {
     if (jsonData.is_number()) {
@@ -48,7 +48,7 @@ inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
     return false;
 }
 
-template<typename T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
+template <typename T, BASE_NS::enable_if_t<BASE_NS::is_convertible_v<T, BASE_NS::string_view>, bool> = true>
 inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
 {
     if (jsonData.is_string()) {
@@ -60,7 +60,7 @@ inline bool FromJson(const CORE_NS::json::value& jsonData, T& result)
 
 namespace Detail {
 constexpr const BASE_NS::string_view INVALID_DATATYPE = "Failed to read value, invalid datatype: ";
-template<typename T>
+template <typename T>
 inline T Convert(const CORE_NS::json::value& value)
 {
     T result;
@@ -68,14 +68,14 @@ inline T Convert(const CORE_NS::json::value& value)
     return result;
 }
 
-template<typename Container, typename OutIt, typename Fn>
+template <typename Container, typename OutIt, typename Fn>
 inline OutIt Transform(Container&& container, OutIt dest, Fn func)
 {
     return std::transform(container.begin(), container.end(), dest, func);
 }
 }  // namespace Detail
 
-template<class JsonType, typename T>
+template <class JsonType, typename T>
 inline void FromJson(const JsonType& jsonData, BASE_NS::array_view<T> container)
 {
     if (jsonData.is_array()) {
@@ -85,7 +85,7 @@ inline void FromJson(const JsonType& jsonData, BASE_NS::array_view<T> container)
     }
 }
 
-template<class JsonType, typename T>
+template <class JsonType, typename T>
 inline void FromJson(const JsonType& jsonData, BASE_NS::vector<T>& container)
 {
     if (jsonData.is_array()) {
@@ -95,13 +95,13 @@ inline void FromJson(const JsonType& jsonData, BASE_NS::vector<T>& container)
     }
 }
 
-template<class JsonType, typename T, size_t N>
+template <class JsonType, typename T, size_t N>
 inline void FromJson(const JsonType& jsonData, T (&container)[N])
 {
     FromJson(jsonData, BASE_NS::array_view(container));
 }
 
-template<class JsonType, typename T,
+template <class JsonType, typename T,
     BASE_NS::enable_if_t<BASE_NS::is_array_v<decltype(T::data)> &&
                              BASE_NS::is_arithmetic_v<BASE_NS::remove_extent_t<decltype(T::data)>>,
         bool> = true>
@@ -110,7 +110,7 @@ inline void FromJson(const JsonType& jsonData, T& output)
     FromJson(jsonData, output.data);
 }
 
-template<class JsonType, typename T>
+template <class JsonType, typename T>
 inline void SafeFromJsonValue(const JsonType* jsonData, T& output)
 {
     if (jsonData) {

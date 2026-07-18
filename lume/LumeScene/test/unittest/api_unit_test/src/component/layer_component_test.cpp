@@ -29,7 +29,7 @@ namespace UTest {
 
 class API_ScenePluginLayerComponentTest : public ScenePluginComponentTest<CORE3D_NS::ILayerComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestILayerPropertyGetters(T* layer)
     {
         EXPECT_TRUE(layer->LayerMask());

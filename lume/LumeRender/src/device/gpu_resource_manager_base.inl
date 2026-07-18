@@ -44,10 +44,10 @@ inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::Create(const 
     const CreateInfoType& desc, BASE_NS::unique_ptr<ResourceType> optionalResource, const bool useAdditionalDesc,
     const AdditionalInfoType& additionalDesc)
 {
-    if (index < static_cast<uint32_t>(resources_.size())) {  // use existing location
+    if (index < static_cast<uint32_t>(resources_.size())) { // use existing location
         // add old for deallocation if found
         if (resources_[index]) {
-            pendingDeallocations_.push_back({move(resources_[index]), device_.GetFrameCount()});
+            pendingDeallocations_.push_back({ move(resources_[index]), device_.GetFrameCount() });
         }
 
         if (optionalResource) {
@@ -88,8 +88,7 @@ inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::HandlePending
         auto const minAge = device_.GetCommandBufferingCount() + 1;
         auto const ageLimit = (device_.GetFrameCount() < minAge) ? 0 : (device_.GetFrameCount() - minAge);
 
-        auto const oldResources = std::partition(pendingDeallocations_.begin(),
-            pendingDeallocations_.end(),
+        auto const oldResources = std::partition(pendingDeallocations_.begin(), pendingDeallocations_.end(),
             [ageLimit](auto const& handleTime) { return handleTime.frameIndex >= ageLimit; });
 
         pendingDeallocations_.erase(oldResources, pendingDeallocations_.end());
@@ -107,7 +106,7 @@ inline void GpuResourceManagerTyped<ResourceType, CreateInfoType>::Destroy(const
 {
     PLUGIN_ASSERT(index < static_cast<uint32_t>(resources_.size()));
     if (index < static_cast<uint32_t>(resources_.size())) {
-        pendingDeallocations_.push_back({move(resources_[index]), device_.GetFrameCount()});
+        pendingDeallocations_.push_back({ move(resources_[index]), device_.GetFrameCount() });
     }
 }
 
@@ -144,4 +143,4 @@ size_t GpuResourceManagerTyped<ResourceType, CreateInfoType>::GetValidResourceCo
 #endif
 RENDER_END_NAMESPACE()
 
-#endif  // DEVICE_GPU_RESOURCE_MANAGER_BASE_INL
+#endif // DEVICE_GPU_RESOURCE_MANAGER_BASE_INL

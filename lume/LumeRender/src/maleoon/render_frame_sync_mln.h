@@ -46,15 +46,15 @@ private:
     Device& device_;
 
     struct FrameFence {
-        MlnTimeline timeline{MLN_NULL_HANDLE};
-        uint64_t value{0};
-        bool signalled{true};
+        MlnTimeline timeline { MLN_NULL_HANDLE };
+        uint64_t value { 0 };
+        bool signalled { true };
     };
 
     BASE_NS::vector<FrameFence> frameFences_;
-    uint32_t bufferingIndex_{0};
+    uint32_t bufferingIndex_ { 0 };
 };
 
 RENDER_END_NAMESPACE()
 
-#endif  // MALEOON_RENDER_FRAME_SYNC_MLN_H
+#endif // MALEOON_RENDER_FRAME_SYNC_MLN_H

@@ -32,7 +32,7 @@ string NextPropertyName()
     return string("Property" + to_string(counter++));
 }
 
-template<typename T>
+template <typename T>
 void TestPropertyType(CustomPropertyPodContainer& podContainer, const PropertyTypeDecl& propType, T data)
 {
     // Set data with SetValue(...)

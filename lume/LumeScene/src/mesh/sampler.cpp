@@ -30,7 +30,7 @@ static constexpr BASE_NS::string_view ADDRESS_MODE_V_PROPERTY = "AddressModeV";
 static constexpr BASE_NS::string_view ADDRESS_MODE_W_PROPERTY = "AddressModeW";
 static constexpr BASE_NS::string_view DEFAULT_SAMPLER_NAME = "CORE_DEFAULT_SAMPLER_LINEAR_MIPMAP_REPEAT";
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool SetSamplerValue(META_NS::IProperty* p, const U& f, bool setToDefault = false)
 {
     if (p) {
@@ -45,7 +45,7 @@ bool SetSamplerValue(META_NS::IProperty* p, const U& f, bool setToDefault = fals
     return false;
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool InitializeSamplerValue(META_NS::IProperty* p, const U& value, const U& defaultValue, bool setValue)
 {
     auto success = SetSamplerValue<T, U>(p, defaultValue, true);  // Set default
@@ -55,7 +55,7 @@ bool InitializeSamplerValue(META_NS::IProperty* p, const U& value, const U& defa
     return success;
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 bool GetSamplerValue(const META_NS::IProperty* p, U& value)
 {
     if (p && p->IsValueSet()) {

@@ -216,7 +216,7 @@ EngineResourceHandle CreateEngineResourceHandle(RenderHandleType type, uint32_t 
 RENDER_END_NAMESPACE()
 
 BASE_BEGIN_NAMESPACE()
-template<>
+template <>
 inline uint64_t hash(const RENDER_NS::RenderHandle& value)
 {
     return value.id;

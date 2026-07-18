@@ -118,7 +118,7 @@ constexpr MetaData GetMetaData(const PropertyTypeDecl& typeDecl)
     return {};
 }
 
-template<typename T>
+template <typename T>
 inline void SafeFromJsonValue(const json::value* value, T& val)
 {
     if (value) {
@@ -126,7 +126,7 @@ inline void SafeFromJsonValue(const json::value* value, T& val)
     }
 }
 
-template<typename T>
+template <typename T>
 inline void DestroyHelper(T& t)
 {
     {

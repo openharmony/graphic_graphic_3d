@@ -28,7 +28,7 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief A default implementation template for an interpolator for a given type.
  */
-template<class Type>
+template <class Type>
 class Interpolator : public IntroduceInterfaces<BaseObject, IInterpolator> {
 public:
     AnyReturnValue Interpolate(IAny& output, const IAny& from, const IAny& to, float t) const override

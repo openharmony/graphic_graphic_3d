@@ -89,7 +89,7 @@ struct Elf32Traits {
     }
 };
 
-template<typename T>
+template <typename T>
 typename T::Sym FindSymbolByName(const IFile::Ptr& f, const typename T::Shdr& strTable,
     const typename T::Shdr* symTable, const char* name, FIND_TYPE types)
 {
@@ -152,7 +152,7 @@ typename T::Sym FindSymbolByName(const IFile::Ptr& f, const typename T::Shdr& st
     return {};
 }
 
-template<typename T>
+template <typename T>
 bool AddrToFileOffset(const BASE_NS::vector<typename T::Shdr>& sections, uint64_t addr, uint64_t& fileOff)
 {
     for (const auto& s : sections) {
@@ -166,7 +166,7 @@ bool AddrToFileOffset(const BASE_NS::vector<typename T::Shdr>& sections, uint64_
     return false;
 }
 
-template<typename T>
+template <typename T>
 bool ReadElfHeader(const IFile::Ptr& filePtr, typename T::Ehdr& head)
 {
     if (filePtr->Read(&head, sizeof(head)) != sizeof(head)) {
@@ -175,7 +175,7 @@ bool ReadElfHeader(const IFile::Ptr& filePtr, typename T::Ehdr& head)
     return (std::memcmp(&head.e_ident, &T::Ident(), sizeof(ElfIdent)) == 0);
 }
 
-template<typename T>
+template <typename T>
 bool ReadSectionList(
     const IFile::Ptr& filePtr, const typename T::Ehdr& head, BASE_NS::vector<typename T::Shdr>& sectionList)
 {
@@ -185,7 +185,7 @@ bool ReadSectionList(
     return (filePtr->Read(sectionList.data(), sectionList.size_in_bytes()) == sectionList.size_in_bytes());
 }
 
-template<typename T>
+template <typename T>
 void FindSymTableAndRels(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const typename T::Shdr& sectStrTable, const typename T::Shdr*& symTable, const typename T::Shdr* (&rels)[10],
     int32_t& relcnt)
@@ -212,7 +212,7 @@ void FindSymTableAndRels(const IFile::Ptr& filePtr, const BASE_NS::vector<typena
     }
 }
 
-template<typename T>
+template <typename T>
 bool ReadPlugin(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const typename T::Sym& pluginDataSymbol, CORE_NS::IPlugin& plugin)
 {
@@ -226,7 +226,7 @@ bool ReadPlugin(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shd
     return (filePtr->Read(&plugin, sizeof(plugin)) == sizeof(plugin));
 }
 
-template<typename T>
+template <typename T>
 bool ReadSymEntries(
     const IFile::Ptr& filePtr, const typename T::Shdr* symTable, BASE_NS::vector<typename T::Sym>& symEntries)
 {
@@ -236,14 +236,14 @@ bool ReadSymEntries(
     return (filePtr->Read(symEntries.data(), symEntries.size_in_bytes()) == symEntries.size_in_bytes());
 }
 
-template<typename T>
+template <typename T>
 typename T::Addr GetDepPtrFieldAddr(const typename T::Sym& pluginDataSymbol, const CORE_NS::IPlugin& plugin)
 {
     const ptrdiff_t offset = ptrdiff_t(uintptr_t(&plugin.pluginDependencies) - uintptr_t(&plugin));
     return static_cast<typename T::Addr>(pluginDataSymbol.st_value + static_cast<typename T::Addr>(offset));
 }
 
-template<typename T>
+template <typename T>
 bool IsRelocationForSymTable(const BASE_NS::vector<typename T::Shdr>& sectionList, const typename T::Shdr* symTable,
     const typename T::Shdr* relt)
 {
@@ -254,7 +254,7 @@ bool IsRelocationForSymTable(const BASE_NS::vector<typename T::Shdr>& sectionLis
     return &relTgtSyms == symTable;
 }
 
-template<typename T>
+template <typename T>
 bool ReadRelaEntries(const IFile::Ptr& filePtr, const typename T::Shdr* relt, BASE_NS::vector<typename T::Rela>& rela)
 {
     if (!filePtr->Seek(relt->sh_offset)) {
@@ -263,7 +263,7 @@ bool ReadRelaEntries(const IFile::Ptr& filePtr, const typename T::Shdr* relt, BA
     return (filePtr->Read(rela.data(), rela.size_in_bytes()) == rela.size_in_bytes());
 }
 
-template<typename T>
+template <typename T>
 bool ResolveDepTarget(const BASE_NS::vector<typename T::Shdr>& sectionList,
     const BASE_NS::vector<typename T::Sym>& symEntries, const typename T::Rela& r, uint64_t& depVAddr,
     uint64_t& depFileOff)
@@ -300,7 +300,7 @@ bool ResolveDepTarget(const BASE_NS::vector<typename T::Shdr>& sectionList,
     return foundTarget;
 }
 
-template<typename T>
+template <typename T>
 bool TryReadDependenciesAtOffset(
     const IFile::Ptr& filePtr, uint64_t depFileOff, BASE_NS::vector<BASE_NS::Uid>& dependencies)
 {
@@ -310,7 +310,7 @@ bool TryReadDependenciesAtOffset(
     return (filePtr->Read(dependencies.data(), dependencies.size_in_bytes()) == dependencies.size_in_bytes());
 }
 
-template<typename T>
+template <typename T>
 bool TryLoadDepsFromRelocSection(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const BASE_NS::vector<typename T::Sym>& symEntries, const typename T::Shdr* relt,
     const typename T::Addr depPtrFieldAddr, BASE_NS::vector<BASE_NS::Uid>& dependencies, bool& depsLoaded)
@@ -356,7 +356,7 @@ bool TryLoadDepsFromRelocSection(const IFile::Ptr& filePtr, const BASE_NS::vecto
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool TryLoadDepsFromRelocations(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const typename T::Shdr* symTable, const typename T::Sym& pluginDataSymbol, const CORE_NS::IPlugin& plugin,
     const typename T::Shdr* const (&rels)[10], int32_t relcnt, BASE_NS::vector<BASE_NS::Uid>& dependencies,
@@ -394,7 +394,7 @@ bool TryLoadDepsFromRelocations(const IFile::Ptr& filePtr, const BASE_NS::vector
     return true;
 }
 
-template<typename T>
+template <typename T>
 void TryLoadDepsFromPointer(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const CORE_NS::IPlugin& plugin, BASE_NS::vector<BASE_NS::Uid>& dependencies, bool& depsLoaded)
 {
@@ -408,7 +408,7 @@ void TryLoadDepsFromPointer(const IFile::Ptr& filePtr, const BASE_NS::vector<typ
     }
 }
 
-template<typename T>
+template <typename T>
 bool LoadDependenciesFromFile(const IFile::Ptr& filePtr, const BASE_NS::vector<typename T::Shdr>& sectionList,
     const typename T::Shdr* symTable, const typename T::Sym& pluginDataSymbol, const CORE_NS::IPlugin& plugin,
     const typename T::Shdr* const (&rels)[10], int32_t relcnt, BASE_NS::vector<BASE_NS::Uid>& dependencies,
@@ -428,7 +428,7 @@ bool LoadDependenciesFromFile(const IFile::Ptr& filePtr, const BASE_NS::vector<t
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool ReadElfSectionsValidated(
     const IFile::Ptr& filePtr, typename T::Ehdr& head, BASE_NS::vector<typename T::Shdr>& sectionList)
 {
@@ -442,7 +442,7 @@ bool ReadElfSectionsValidated(
     return ReadSectionList<T>(filePtr, head, sectionList) && (head.e_shstrndx < sectionList.size());
 }
 
-template<typename T>
+template <typename T>
 bool FindPluginDataSymbolInElf(const IFile::Ptr& filePtr, const typename T::Ehdr& head,
     const BASE_NS::vector<typename T::Shdr>& sectionList, const typename T::Shdr*& symTable,
     const typename T::Shdr* (&rels)[10], int32_t& relcnt, typename T::Sym& pluginDataSymbol)
@@ -464,7 +464,7 @@ bool FindPluginDataSymbolInElf(const IFile::Ptr& filePtr, const typename T::Ehdr
     return true;
 }
 
-template<typename T>
+template <typename T>
 PluginData ProcessElfImpl(const BASE_NS::string_view filePath, const IFile::Ptr& filePtr)
 {
     using Ehdr = typename T::Ehdr;

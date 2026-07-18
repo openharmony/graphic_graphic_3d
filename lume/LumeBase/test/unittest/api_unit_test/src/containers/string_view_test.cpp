@@ -549,7 +549,7 @@ UNIT_TEST(API_ContainersFixedString, construct, testing::ext::TestSize.Level1)
     }
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 void fixed_string_compare()
 {
     {
@@ -664,7 +664,7 @@ UNIT_TEST(API_ContainersFixedString, compare, testing::ext::TestSize.Level1)
     fixed_string_compare<BASE_NS::basic_fixed_string<char, 30>, BASE_NS::basic_string_view<char>>();
 }
 
-template<typename T>
+template <typename T>
 void findTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -826,7 +826,7 @@ UNIT_TEST(API_ContainersFixedString, find, testing::ext::TestSize.Level1)
     findTest<BASE_NS::fixed_string<20>>();
 }
 
-template<typename T>
+template <typename T>
 void testFindFirstOfAndLastOf()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -914,7 +914,7 @@ UNIT_TEST(API_ContainersFixedString, findFirstOfAndLastOf, testing::ext::TestSiz
     testFindFirstOfAndLastOf<BASE_NS::fixed_string<20>>();
 }
 
-template<typename T>
+template <typename T>
 void startWithTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";
@@ -986,7 +986,7 @@ UNIT_TEST(API_ContainersStringView, startsWith, testing::ext::TestSize.Level1)
     startWithTest<BASE_NS::string_view>();
 }
 
-template<typename T>
+template <typename T>
 void endsWithTest()
 {
     constexpr const char* TEST_STRING = "ABCDEF";

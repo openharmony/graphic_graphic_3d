@@ -79,7 +79,7 @@ void CreatePods(UTest::EngineResources& er)
     }
 }
 
-template<class RenderDataStoreType>
+template <class RenderDataStoreType>
 RenderDataStoreTypeInfo FillRenderDataStoreTypeInfo()
 {
     return {

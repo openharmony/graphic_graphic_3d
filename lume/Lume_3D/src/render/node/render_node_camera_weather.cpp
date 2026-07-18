@@ -91,7 +91,7 @@ void UpdateBuffer(IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHan
     }
 }
 
-template<typename T>
+template <typename T>
 RenderHandleReference CreateCloudDataUniformBuffer(
     IRenderNodeGpuResourceManager& gpuResourceMgr, const RenderHandleReference& handle)
 {

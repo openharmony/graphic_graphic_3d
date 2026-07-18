@@ -213,7 +213,7 @@ ISerNode::Ptr Exporter::ExportIContainer(const IContainer& cont)
     return ISerNode::Ptr(new ArrayNode(BASE_NS::move(elements)));
 }
 
-template<typename... Builtins>
+template <typename... Builtins>
 static ISerNode::Ptr ExportSingleBuiltinValue(TypeList<Builtins...>, const IAny& value)
 {
     ISerNode::Ptr res;

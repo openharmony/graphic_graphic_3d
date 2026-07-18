@@ -206,7 +206,7 @@ public:
     SerMetadata metadata{};
 };
 
-template<typename Type, const META_NS::ClassInfo& ClassInfo>
+template <typename Type, const META_NS::ClassInfo& ClassInfo>
 class BuiltinValueNode : public IntroduceInterfaces<BaseObject, IBuiltinValueNode<Type>> {
     using MyBase = IntroduceInterfaces<BaseObject, IBuiltinValueNode<Type>>;
     META_OBJECT(BuiltinValueNode, ClassInfo, MyBase)
@@ -243,7 +243,7 @@ using DoubleNode = BuiltinValueNode<double, ClassId::DoubleNode>;
 using StringNode = BuiltinValueNode<BASE_NS::string, ClassId::StringNode>;
 using RefNode = BuiltinValueNode<RefUri, ClassId::RefNode>;
 
-template<typename Type, typename Node>
+template <typename Type, typename Node>
 struct SupportedType {
     using NodeType = Node;
     constexpr const static TypeId ID = UidFromType<Type>();

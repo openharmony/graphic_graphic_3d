@@ -33,12 +33,12 @@ constexpr TypeId WeakPtrIInterfaceId = UidFromType<WeakPtrIInterface>();
 constexpr TypeId WeakPtrConstIInterfaceId = UidFromType<WeakPtrConstIInterface>();
 // NOLINTEND(readability-identifier-naming)
 
-template<bool IsConst, bool IsWeak>
+template <bool IsConst, bool IsWeak>
 struct AnyPointerCompatibility {
     using IIType = BASE_NS::conditional_t<IsConst, const CORE_NS::IInterface, CORE_NS::IInterface>;
     using IIPtrType = BASE_NS::conditional_t<IsConst, SharedPtrConstIInterface, SharedPtrIInterface>;
 
-    template<typename Type>
+    template <typename Type>
     static BASE_NS::array_view<const TypeId> GetCompatibleTypes(CompatibilityDirection dir)
     {
         static constexpr TypeId typeId = UidFromType<Type>();
@@ -122,12 +122,12 @@ struct AnyPointerCompatibility {
     }
 };
 
-template<bool IsConst>
+template <bool IsConst>
 struct AnyPointerCompatibility<IsConst, true> {
     using IIType = BASE_NS::conditional_t<IsConst, const CORE_NS::IInterface, CORE_NS::IInterface>;
     using IIPtrType = BASE_NS::conditional_t<IsConst, SharedPtrConstIInterface, SharedPtrIInterface>;
 
-    template<typename Type>
+    template <typename Type>
     static BASE_NS::array_view<const TypeId> GetCompatibleTypes(CompatibilityDirection dir)
     {
         static constexpr TypeId typeId = UidFromType<Type>();
@@ -231,7 +231,7 @@ struct AnyPointerCompatibility<IsConst, true> {
     }
 };
 
-template<typename Type>
+template <typename Type>
 using AnyPC = AnyPointerCompatibility<IsConstPtr_v<Type>, IsWeakPtr_v<Type>>;
 
 META_END_NAMESPACE()

@@ -355,14 +355,14 @@ constexpr SystemTypeInfo CORE_SYSTEM_TYPE_INFOS[] = {
     WEATHER_SYSTEM_TYPE_INFO,
 };
 
-template<typename RenderType>
+template <typename RenderType>
 constexpr auto FillRenderDataStoreTypeInfo()
 {
     return RenderDataStoreTypeInfo{
         {RenderDataStoreTypeInfo::UID}, RenderType::UID, RenderType::TYPE_NAME, RenderType::Create};
 }
 
-template<typename RenderType>
+template <typename RenderType>
 constexpr auto FillRenderNodeTypeInfo()
 {
     return RenderNodeTypeInfo{{RenderNodeTypeInfo::UID},

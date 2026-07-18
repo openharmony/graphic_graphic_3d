@@ -33,7 +33,7 @@ namespace UTest {
 
 class API_ScenePluginCameraComponentTest : public ScenePluginComponentTest<CORE3D_NS::ICameraComponentManager> {
 public:
-    template<class T>
+    template <class T>
     void TestICameraPropertyGetters(T* camera)
     {
         EXPECT_TRUE(camera->IsActive());

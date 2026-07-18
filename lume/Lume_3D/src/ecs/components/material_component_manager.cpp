@@ -134,13 +134,13 @@ constexpr string_view CUSTOM_PROPERTY_DATA = "data";
 
 constexpr uint32_t MODIFIED = 0x80000000;
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline typename Container::const_iterator FindIf(const Container& container, Predicate&& predicate)
 {
     return std::find_if(container.cbegin(), container.cend(), forward<Predicate>(predicate));
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 inline typename Container::iterator FindIf(Container& container, Predicate&& predicate)
 {
     return std::find_if(container.begin(), container.end(), forward<Predicate>(predicate));

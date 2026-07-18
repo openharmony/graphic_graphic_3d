@@ -44,7 +44,7 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<typename Manager>
+template <typename Manager>
 Manager* Ecs::GetCoreManager()
 {
     auto m = CORE_NS::GetManager<Manager>(*ecs);

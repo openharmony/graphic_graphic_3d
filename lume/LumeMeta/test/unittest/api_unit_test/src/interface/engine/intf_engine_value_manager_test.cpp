@@ -324,7 +324,7 @@ UNIT_TEST_F(API_EngineManagerTest, ChangeHandle, testing::ext::TestSize.Level1)
     EXPECT_EQ(handle->GetValue(), cman3.GetData(0));
 }
 
-template<typename Type>
+template <typename Type>
 void TestWithSingle(BASE_NS::string_view path, EngineValueOptions ops = {})
 {
     TestComponentManager<prop1::EngineTestProp> cman1{prop1::ENGINE_TESTPROP_METADATA};
@@ -747,47 +747,6 @@ UNIT_TEST_F(API_EngineManagerTest, DefaultValueFromEngineValue, testing::ext::Te
     auto p = manager->ConstructProperty<int32_t>("value");
     ASSERT_TRUE(p);
     EXPECT_EQ(p->GetValue(), 2);
-}
-
-/**
- * @tc.name: PendingLocalWriteNotOverwrittenByEngineSync
- * @tc.desc: A FROM_ENGINE sync must not overwrite a pending local write; the local value is
- *           preserved and flushed to the engine on the next TO_ENGINE pass.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_EngineManagerTest, PendingLocalWriteNotOverwrittenByEngineSync, testing::ext::TestSize.Level1)
-{
-    TestComponentManager<prop1::EngineTestProp> cman{prop1::ENGINE_TESTPROP_METADATA};
-
-    auto manager = GetObjectRegistry().Create<IEngineValueManager>(ClassId::EngineValueManager);
-    ASSERT_TRUE(manager);
-    EXPECT_TRUE(manager->ConstructValues(EnginePropertyHandle{&cman, cman.entityRef}));
-
-    auto p = manager->ConstructProperty<int32_t>("value");
-    ASSERT_TRUE(p);
-    EXPECT_EQ(p->GetValue(), 0);
-
-    // Local write from the user side: the value is now pending (VALUE_CHANGED).
-    EXPECT_TRUE(p->SetValue(7));
-    EXPECT_EQ(p->GetValue(), 7);
-
-    // The engine-side value changes concurrently (e.g. an unrelated MODIFIED event on the
-    // same component manager).
-    EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman.GetData(0), "value", 99));
-
-    // A FROM_ENGINE sync must not clobber the pending local write.
-    EXPECT_TRUE(manager->Sync(EngineSyncDirection::FROM_ENGINE));
-    EXPECT_EQ(p->GetValue(), 7);
-
-    // The pending local write is flushed to the engine on the next dirty (TO_ENGINE) pass.
-    EXPECT_TRUE(manager->Sync(EngineSyncDirection::TO_ENGINE));
-    EXPECT_EQ(p->GetValue(), 7);
-    EXPECT_EQ(CORE_NS::GetPropertyValue<int32_t>(*cman.GetData(0), "value"), 7);
-
-    // After the local write has been flushed, FROM_ENGINE syncs again as usual.
-    EXPECT_TRUE(CORE_NS::SetPropertyValue(*cman.GetData(0), "value", 5));
-    EXPECT_TRUE(manager->Sync(EngineSyncDirection::FROM_ENGINE));
-    EXPECT_EQ(p->GetValue(), 5);
 }
 
 }  // namespace UTest

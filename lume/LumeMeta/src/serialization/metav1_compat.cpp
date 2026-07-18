@@ -32,7 +32,7 @@ static bool IsV1Property(ObjectId oid)
     return oid.ToUid().data[1] == propertyUid.data[1];
 }
 
-template<typename... Types>
+template <typename... Types>
 static bool CheckBasicMetaTypes(ObjectId oid, ObjectId& out, TypeList<Types...>)
 {
     return (false || ... ||

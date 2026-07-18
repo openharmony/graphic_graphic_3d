@@ -53,7 +53,7 @@ using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
 
-template<typename ComponentManager>
+template <typename ComponentManager>
 Entity LookupResourceByUri(
     string_view uri, const IUriComponentManager& uriManager, const ComponentManager& componentManager)
 {
@@ -73,7 +73,7 @@ Entity LookupResourceByUri(
     return {};
 }
 
-template<typename Container, typename Pred>
+template <typename Container, typename Pred>
 bool any_of(const Container& c, Pred&& p)
 {
     return std::any_of(std::begin(c), std::end(c), std::forward<Pred>(p));
@@ -87,7 +87,7 @@ struct PropertyValue {
     {
         return (handle) && (info);
     }
-    template<typename Type>
+    template <typename Type>
     Type& get() const
     {
         return *static_cast<Type*>(const_cast<void*>(offset));

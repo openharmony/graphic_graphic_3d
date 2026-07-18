@@ -25,7 +25,7 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T1, class T2>
+template <class T1, class T2>
 struct pair;
 BASE_END_NAMESPACE()
 

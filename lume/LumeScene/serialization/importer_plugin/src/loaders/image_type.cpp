@@ -24,13 +24,9 @@
 #include <scene/interface/resource/intf_resource_context.h>
 
 #include <3d/ecs/components/render_handle_component.h>
-#include <render/device/intf_gpu_resource_manager.h>
-#include <render/intf_render_context.h>
 
 #include <meta/api/util.h>
-#include <meta/interface/intf_attach.h>
 #include <meta/interface/intf_metadata.h>
-#include <meta/interface/intf_named.h>
 
 #include "../config.h"
 #include "../objects/index.h"
@@ -74,45 +70,6 @@ static RENDER_NS::RenderHandleReference FindRenderHandle(
     return {};
 }
 
-static META_NS::IObject::Ptr CreateImageTemplate(const SCENE_NS::ImageLoadInfo& flags)
-{
-    auto obj = META_NS::GetObjectRegistry().Create<META_NS::IObject>(SCENE_NS::ClassId::ImageTemplate);
-    if (auto meta = interface_cast<META_NS::IMetadata>(obj)) {
-        META_NS::SetValue(meta->GetProperty<SCENE_NS::ImageLoadInfo>("ImageLoadInfo"), flags);
-    }
-    return obj;
-}
-
-static void AttachImageTemplate(const META_NS::IObject::Ptr& tmpl, CORE_NS::IResource& image)
-{
-    if (!tmpl) {
-        return;
-    }
-    if (auto att = interface_cast<META_NS::IAttach>(&image)) {
-        att->Attach(tmpl);
-    }
-}
-
-static SCENE_NS::ImageLoadInfo ReadGpuImageLoadInfo(
-    const SCENE_NS::IRenderContext::Ptr& context, const CORE_NS::IResource::Ptr& image)
-{
-    SCENE_NS::ImageLoadInfo flags = SCENE_NS::DEFAULT_IMAGE_LOAD_INFO;
-    auto renderResource = interface_cast<SCENE_NS::IRenderResource>(image);
-    if (!context || !renderResource) {
-        return flags;
-    }
-    auto handle = renderResource->GetRenderHandle();
-    if (!handle) {
-        return flags;
-    }
-    auto& gpuRes = context->GetRenderer()->GetDevice().GetGpuResourceManager();
-    auto desc = gpuRes.GetImageDescriptor(handle);
-    flags.info.usageFlags = static_cast<SCENE_NS::ImageUsageFlag>(desc.usageFlags);
-    flags.info.memoryFlags = static_cast<SCENE_NS::MemoryPropertyFlag>(desc.memoryPropertyFlags);
-    flags.info.creationFlags = static_cast<SCENE_NS::EngineImageCreationFlag>(desc.engineCreationFlags);
-    return flags;
-}
-
 static CORE_NS::IResource::Ptr LoadImageFromScene(
     const CORE_NS::IResourceType::StorageInfo& s, const SCENE_NS::IScene::Ptr& scene)
 {
@@ -122,9 +79,7 @@ static CORE_NS::IResource::Ptr LoadImageFromScene(
             if (auto img =
                     interface_pointer_cast<SCENE_NS::IRenderResource>(is->CreateObject(SCENE_NS::ClassId::Image))) {
                 img->SetRenderHandle(handle);
-                auto res = interface_pointer_cast<CORE_NS::IResource>(img);
-                AttachImageTemplate(CreateImageTemplate(ReadGpuImageLoadInfo(is->GetContext(), res)), *res);
-                return res;
+                return interface_pointer_cast<CORE_NS::IResource>(img);
             }
         } else {
             CORE_LOG_E("Could not find render handle for resource: %s", s.id.ToString().c_str());
@@ -147,23 +102,8 @@ static CORE_NS::IResource::Ptr LoadImageFromPath(
     return nullptr;
 }
 
-// Copy the optional INamed "Name" from the load options onto the freshly
-// loaded image. ImageTemplate::ApplyOptions is a no-op, so the importer's name
-// has to be transferred to the live resource here.
-static void ApplyResourceName(const CORE_NS::IResourceOptions::Ptr& options, CORE_NS::IResource& image)
-{
-    auto src = interface_cast<META_NS::INamed>(options);
-    auto dst = interface_cast<META_NS::INamed>(&image);
-    if (src && dst) {
-        if (auto name = META_NS::GetValue(src->Name()); !name.empty()) {
-            META_NS::SetValue(dst->Name(), name);
-        }
-    }
-}
-
 CORE_NS::IResource::Ptr ImageResourceType::LoadResource(const StorageInfo& s) const
 {
-    CORE_NS::IResource::Ptr image;
     if (s.path.empty()) {
         auto rcontext = interface_cast<SCENE_NS::IResourceContext>(s.context);
         auto scene = rcontext ? rcontext->GetScene() : interface_pointer_cast<SCENE_NS::IScene>(s.context);
@@ -171,24 +111,17 @@ CORE_NS::IResource::Ptr ImageResourceType::LoadResource(const StorageInfo& s) co
             CORE_LOG_E("Scene context not set for image when loading: %s", s.id.ToString().c_str());
             return nullptr;
         }
-        image = LoadImageFromScene(s, scene);
-    } else {
-        auto context = GetRenderContext(importer_);
-        if (!context) {
-            CORE_LOG_E("No render context when loading image resource: %s (path: %s)",
-                s.id.ToString().c_str(),
-                BASE_NS::string(s.path).c_str());
-            return nullptr;
-        }
-        image = LoadImageFromPath(s, context);
-        if (image && s.options) {
-            AttachImageTemplate(interface_pointer_cast<META_NS::IObject>(s.options), *image);
-        }
+        return LoadImageFromScene(s, scene);
     }
-    if (image) {
-        ApplyResourceName(s.options, *image);
+
+    auto context = GetRenderContext(importer_);
+    if (!context) {
+        CORE_LOG_E("No render context when loading image resource: %s (path: %s)",
+            s.id.ToString().c_str(),
+            BASE_NS::string(s.path).c_str());
+        return nullptr;
     }
-    return image;
+    return LoadImageFromPath(s, context);
 }
 
 bool ImageResourceType::ReloadResource(const StorageInfo& s, const CORE_NS::IResource::Ptr& res) const

@@ -79,7 +79,7 @@ UNIT_TEST(API_MetadataTest, Events, testing::ext::TestSize.Level1)
     ASSERT_TRUE(e);
 }
 
-template<typename Set, typename Get>
+template <typename Set, typename Get>
 void TestGetSetValue(Set sp, Get gp)
 {
     ASSERT_TRUE(SetValue(sp, "First", 1));
@@ -100,7 +100,7 @@ void TestGetSetValue(Set sp, Get gp)
     ASSERT_EQ(GetValue<int>(nil, "First", 3), 3);
 }
 
-template<typename Type>
+template <typename Type>
 void TestGetSetValue(BASE_NS::shared_ptr<Type> p)
 {
     BASE_NS::shared_ptr<const Type> c_p = p;
@@ -216,7 +216,7 @@ class EmptyMetadataTest : public MetadataTest {
     META_OBJECT(EmptyMetadataTest, ClassId::EmptyMetadataTest, MetadataTest)
 };
 
-template<typename Type>
+template <typename Type>
 void TestMetadata(const ClassInfo& info)
 {
     auto& r = META_NS::GetObjectRegistry();

@@ -16,12 +16,12 @@
 #ifndef GLTF2_LOADER_FUZZER_H
 #define GLTF2_LOADER_FUZZER_H
 
-#include <climits>
 #include <cstdint>
+#include <unistd.h>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <unistd.h>
 
 #define FUZZ_PROJECT_NAME "gltf2loader_fuzzer"
 

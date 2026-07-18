@@ -84,9 +84,10 @@ void SwapchainMln::CreateDisplaySurface(const SwapchainCreateInfo& createInfo)
     // New API: nativeWindow is OHNativeWindow* (same underlying type, just pointer cast)
     dsDesc.nativeWindow = reinterpret_cast<OHNativeWindow*>(createInfo.window.window);
 
-    MLN_LOG_INIT("BEFORE MlnCreateDisplaySurface");
+    MLN_LOG_INIT(
+        "BEFORE MlnCreateDisplaySurface (nativeWindow=%p)", reinterpret_cast<const void*>(dsDesc.nativeWindow));
     plat_.displaySurface = MlnCreateDisplaySurface(deviceMln.GetMlnDevice(), &dsDesc);
-    MLN_LOG_INIT("AFTER  MlnCreateDisplaySurface");
+    MLN_LOG_INIT("AFTER  MlnCreateDisplaySurface (handle=%p)", reinterpret_cast<void*>(plat_.displaySurface));
     if (!plat_.displaySurface) {
         MLN_LOG_ERR("SwapchainMln: MlnCreateDisplaySurface FAILED");
     }
@@ -99,16 +100,15 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
 
     // Query capabilities to get actual width/height (new API: MlnDisplaySurfaceCapabilities)
     MlnDisplaySurfaceCapabilities caps{};
+    MLN_LOG_INIT("BEFORE MlnGetDisplaySurfaceCapabilities (surface=%p)", reinterpret_cast<void*>(plat_.displaySurface));
     MlnStatus capsResult = MlnGetDisplaySurfaceCapabilities(deviceMln.GetMlnDevice(), plat_.displaySurface, &caps);
+    MLN_LOG_INIT("AFTER  MlnGetDisplaySurfaceCapabilities (status=%d)", static_cast<int>(capsResult));
     if (capsResult != MLN_STATUS_SUCCESS) {
         MLN_LOG_ERR("SwapchainMln: MlnGetDisplaySurfaceCapabilities FAILED (status=%d)", static_cast<int>(capsResult));
         return;
     }
-    MLN_LOG_INIT("caps: extent=%ux%u, minImg=%u, maxImg=%u, currentTransform=0x%x",
-        caps.currentExtent.width,
-        caps.currentExtent.height,
-        caps.minImageCount,
-        caps.maxImageCount,
+    MLN_LOG_INIT("caps: extent=%ux%u, minImg=%u, maxImg=%u, currentTransform=0x%x", caps.currentExtent.width,
+        caps.currentExtent.height, caps.minImageCount, caps.maxImageCount,
         static_cast<uint32_t>(caps.currentTransform));
 
     desc_.imageType = CORE_IMAGE_TYPE_2D;
@@ -196,8 +196,7 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
         if (selectedFormat == Format::BASE_FORMAT_UNDEFINED) {
             selectedFormat = wantSrgb ? Format::BASE_FORMAT_R8G8B8A8_SRGB : Format::BASE_FORMAT_R8G8B8A8_UNORM;
             MLN_LOG_INIT("Swapchain format: using fallback %u (query returned %u formats)",
-                static_cast<uint32_t>(selectedFormat),
-                fmtCount);
+                static_cast<uint32_t>(selectedFormat), fmtCount);
         }
 
         desc_.format = selectedFormat;
@@ -251,18 +250,17 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
     scDesc.presentMode = presentMode;
     scDesc.clipped = 1;
 
-    MLN_LOG_INIT("BEFORE MlnCreateSwapchain: %ux%u, imgs=%u(req=%u), fmt=%d, "
-                 "preTransform=0x%x, compositeAlpha=0x%x, presentMode=%d, usage=0x%x",
-        desc_.width,
-        desc_.height,
-        imageCount,
-        config.swapchainImageCount,
-        static_cast<int>(surfaceFormat.format),
-        static_cast<uint32_t>(scDesc.preTransform),
-        static_cast<uint32_t>(scDesc.compositeAlpha),
-        static_cast<int>(presentMode),
-        static_cast<uint32_t>(scDesc.imageUsage));
+    MLN_LOG_INIT(
+        "BEFORE MlnCreateSwapchain: %ux%u, imgs=%u(req=%u), fmt=%d, "
+        "preTransform=0x%x, compositeAlpha=0x%x, presentMode=%d, usage=0x%x",
+        desc_.width, desc_.height, imageCount, config.swapchainImageCount, static_cast<int>(surfaceFormat.format),
+        static_cast<uint32_t>(scDesc.preTransform), static_cast<uint32_t>(scDesc.compositeAlpha),
+        static_cast<int>(presentMode), static_cast<uint32_t>(scDesc.imageUsage));
     plat_.swapchain = MlnCreateSwapchain(deviceMln.GetMlnDevice(), &scDesc);
+    MLN_LOG_INIT("AFTER  MlnCreateSwapchain (handle=%p)", reinterpret_cast<void*>(plat_.swapchain));
+    if (!plat_.swapchain) {
+        MLN_LOG_ERR("SwapchainMln: MlnCreateSwapchain FAILED");
+    }
 }
 
 void SwapchainMln::GetSwapchainImages()
@@ -270,11 +268,11 @@ void SwapchainMln::GetSwapchainImages()
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
 
     uint32_t imageCount = 0;
+    MLN_LOG_INIT("BEFORE MlnGetSwapchainImages (query count, swapchain=%p)", reinterpret_cast<void*>(plat_.swapchain));
     MlnStatus status1 = MlnGetSwapchainImages(deviceMln.GetMlnDevice(), plat_.swapchain, &imageCount, nullptr);
     MLN_LOG_INIT("AFTER  MlnGetSwapchainImages query: status=%d, count=%u", static_cast<int>(status1), imageCount);
     if (status1 != MLN_STATUS_SUCCESS || imageCount == 0) {
-        MLN_LOG_ERR("SwapchainMln: MlnGetSwapchainImages query FAILED (status=%d, count=%u)",
-            static_cast<int>(status1),
+        MLN_LOG_ERR("SwapchainMln: MlnGetSwapchainImages query FAILED (status=%d, count=%u)", static_cast<int>(status1),
             imageCount);
         return;
     }
@@ -313,6 +311,8 @@ void SwapchainMln::GetSwapchainImages()
         viewDesc.subresourceRange.layerCount = 1;
 
         plat_.imageViews[i] = MlnCreateImageResourceView(mlnDev, &viewDesc);
+        MLN_LOG_INIT("SwapchainMln: pre-created imageView[%u]=%p for resource=%p", i,
+            reinterpret_cast<void*>(plat_.imageViews[i]), reinterpret_cast<void*>(plat_.images[i]));
     }
 }
 
@@ -353,7 +353,8 @@ const SwapchainPlatformDataMln& SwapchainMln::GetPlatformData() const
 
 MlnStatus SwapchainMln::AcquireNextImage(uint32_t& imageIndex, MlnTimeline signalTimeline, uint64_t signalValue)
 {
-    MLN_LOG_FRAME("SwapchainMln::AcquireNextImage (signalValue=%llu)", static_cast<unsigned long long>(signalValue));
+    MLN_LOG_FRAME("SwapchainMln::AcquireNextImage (signalTimeline=%p, signalValue=%llu)",
+        reinterpret_cast<void*>(signalTimeline), static_cast<unsigned long long>(signalValue));
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
     MlnStatus result = MlnAcquireNextImage(
         deviceMln.GetMlnDevice(), plat_.swapchain, UINT64_MAX, signalTimeline, signalValue, &imageIndex);

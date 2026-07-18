@@ -32,13 +32,13 @@ class Device;
 class GpuResourceManager;
 
 struct LowLevelDescriptorSetMln {
-    MlnBindingLayout bindingLayout{MLN_NULL_HANDLE};
-    static constexpr uint32_t MAX_BUFFERING_COUNT{DeviceConstants::MAX_BUFFERING_COUNT};
-    MlnBindingSet bufferingSet[MAX_BUFFERING_COUNT]{};
+    MlnBindingLayout bindingLayout { MLN_NULL_HANDLE };
+    static constexpr uint32_t MAX_BUFFERING_COUNT { DeviceConstants::MAX_BUFFERING_COUNT };
+    MlnBindingSet bufferingSet[MAX_BUFFERING_COUNT] {};
     // Ensure all buffering sets receive initial writes: on creation, set to bufferingCount_.
     // Decremented each frame; forces UpdateDescriptorSetGpuHandle to return dirty=true
     // even after isDirty is cleared, so every buffering slot gets written at least once.
-    uint32_t dirtyFramesRemaining{0};
+    uint32_t dirtyFramesRemaining { 0 };
 };
 
 class NodeContextDescriptorSetManagerMln final : public NodeContextDescriptorSetManager {
@@ -68,7 +68,7 @@ public:
 
 private:
     struct PendingOneFrameGpuData {
-        uint64_t frameIndex{0};
+        uint64_t frameIndex { 0 };
         BASE_NS::vector<LowLevelDescriptorSetMln> gpuSets;
     };
 
@@ -80,7 +80,7 @@ private:
     void DestroyGpuDescriptorSetArray(BASE_NS::vector<LowLevelDescriptorSetMln>& gpuSets);
     void ReclaimAgedOneFrameGpuData();
 
-    uint32_t bufferingCount_{0};
+    uint32_t bufferingCount_ { 0 };
 
     // GPU-side storage parallel to cpuDescriptorSets_
     BASE_NS::vector<LowLevelDescriptorSetMln> gpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_COUNT];
@@ -91,4 +91,4 @@ private:
 
 RENDER_END_NAMESPACE()
 
-#endif  // MALEOON_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_MLN_H
+#endif // MALEOON_NODE_CONTEXT_DESCRIPTOR_SET_MANAGER_MLN_H

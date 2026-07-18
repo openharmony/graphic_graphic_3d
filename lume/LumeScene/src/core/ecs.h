@@ -138,7 +138,7 @@ public:
     BASE_NS::vector<CORE3D_NS::IPicking*> GetPicking();
 
 private:
-    template<typename Manager>
+    template <typename Manager>
     Manager* GetCoreManager();
 
     void OnChildChanged(const CORE3D_NS::ISceneNode& parent, CORE3D_NS::INodeSystem::SceneNodeListener::EventType type,

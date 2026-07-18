@@ -398,7 +398,7 @@ UNIT_TEST(API_Mathf, Sign, testing::ext::TestSize.Level1)
 }
 
 // Vector2
-template<typename T>
+template <typename T>
 void TestCopyableMovable()
 {
     static_assert(std::is_copy_assignable_v<T>);

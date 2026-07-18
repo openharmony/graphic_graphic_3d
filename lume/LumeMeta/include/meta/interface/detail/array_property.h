@@ -20,12 +20,12 @@
 
 META_BEGIN_NAMESPACE()
 
-template<typename Base>
+template <typename Base>
 class ConstTypelessArrayPropertyInterfaceImpl : public Base {
 public:
     using IndexType = IArrayAny::IndexType;
 
-    template<typename Prop>
+    template <typename Prop>
     explicit ConstTypelessArrayPropertyInterfaceImpl(Prop* p) : Base(p)
     {}
 
@@ -147,11 +147,11 @@ public:
     }
 };
 
-template<typename Type>
+template <typename Type>
 using ArrayPropertyBaseType = BASE_NS::conditional_t<BASE_NS::is_const_v<Type>, ConstTypelessArrayPropertyInterface,
     TypelessArrayPropertyInterface>;
 
-template<typename Type>
+template <typename Type>
 class ArrayPropertyInterface : public ArrayPropertyBaseType<Type> {
     using Super = ArrayPropertyBaseType<Type>;
 
@@ -219,7 +219,7 @@ public:
     }
 
     /// Set default value of the array property
-    template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
+    template <typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
     AnyReturnValue SetDefaultValue(BASE_NS::vector<T> value)
     {
         return this->SetDefaultValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
@@ -247,7 +247,7 @@ public:
         return this->SetValueAny(ArrayAny<ValueType>(value));
     }
     /// Set value of the array property
-    template<typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
+    template <typename T, typename = BASE_NS::enable_if_t<BASE_NS::is_same_v<T, ValueType>>>
     AnyReturnValue SetValue(BASE_NS::vector<T> value)
     {
         return this->SetValueAny(ArrayAny<ValueType>(BASE_NS::move(value)));
@@ -264,7 +264,7 @@ public:
     }
 };
 
-template<typename Type>
+template <typename Type>
 class TypedArrayPropertyLock final : public ArrayPropertyInterface<Type> {
     using PropertyType = typename ArrayPropertyInterface<Type>::PropertyType;
     using IT = ArrayPropertyInterface<Type>;
@@ -313,7 +313,7 @@ public:
     }
 };
 
-template<typename Property>
+template <typename Property>
 class ArrayPropertyLock final : public ArrayPropertyBaseType<Property> {
     using InterfaceType = ArrayPropertyBaseType<Property>*;
 

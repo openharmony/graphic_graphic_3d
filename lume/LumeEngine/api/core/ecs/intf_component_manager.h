@@ -27,7 +27,7 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 
@@ -195,21 +195,21 @@ protected:
 };
 
 /** Get name */
-template<class T>
+template <class T>
 inline constexpr BASE_NS::string_view GetName()
 {
     return GetName((const T*)nullptr);
 }
 
 /** Get UID */
-template<class T>
+template <class T>
 inline constexpr BASE_NS::Uid GetUid()
 {
     return GetUid((const T*)nullptr);
 }
 
 /** Create component */
-template<class T>
+template <class T>
 inline auto CreateComponent(T& componentManager, const Entity& entity)
 {
     componentManager.Create(entity);

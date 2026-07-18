@@ -378,7 +378,7 @@ ohos_source_set("lume_render_src") {
       "graphic_2d:EGL",
       "graphic_2d:GLESv3",
       "egl:libEGL",
-      "opengles:libGLES"
+      "opengles:libGLES",
     ]
   }
   if (RENDER_BUILD_VULKAN) {
@@ -426,7 +426,6 @@ ohos_source_set("lume_render_src") {
     external_deps += [
       "vulkan-headers:vulkan_headers",
       "vulkan-loader:vulkan_loader",
-      "vma:vma"
     ]
   }
 
@@ -496,7 +495,8 @@ ohos_source_set("lume_render_src") {
     "c_utils:utils",
     "graphic_surface:surface",
     "hitrace:hitrace_meter",
-    "vma:vma",
+    "skia:skia_canvaskit",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"
@@ -559,7 +559,7 @@ lume_rofs("lume_render_rofs")
       "${LUME_BINARY_PATH}/lumeassetcompiler:lume_binary_assets_compile",
     ]
   }
-  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gles\""
+  file_extension = "\".spv;.json;.lsb;.shader;.shadergs;.shadervid;.shaderpl;.rng;.gl;.gles\""
 }
 
 source_set("lume_render_rofs_obj") {
@@ -626,4 +626,3 @@ ohos_shared_library("AGPRenderApi") {
   part_name = "graphic_3d"
   subsystem_name = "graphic"
 }
-

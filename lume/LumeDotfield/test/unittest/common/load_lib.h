@@ -45,7 +45,7 @@ public:
     bool IsLoaded() const;
 
     // Load function
-    template<typename T>
+    template <typename T>
     bool LoadFunction(T& fn, const BASE_NS::string& fName);
 
     // Unload the library
@@ -65,7 +65,7 @@ private:
     BASE_NS::string m_lastError;
 };
 
-template<typename T>
+template <typename T>
 bool DynamicLibrary::LoadFunction(T& fn, const BASE_NS::string& fName)
 {
 #if defined(_WIN32)

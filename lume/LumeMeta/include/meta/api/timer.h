@@ -46,7 +46,7 @@ public:
     /**
      * @brief Constructor that calls corresponding Start function (See Start below).
      */
-    template<typename Func>
+    template <typename Func>
     Timer(const TimeSpan& interval, Func func, TimerType type, const ITaskQueue::Ptr& queue)
     {
         Start(interval, BASE_NS::move(func), type, queue);
@@ -55,7 +55,7 @@ public:
     /**
      * @brief Constructor that calls corresponding Start function (See Start below).
      */
-    template<typename Func>
+    template <typename Func>
     Timer(const TimeSpan& interval, Func func, TimerType type, const BASE_NS::Uid& queueId)
     {
         Start(interval, BASE_NS::move(func), type, queueId);
@@ -76,7 +76,7 @@ public:
      * @param type Type of the timer.
      * @param queue Queue to which the timer task is posted to (this dictates on what thread the func is called).
      */
-    template<typename Func>
+    template <typename Func>
     bool Start(const TimeSpan& interval, Func func, TimerType type, const ITaskQueue::Ptr& queue)
     {
         if (!queue) {
@@ -109,7 +109,7 @@ public:
      * @param queueId Uid of queue to which the timer task is posted to (this dictates on what thread the func is
      * called).
      */
-    template<typename Func>
+    template <typename Func>
     bool Start(const TimeSpan& interval, Func func, TimerType type, const BASE_NS::Uid& queueId)
     {
         return Start(interval, BASE_NS::move(func), type, GetTaskQueueRegistry().GetTaskQueue(queueId));
@@ -170,7 +170,7 @@ private:
  * @param func Callable entity (e.g. lambda) which is called.
  * @param queue Queue to which the timer task is posted to (this dictates on what thread the func is called).
  */
-template<typename Func>
+template <typename Func>
 inline ITaskQueue::Token SingleShotTimer(const TimeSpan& interval, Func func, const ITaskQueue::Ptr& queue)
 {
     Timer t;
@@ -184,7 +184,7 @@ inline ITaskQueue::Token SingleShotTimer(const TimeSpan& interval, Func func, co
  * @param func Callable entity (e.g. lambda) which is called.
  * @param queueId Uid of queue to which the timer task is posted to (this dictates on what thread the func is called).
  */
-template<typename Func>
+template <typename Func>
 inline ITaskQueue::Token SingleShotTimer(const TimeSpan& interval, Func func, const BASE_NS::Uid& queueId)
 {
     Timer t;

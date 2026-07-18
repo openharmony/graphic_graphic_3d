@@ -23,14 +23,14 @@ constexpr char MULTI_TYPE_ANY_TAG[] = "MultiAny";
 constexpr char MULTI_TYPE_ARRAY_ANY_TAG[] = "MultsAny";
 
 struct StaticCastConv {
-    template<typename T1, typename T2>
+    template <typename T1, typename T2>
     static T1 ToType(const T2& v)
     {
         return static_cast<T1>(v);
     }
 };
 
-template<typename Type, typename Conv, typename... CompatType>
+template <typename Type, typename Conv, typename... CompatType>
 class MultiTypeAny : public IntroduceInterfaces<IAny, IValue> {
     using Super = IntroduceInterfaces;
 
@@ -163,7 +163,7 @@ protected:
 };
 
 // idea is just to provide array any that gives you correct any type when cloning ITEM
-template<typename Type>
+template <typename Type>
 class ArrayMultiTypeAnyBase : public ArrayAny<Type> {
     using Super = ArrayAny<Type>;
 

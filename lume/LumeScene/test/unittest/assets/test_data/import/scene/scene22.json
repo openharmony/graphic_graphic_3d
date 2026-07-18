@@ -1,6 +1,6 @@
 {
     "version": "1.0",
-    "description": "test scene with camera postProcess resourceId",
+    "description": "test scene with camera postProcess objectRef",
     "data": {
         "type": "scene",
         "name": "test",
@@ -12,7 +12,10 @@
                     "type": "camera",
                     "name": "test",
                     "projection": "perspective",
-                    "postProcess": { "name": "myPostProcess" }
+                    "postProcess": {
+                        "type": "objectRef",
+                        "path": "@myPostProcess"
+                    }
                 }
             ]
         }

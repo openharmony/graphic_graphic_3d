@@ -152,7 +152,7 @@ public:
     {}
 };
 
-template<typename Property>
+template <typename Property>
 class TestComponentManager final : public CORE_NS::IComponentManager {
 public:
     CORE_NS::Entity ent{uint64_t(this)};

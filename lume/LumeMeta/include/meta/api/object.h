@@ -143,7 +143,7 @@ public:
     {
         return META_INTERFACE_OBJECT_CALL_PTR(RemoveProperty(property));
     }
-    template<class T>
+    template <class T>
     auto AddProperty(BASE_NS::string_view name, const T& value = {}, ObjectFlagBitsValue flags = ObjectFlagBits::NONE)
     {
         if (!GetProperty(name)) {
@@ -151,7 +151,7 @@ public:
         }
         return false;
     }
-    template<class T>
+    template <class T>
     auto GetProperty(BASE_NS::string_view name) const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetProperty<T>(name));
@@ -243,18 +243,18 @@ public:
 class AttachmentContainer : public InterfaceObject<IAttach> {
 public:
     META_INTERFACE_OBJECT(AttachmentContainer, InterfaceObject<IAttach>, IAttach)
-    template<class T, class U>
+    template <class T, class U>
     auto Attach(const T& object, const U& dataContext)
     {
         return META_INTERFACE_OBJECT_CALL_PTR(
             Attach(interface_pointer_cast<IObject>(object), interface_pointer_cast<IObject>(dataContext)));
     }
-    template<class T>
+    template <class T>
     auto Attach(const T& object)
     {
         return Attach(interface_pointer_cast<IObject>(object), META_NS::IObject::Ptr{});
     }
-    template<class T>
+    template <class T>
     auto Detach(const T& object)
     {
         return META_INTERFACE_OBJECT_CALL_PTR(Detach(interface_pointer_cast<IObject>(object)));
@@ -272,7 +272,7 @@ public:
     {
         return META_INTERFACE_OBJECT_CALL_PTR(GetAttachments());
     }
-    template<class T>
+    template <class T>
     BASE_NS::vector<typename T::Ptr> GetAttachments() const
     {
         return META_INTERFACE_OBJECT_CALL_PTR(template GetAttachments<T>());
@@ -322,33 +322,33 @@ public:
  * @param clsi The class info of the class to instantiate.
  * @return The created object converted to given interface type.
  */
-template<typename Interface>
+template <typename Interface>
 inline auto CreateObjectInstance(const META_NS::ClassInfo& clsi)
 {
     return interface_pointer_cast<Interface>(CreateObjectInstance(clsi));
 }
-template<typename Interface>
+template <typename Interface>
 auto CreateObjectInstance() = delete;
 /// Returns a default object which implements IObject
-template<>
+template <>
 inline auto CreateObjectInstance<IObject>()
 {
     return Object(CreateNew);
 }
 /// Returns a default object which implements IMetadata
-template<>
+template <>
 inline auto CreateObjectInstance<IMetadata>()
 {
     return Metadata(CreateObjectInstance(META_NS::ClassId::Object));
 }
 /// Returns a default object which implements IAttach
-template<>
+template <>
 inline auto CreateObjectInstance<IAttach>()
 {
     return AttachmentContainer(CreateObjectInstance(META_NS::ClassId::Object));
 }
 /// Returns a default object which implements IContainer
-template<>
+template <>
 inline auto CreateObjectInstance<IContainer>()
 {
     return Container(CreateNew);

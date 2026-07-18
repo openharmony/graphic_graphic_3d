@@ -23,7 +23,7 @@
 #include "threading/task_queue.h"
 
 BASE_BEGIN_NAMESPACE()
-template<class T>
+template <class T>
 class array_view;
 BASE_END_NAMESPACE()
 

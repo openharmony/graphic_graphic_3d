@@ -34,7 +34,7 @@ constexpr size_t NPOS = -1;
  * @param pos Index to start the search
  * @return First index where is 'value' or NPOS
  */
-template<typename Type>
+template <typename Type>
 size_t FindFirstOf(const BASE_NS::vector<Type>& vec, const Type& value, size_t pos = 0)
 {
     for (; pos < vec.size(); ++pos) {

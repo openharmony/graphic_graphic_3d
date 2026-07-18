@@ -29,7 +29,7 @@ META_BEGIN_NAMESPACE()
 /**
  * @brief Function implementation that is used for the meta function system.
  */
-template<typename Interface, typename Func>
+template <typename Interface, typename Func>
 class DefaultFunction final : public IntroduceInterfaces<IObject, IFunction, ICloneable> {
 public:
     ~DefaultFunction() override = default;
@@ -96,7 +96,7 @@ protected:
 /**
  * @brief Create DefaultFunction object for obj+memfun (used in metadata initialisation)
  */
-template<typename Interface, typename Func>
+template <typename Interface, typename Func>
 IFunction::Ptr CreateFunction(
     BASE_NS::string_view name, BASE_NS::shared_ptr<Interface> obj, Func func, Internal::MetaValue* context)
 {
@@ -112,7 +112,7 @@ IFunction::Ptr CreateFunction(
 /**
  * @brief Create DefaultFunction object from lambda
  */
-template<typename Func, typename = EnableIfBindFunction<Func>>
+template <typename Func, typename = EnableIfBindFunction<Func>>
 IFunction::Ptr CreateBindFunction(Func func)
 {
     auto ccontext = []() {
@@ -129,7 +129,7 @@ IFunction::Ptr CreateBindFunction(Func func)
 /**
  * @brief Create DefaultFunction object from lambda
  */
-template<typename Func, typename... Args>
+template <typename Func, typename... Args>
 IFunction::Ptr CreateBindFunctionSafe(Func func, Args&&... args)
 {
     return CreateBindFunction(CaptureSafe(BASE_NS::move(func), BASE_NS::forward<Args>(args)...));
@@ -151,7 +151,7 @@ inline IFunction::Ptr CreateFunction(const IObject::Ptr& obj, BASE_NS::string_vi
 /**
  * @brief Helper class for meta function call result.
  */
-template<typename Type>
+template <typename Type>
 struct CallResult {
     explicit operator bool() const
     {
@@ -172,7 +172,7 @@ struct CallResult {
     Type value{};
 };
 
-template<>
+template <>
 struct CallResult<void> {
     explicit operator bool() const
     {
@@ -183,7 +183,7 @@ struct CallResult<void> {
     bool success{};
 };
 
-template<typename Ret, typename... Args, size_t... Index>
+template <typename Ret, typename... Args, size_t... Index>
 CallResult<Ret> CallMetaFunctionImpl(const IFunction::Ptr& func, IndexSequence<Index...>, Args&&... args)
 {
     auto context = func->CreateCallContext();
@@ -223,18 +223,18 @@ CallResult<Ret> CallMetaFunctionImpl(const IFunction::Ptr& func, IndexSequence<I
  * @return Result of the call.
  * @see CallResult
  */
-template<typename Ret, typename... Args>
+template <typename Ret, typename... Args>
 CallResult<Ret> CallMetaFunction(const IFunction::Ptr& func, Args&&... args)
 {
     return CallMetaFunctionImpl<Ret>(func, MakeIndexSequenceFor<Args...>(), BASE_NS::forward<Args>(args)...);
 }
 
-template<typename Signature>
+template <typename Signature>
 struct IsFunctionCompatibleImpl;
 
-template<typename Ret, typename... Args>
+template <typename Ret, typename... Args>
 struct IsFunctionCompatibleImpl<Ret(Args...)> {
-    template<size_t... Index>
+    template <size_t... Index>
     static bool Call(const IFunction::Ptr& func, IndexSequence<Index...>)
     {
         auto context = func->CreateCallContext();
@@ -272,7 +272,7 @@ struct IsFunctionCompatibleImpl<Ret(Args...)> {
 /**
  * @brief Check if function is compatible with given signature (The return type and parameter types match).
  */
-template<typename FuncSignature>
+template <typename FuncSignature>
 bool IsFunctionCompatible(const IFunction::Ptr& func)
 {
     return IsFunctionCompatibleImpl<FuncSignature>::Call(func);

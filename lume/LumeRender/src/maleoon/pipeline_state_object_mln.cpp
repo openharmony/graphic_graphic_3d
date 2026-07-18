@@ -49,7 +49,7 @@ MlnStencilOpState ToMlnStencilOpState(const GraphicsState::StencilOpState& src)
     return dst;
 }
 
-}  // namespace
+} // namespace
 
 // ============================================================================
 // GraphicsPipelineStateObjectMln
@@ -158,11 +158,8 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
     }
     // Diagnostic: print vertex input binding strides for PSO stride verification
     for (size_t i = 0; i < viBindings.size(); ++i) {
-        MLN_LOG_GRAPH("GfxPSO-VI: binding[%zu] slot=%u stride=%u inputRate=%u",
-            i,
-            viBindings[i].binding,
-            viBindings[i].stride,
-            static_cast<uint32_t>(viBindings[i].inputRate));
+        MLN_LOG_GRAPH("GfxPSO-VI: binding[%zu] slot=%u stride=%u inputRate=%u", i, viBindings[i].binding,
+            viBindings[i].stride, static_cast<uint32_t>(viBindings[i].inputRate));
     }
     if (viBindings.empty()) {
         MLN_LOG_GRAPH("GfxPSO-VI: NO vertex input bindings (fullscreen/procedural draw)");
@@ -200,9 +197,9 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
     viewportState.extensions = nullptr;
     viewportState.flags = 0;
     viewportState.viewportCount = 1;
-    viewportState.viewports = nullptr;  // dynamic
+    viewportState.viewports = nullptr; // dynamic
     viewportState.scissorCount = 1;
-    viewportState.scissors = nullptr;  // dynamic
+    viewportState.scissors = nullptr; // dynamic
 
     // === Rasterization state ===
     const auto& rs = graphicsState.rasterizationState;
@@ -220,7 +217,6 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
     rasterState.depthBiasClamp = rs.depthBiasClamp;
     rasterState.depthBiasSlopeFactor = rs.depthBiasSlopeFactor;
     rasterState.lineWidth = rs.lineWidth;
-    rasterState.depthClipEnable = rs.enableDepthClamp ? 0u : 1u;
 
     // === Multisample state ===
     // Determine sample count from first color attachment (matching Vulkan PSO behavior)
@@ -434,22 +430,15 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
 
     plat_.program = MlnCreateGraphicsProgram(deviceMln.GetMlnDevice(), deviceMln.GetMlnProgramCache(), &programState);
     // Single-line PSO result (minimized for hilog rate limit)
-    MLN_LOG_GRAPH("GfxPSO sub=%u stg=%u col=%zu dep=%u pc=%u => %s",
-        subpassIndex,
-        stageCount,
-        colorFormats.size(),
-        static_cast<uint32_t>(depthFormat),
-        pipelineLayout.pushConstant.byteSize,
-        plat_.program ? "OK" : "FAILED");
+    MLN_LOG_GRAPH("GfxPSO sub=%u stg=%u col=%zu dep=%u pc=%u iface=%p => %s", subpassIndex, stageCount,
+        colorFormats.size(), static_cast<uint32_t>(depthFormat), pipelineLayout.pushConstant.byteSize,
+        reinterpret_cast<void*>(plat_.programInterface), plat_.program ? "OK" : "FAILED");
     // DIAGNOSTIC: dump color attachment formats + blend state to debug BUG-27 (all draws invisible)
     {
         char fmtBuf[128] = {};
         int pos = 0;
         for (size_t i = 0; i < colorFormats.size() && i < 4; ++i) {
-            const int n = snprintf_s(fmtBuf + pos,
-                sizeof(fmtBuf) - pos,
-                sizeof(fmtBuf) - pos - 1,
-                "%u ",
+            const int n = snprintf_s(fmtBuf + pos, sizeof(fmtBuf) - pos, sizeof(fmtBuf) - pos - 1, "%u ",
                 static_cast<uint32_t>(colorFormats[i]));
             if (n > 0) {
                 pos += n;
@@ -458,39 +447,28 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
         MLN_LOG_GRAPH("GfxPSO-BLEND: colFmts=[%s] attachCount=%u", fmtBuf, colorBlendState.attachmentCount);
         for (uint32_t i = 0; i < colorBlendState.attachmentCount && i < 4; ++i) {
             const auto& a = attachments[i];
-            MLN_LOG_GRAPH("GfxPSO-BLEND[%u]: enable=%u srcColor=%u dstColor=%u colorOp=%u "
-                          "srcAlpha=%u dstAlpha=%u alphaOp=%u writeMask=0x%x",
-                i,
-                a.blendEnable,
-                static_cast<uint32_t>(a.srcColorBlendFactor),
-                static_cast<uint32_t>(a.dstColorBlendFactor),
-                static_cast<uint32_t>(a.colorBlendOp),
-                static_cast<uint32_t>(a.srcAlphaBlendFactor),
-                static_cast<uint32_t>(a.dstAlphaBlendFactor),
-                static_cast<uint32_t>(a.alphaBlendOp),
-                static_cast<uint32_t>(a.colorWriteMask));
+            MLN_LOG_GRAPH(
+                "GfxPSO-BLEND[%u]: enable=%u srcColor=%u dstColor=%u colorOp=%u "
+                "srcAlpha=%u dstAlpha=%u alphaOp=%u writeMask=0x%x",
+                i, a.blendEnable, static_cast<uint32_t>(a.srcColorBlendFactor),
+                static_cast<uint32_t>(a.dstColorBlendFactor), static_cast<uint32_t>(a.colorBlendOp),
+                static_cast<uint32_t>(a.srcAlphaBlendFactor), static_cast<uint32_t>(a.dstAlphaBlendFactor),
+                static_cast<uint32_t>(a.alphaBlendOp), static_cast<uint32_t>(a.colorWriteMask));
         }
         // Rasterization state
         MLN_LOG_GRAPH("GfxPSO-RASTER: cullMode=%u frontFace=%u depthBias=%u rastDiscard=%u lineW=%.1f",
-            static_cast<uint32_t>(rasterState.cullMode),
-            static_cast<uint32_t>(rasterState.frontFace),
-            rasterState.depthBiasEnable,
-            rasterState.rasterizerDiscardEnable,
-            rasterState.lineWidth);
+            static_cast<uint32_t>(rasterState.cullMode), static_cast<uint32_t>(rasterState.frontFace),
+            rasterState.depthBiasEnable, rasterState.rasterizerDiscardEnable, rasterState.lineWidth);
         // Depth/stencil state
         MLN_LOG_GRAPH("GfxPSO-DEPTH: testEn=%u writeEn=%u compareOp=%u boundsEn=%u stencilEn=%u",
-            depthStencilState.depthTestEnable,
-            depthStencilState.depthWriteEnable,
-            static_cast<uint32_t>(depthStencilState.depthCompareOp),
-            depthStencilState.depthBoundsTestEnable,
+            depthStencilState.depthTestEnable, depthStencilState.depthWriteEnable,
+            static_cast<uint32_t>(depthStencilState.depthCompareOp), depthStencilState.depthBoundsTestEnable,
             depthStencilState.stencilTestEnable);
         // SPIR-V magic number check
         if (platProgram.vertSpvSource && platProgram.vertSpvSourceSize >= 4) {
             MLN_LOG_GRAPH("GfxPSO-SPV: vertMagic=0x%08x vertSize=%zu fragMagic=0x%08x fragSize=%zu",
-                platProgram.vertSpvSource[0],
-                platProgram.vertSpvSourceSize,
-                platProgram.fragSpvSource ? platProgram.fragSpvSource[0] : 0,
-                platProgram.fragSpvSourceSize);
+                platProgram.vertSpvSource[0], platProgram.vertSpvSourceSize,
+                platProgram.fragSpvSource ? platProgram.fragSpvSource[0] : 0, platProgram.fragSpvSourceSize);
         }
     }
 
@@ -507,21 +485,6 @@ GraphicsPipelineStateObjectMln::GraphicsPipelineStateObjectMln(Device& device, c
     plat_.depthCompareOp = depthStencilState.depthCompareOp;
     plat_.depthBoundsTestEnable = depthStencilState.depthBoundsTestEnable;
     plat_.stencilTestEnable = depthStencilState.stencilTestEnable;
-
-    // Compute cached static state hash (used by HashOGIdentity, opt9)
-    {
-        uint64_t h = 0;
-        BASE_NS::HashCombine(h,
-            static_cast<uint64_t>(plat_.topology),
-            static_cast<uint64_t>(plat_.cullMode),
-            static_cast<uint64_t>(plat_.frontFace),
-            static_cast<uint64_t>(plat_.depthTestEnable),
-            static_cast<uint64_t>(plat_.depthWriteEnable),
-            static_cast<uint64_t>(plat_.depthCompareOp),
-            static_cast<uint64_t>(plat_.stencilTestEnable),
-            static_cast<uint64_t>(plat_.rasterizerDiscardEnable));
-        plat_.staticStateHash = h;
-    }
 }
 
 GraphicsPipelineStateObjectMln::~GraphicsPipelineStateObjectMln()
@@ -659,7 +622,8 @@ ComputePipelineStateObjectMln::ComputePipelineStateObjectMln(Device& device, con
     computeState.programInterface = plat_.programInterface;
 
     plat_.program = MlnCreateComputeProgram(deviceMln.GetMlnDevice(), deviceMln.GetMlnProgramCache(), &computeState);
-    MLN_LOG_GRAPH("CompPSO pc=%u => %s", pipelineLayout.pushConstant.byteSize, plat_.program ? "OK" : "FAILED");
+    MLN_LOG_GRAPH("CompPSO pc=%u iface=%p => %s", pipelineLayout.pushConstant.byteSize,
+        reinterpret_cast<void*>(plat_.programInterface), plat_.program ? "OK" : "FAILED");
 }
 
 ComputePipelineStateObjectMln::~ComputePipelineStateObjectMln()

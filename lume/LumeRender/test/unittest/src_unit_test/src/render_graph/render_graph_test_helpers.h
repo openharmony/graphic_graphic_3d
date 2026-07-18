@@ -49,7 +49,7 @@ struct TestData {
     RenderHandleReference vertexBufferHandle;
 };
 
-template<typename Node>
+template <typename Node>
 inline void RegisterNodeFactory(TestData& td)
 {
     RenderNodeGraphManager& rngMgr =

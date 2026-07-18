@@ -17,7 +17,6 @@
 
 #include <algorithm>
 
-#include <base/math/mathf.h>
 #include <render/device/intf_gpu_resource_manager.h>
 #include <render/device/intf_shader_manager.h>
 #include <render/device/pipeline_state_desc.h>
@@ -302,14 +301,13 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
     RenderPass rp;
     RenderPassDesc& rpDesc = rp.renderPassDesc;
 
-    PLUGIN_ASSERT(renderPass.attachments.size() <= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
-    const uint32_t attachmentCount =
-        Math::min((uint32_t)renderPass.attachments.size(), PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+    const uint32_t attachmentCount = (uint32_t)renderPass.attachments.size();
+    PLUGIN_ASSERT(attachmentCount <= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
     uint32_t width = ~0u;
     uint32_t height = ~0u;
     if (attachmentCount > 0) {
         rp.renderPassDesc.attachmentCount = attachmentCount;
-        for (size_t idx = 0; idx < attachmentCount; ++idx) {
+        for (size_t idx = 0; idx < renderPass.attachments.size(); ++idx) {
             const auto& ref = renderPass.attachments[idx];
             rpDesc.attachments[idx] = {
                 ref.layer, ref.mip, ref.loadOp, ref.storeOp, ref.stencilLoadOp, ref.stencilStoreOp, ref.clearValue};
@@ -331,12 +329,9 @@ RenderPass RenderNodeUtil::CreateRenderPass(const RenderNodeHandles::InputRender
             // update the one subpass described in render node graph
             auto& spDesc = rp.subpassDesc;
 
-            spDesc.inputAttachmentCount = Math::min(
-                (uint32_t)renderPass.inputAttachmentIndices.size(), PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT);
-            spDesc.colorAttachmentCount = Math::min(
-                (uint32_t)renderPass.colorAttachmentIndices.size(), PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT);
-            spDesc.resolveAttachmentCount = Math::min((uint32_t)renderPass.resolveAttachmentIndices.size(),
-                PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT);
+            spDesc.inputAttachmentCount = (uint32_t)renderPass.inputAttachmentIndices.size();
+            spDesc.colorAttachmentCount = (uint32_t)renderPass.colorAttachmentIndices.size();
+            spDesc.resolveAttachmentCount = (uint32_t)renderPass.resolveAttachmentIndices.size();
 
             spDesc.depthAttachmentCount = (renderPass.depthAttachmentIndex != ~0u) ? 1u : 0u;
             spDesc.depthAttachmentIndex = (spDesc.depthAttachmentCount > 0) ? renderPass.depthAttachmentIndex : ~0u;

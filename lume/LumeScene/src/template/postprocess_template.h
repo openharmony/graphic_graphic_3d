@@ -45,7 +45,6 @@ public:
 
 protected:
     bool ValidateResourceType(const CORE_NS::IResource& res) const override;
-    bool ApplyToTarget(META_NS::IObject& target, bool asDefault) const override;
 };
 
 SCENE_END_NAMESPACE()

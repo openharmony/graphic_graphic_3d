@@ -19,11 +19,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <new>
-#include <clocale>
-#include <locale.h>
-#if defined(__APPLE__)
-#include <xlocale.h>
-#endif
 
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
@@ -36,7 +31,7 @@ CORE_BEGIN_NAMESPACE()
 namespace json {
 using readonly_string_t = BASE_NS::string_view;
 using writable_string_t = BASE_NS::string;
-template<typename T>
+template <typename T>
 using array_t = BASE_NS::vector<T>;
 
 /** Type of a JSON value. */
@@ -60,7 +55,7 @@ struct readonly_tag {};
  * JSON string. */
 struct writable_tag {};
 
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 struct value_t;
 
 /** JSON structure which contains read-only strings. The source JSON string must be kept alive until the parsing
@@ -75,17 +70,17 @@ using standalone_value = value_t<writable_tag>;
  * @param data JSON as a null terminated string.
  * @return Parsed JSON structure.
  */
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 value_t<T> parse(const char* data);
 
 /** Converts a JSON structure into a string.
  * @param value JSON structure.
  * @return JSON as string.
  */
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 BASE_NS::string to_string(const value_t<T>& value);
 
-template<typename T = readonly_tag>
+template <typename T = readonly_tag>
 void to_string(BASE_NS::string& out, const value_t<T>& value);
 
 BASE_NS::string unescape(BASE_NS::string_view str);
@@ -97,7 +92,7 @@ BASE_NS::string escape(BASE_NS::string_view str);
 void escape(BASE_NS::string& out, BASE_NS::string_view str);
 
 /** JSON value. */
-template<typename Tag>
+template <typename Tag>
 struct value_t {
     /** Type used for JSON strings and JSON object keys. */
     using string =
@@ -147,7 +142,7 @@ struct value_t {
     value_t(const char* value) noexcept : value_t(string(value))
     {}
 
-    template<typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
+    template <typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
     value_t(Number value) noexcept
     {
         if constexpr (BASE_NS::is_same_v<Number, bool>) {
@@ -168,7 +163,7 @@ struct value_t {
     value_t(null /* value */) noexcept : type{type::null}
     {}
 
-    template<typename Value>
+    template <typename Value>
     value_t(const array_t<Value>& values) noexcept : type{type::array}, array_()
     {
         array_.reserve(values.size());
@@ -177,7 +172,7 @@ struct value_t {
         }
     }
 
-    template<typename Value, size_t N>
+    template <typename Value, size_t N>
     value_t(Value (&value)[N]) : type{type::array}, array_()
     {
         array_.reserve(N);
@@ -224,7 +219,7 @@ struct value_t {
      * POD-copied, string leaves convert via the string member type (string_view <-> string).
      * Use this to materialize a readonly value (whose strings reference an external buffer) into
      * a standalone_value that owns its strings, when the source buffer will outlive the result. */
-    template<typename OtherTag, BASE_NS::enable_if_t<!BASE_NS::is_same_v<OtherTag, Tag>, bool> = true>
+    template <typename OtherTag, BASE_NS::enable_if_t<!BASE_NS::is_same_v<OtherTag, Tag>, bool> = true>
     explicit value_t(const value_t<OtherTag>& other) : type(other.type)
     {
         switch (type) {
@@ -320,7 +315,7 @@ struct value_t {
         return *this;
     }
 
-    template<typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
+    template <typename Number, BASE_NS::enable_if_t<BASE_NS::is_arithmetic_v<Number>, bool> = true>
     value_t& operator=(Number value)
     {
         cleanup();
@@ -411,7 +406,7 @@ struct value_t {
         return *this;
     }
 
-    template<typename OtherT>
+    template <typename OtherT>
     operator value_t<OtherT>() const
     {
         value_t<OtherT> other;
@@ -468,7 +463,7 @@ struct value_t {
 #if _MSC_VER
 #pragma warning(pop)
 #endif
-    template<typename T>
+    template <typename T>
     inline void destroy(T& t)
     {
         t.~T();
@@ -563,7 +558,7 @@ struct value_t {
         return true;
     }
 
-    template<typename T>
+    template <typename T>
     T as_number() const
     {
         switch (type) {
@@ -650,7 +645,7 @@ inline const char* trim(const char* data)
 }
 
 // values
-template<typename T>
+template <typename T>
 const char* parse_string(const char* data, value_t<T>& res)
 {
     const char* start = data;
@@ -685,23 +680,7 @@ const char* parse_string(const char* data, value_t<T>& res)
     return data;
 }
 
-// strtod() honours the active locale's LC_NUMERIC decimal separator, so under a
-// non-"C" locale (e.g. a comma-decimal Windows runner) "1.5" parses as 1.0 and
-// every JSON float is silently corrupted. JSON mandates '.', so parse against a
-// fixed "C" locale on every platform. Falls back to strtod() if the locale could
-// not be created.
-inline double strtod_c(const char* str, char** endptr)
-{
-#if defined(_WIN32)
-    static const _locale_t cLocale = _create_locale(LC_NUMERIC, "C");
-    return cLocale ? _strtod_l(str, endptr, cLocale) : strtod(str, endptr);
-#else
-    static const locale_t cLocale = newlocale(LC_NUMERIC_MASK, "C", static_cast<locale_t>(0));
-    return cLocale ? strtod_l(str, endptr, cLocale) : strtod(str, endptr);
-#endif
-}
-
-template<typename T>
+template <typename T>
 const char* parse_number(const char* data, value_t<T>& res)
 {
     bool negative = false;
@@ -775,7 +754,7 @@ const char* parse_number(const char* data, value_t<T>& res)
     if (data != beg) {
         char* end;
         if (fraction || exponent) {
-            res = value_t<T>(strtod_c(beg, &end));
+            res = value_t<T>(strtod(beg, &end));
         } else if (negative) {
             res = value_t<T>(strtoll(beg, &end, 10));
         } else {
@@ -787,7 +766,7 @@ const char* parse_number(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 const char* parse_boolean(const char* data, value_t<T>& res)
 {
     if (*data == 't') {
@@ -820,7 +799,7 @@ const char* parse_boolean(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 const char* parse_null(const char* data, value_t<T>& res)
 {
     if (*data == 'n') {
@@ -841,7 +820,7 @@ const char* parse_null(const char* data, value_t<T>& res)
     return data;
 }
 
-template<typename T>
+template <typename T>
 void add(value_t<T>& v, value_t<T>&& value)
 {
     switch (v.type) {
@@ -866,7 +845,7 @@ void add(value_t<T>& v, value_t<T>&& value)
 }
 }  // namespace
 
-template<typename T>
+template <typename T>
 value_t<T> parse(const char* data)
 {
     if (!data) {
@@ -1058,7 +1037,7 @@ template value parse(const char*);
 template standalone_value parse(const char*);
 // end of parser
 namespace {
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::string& string)
 {
     out += '"';
@@ -1066,7 +1045,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::string& string)
     out += '"';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::object& object)
 {
     out += '{';
@@ -1082,7 +1061,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::object& object)
     out += '}';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const typename value_t<T>::array& array)
 {
     out += '[';
@@ -1096,7 +1075,7 @@ void append(BASE_NS::string& out, const typename value_t<T>::array& array)
     out += ']';
 }
 
-template<typename T>
+template <typename T>
 void append(BASE_NS::string& out, const double floatingPoint)
 {
     constexpr const char* FLOATING_FORMAT_STR = "%.17g";
@@ -1118,7 +1097,7 @@ void append(BASE_NS::string& out, const double floatingPoint)
 }
 }  // namespace
 
-template<typename T>
+template <typename T>
 BASE_NS::string to_string(const value_t<T>& value)
 {
     BASE_NS::string out;
@@ -1126,7 +1105,7 @@ BASE_NS::string to_string(const value_t<T>& value)
     return out;
 }
 
-template<typename T>
+template <typename T>
 void to_string(BASE_NS::string& out, const value_t<T>& value)
 {
     switch (value.type) {

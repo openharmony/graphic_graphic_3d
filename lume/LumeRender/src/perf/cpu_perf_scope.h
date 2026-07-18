@@ -19,7 +19,7 @@
 
 #if defined(CORE_PERF_ENABLED) && (CORE_PERF_ENABLED == 1)
 CORE_BEGIN_NAMESPACE()
-template<>
+template <>
 struct CORE_NS::PerformanceTraceSubsystem<2> {
     static constexpr bool IsEnabled()
     {

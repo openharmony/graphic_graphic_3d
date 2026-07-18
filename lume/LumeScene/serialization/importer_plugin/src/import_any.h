@@ -18,10 +18,7 @@
 
 #include <core/json/json.h>
 
-#include <meta/base/ids.h>
-
 #include "config.h"
-#include "import_helpers.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
@@ -36,24 +33,6 @@ ImportResult ImportObject(ImportContext& context);
 /// Create a new IAny from a JSON value, allocating the matching type.
 /// Null JSON values produce a null `result` without error.
 IDiagnostics::Ptr GetAnyValue(ImportContext& context, const CORE_NS::json::value& value, META_NS::IAny::Ptr& result);
-
-/// Optional "type" + "objectUid" pair carried by a JSON object describing an
-/// IObject. On the regular create path the pair drives object construction.
-/// At a readonly-property modify-in-place site the `objectUid` is verified
-/// against the live object's class id (see MatchClassId).
-struct ObjectIdent {
-    BASE_NS::string type;
-    OptValue<META_NS::ObjectId> objectUid;
-};
-
-/// Pull "type" + "objectUid" from `context`. Both optional. Reports parse errors
-/// (e.g. malformed uid string) via the returned diagnostics.
-IDiagnostics::Ptr ReadObjectIdent(ImportContext& context, ObjectIdent& out);
-
-/// If `ident.objectUid` is set, compare it to `obj.GetClassId()` and return a
-/// diagnostic on mismatch. The `type` string is accepted but not checked —
-/// importer "type" strings (e.g. "extensionNode") don't map 1:1 to class ids.
-IDiagnostics::Ptr MatchClassId(ImportContext& context, const META_NS::IObject& obj, const ObjectIdent& ident);
 
 SCENE_IMP_END_NAMESPACE()
 

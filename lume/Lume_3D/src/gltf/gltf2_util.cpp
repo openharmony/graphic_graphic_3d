@@ -218,7 +218,7 @@ vector<uint8_t> Read(Accessor const& accessor)
     return Read(src, componentByteSize, componentCount, elementSize, byteStride, count);
 }
 
-template<class T>
+template <class T>
 bool CopySparseElements(
     ByteBuffer& destination, const ByteBuffer& source, const ByteBuffer& indices, uint32_t elementSize, size_t count)
 {
@@ -1371,7 +1371,7 @@ UriLoadResult LoadUri(const string_view uri, const string_view expectedMimeType,
     return URI_LOAD_SUCCESS;
 }
 
-template<typename SrcFormat>
+template <typename SrcFormat>
 vector<float> Normalize(array_view<const float> src)
 {
     vector<float> result(src.size());

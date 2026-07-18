@@ -88,7 +88,7 @@ public:
 
 private:
     IEcs& ecs_;
-    void UpdateShaders(float zNear, float zFar, bool updateNearFarOnly);
+    void UpdateShaders(float zNear, float zFar);
     // TODO: How to initialize with NO properties?
     BEGIN_PROPERTY(Properties, ComponentMetadata)
     DEFINE_PROPERTY(Properties, speed, "Simulation speed", 0, )
@@ -102,9 +102,6 @@ private:
     bool active_{true};
 
     bool inited_{false};
-
-    float zNear_{0.f};
-    float zFar_{0.f};
 
     IRenderContext* renderContext_{nullptr};
 };

@@ -8,6 +8,7 @@
             "children": [
                 {
                     "type": "external",
+                    "name": "host",
                     "source": { "type": "nodeTemplate", "url": "templates/animation_only_tmpl.template" },
                     "resourceGroup": "animOnlyTmplGrp"
                 }

@@ -24,21 +24,13 @@
 #include <scene/api/node.h>
 #include <scene/api/scene.h>
 #include <scene/ext/intf_component.h>
-#include <scene/interface/intf_environment.h>
-#include <scene/interface/postprocess/intf_bloom.h>
-#include <scene/interface/intf_image.h>
 #include <scene/interface/intf_material.h>
-#include <scene/interface/intf_mesh.h>
 #include <scene/interface/intf_node_import.h>
-#include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_render_configuration.h>
-#include <scene/interface/intf_shader.h>
-#include <scene/interface/intf_texture.h>
 #include <scene_importer/interface/intf_importer.h>
 
 #include <gmock/gmock.h>
 
-#include <3d/ecs/components/material_component.h>
 #include <base/math/vector.h>
 
 #include <meta/api/metadata_util.h>
@@ -52,8 +44,6 @@
 
 SCENE_BEGIN_NAMESPACE()
 namespace UTest {
-
-using CORE3D_NS::MaterialComponent;
 
 class API_NodeTemplateImportTest : public ScenePluginTest {
 public:
@@ -121,37 +111,6 @@ UNIT_TEST_F(API_NodeTemplateImportTest, ImportNodeTemplatePropertyOverride, test
     // Scale was only overridden by template — still at default
     EXPECT_TRUE(n->Scale()->IsDefaultValue());
     EXPECT_EQ(n->Scale()->GetValue(), TEMPLATE_SCALE);
-}
-
-/**
- * @tc.name: ImportNodeTemplateNoSceneOverridePreservesDefault
- * @tc.desc: When a scene wraps a nodeTemplate via an external node and does NOT
- *          override a property, the imported node's property stays at its
- *          default (IsDefaultValue==true, !IsValueSet) with the template value.
- *          [AUTO-GENERATED]
- * @tc.type: FUNC
- */
-UNIT_TEST_F(
-    API_NodeTemplateImportTest, ImportNodeTemplateNoSceneOverridePreservesDefault, testing::ext::TestSize.Level1)
-{
-    constexpr BASE_NS::Math::Vec3 TEMPLATE_POS{1.0f, 2.0f, 3.0f};
-    constexpr BASE_NS::Math::Vec3 TEMPLATE_SCALE{4.0f, 5.0f, 6.0f};
-
-    auto scene = LoadTestScene("test://import/node_template/scene_nt0_no_override.json");
-    ASSERT_TRUE(scene);
-
-    auto n = scene->FindNode("//ext//AnimatedCube").GetResult();
-    ASSERT_TRUE(n);
-
-    EXPECT_TRUE(n->Position()->IsDefaultValue());
-    EXPECT_FALSE(n->Position()->IsValueSet());
-    EXPECT_EQ(n->Position()->GetValue(), TEMPLATE_POS);
-    EXPECT_EQ(n->Position()->GetDefaultValue(), TEMPLATE_POS);
-
-    EXPECT_TRUE(n->Scale()->IsDefaultValue());
-    EXPECT_FALSE(n->Scale()->IsValueSet());
-    EXPECT_EQ(n->Scale()->GetValue(), TEMPLATE_SCALE);
-    EXPECT_EQ(n->Scale()->GetDefaultValue(), TEMPLATE_SCALE);
 }
 
 /**
@@ -269,17 +228,6 @@ UNIT_TEST_F(API_NodeTemplateImportTest, UpdatePreservesUserAttachment, testing::
     EXPECT_TRUE(interface_cast<META_NS::IAttach>(n)->GetAttachmentContainer()->FindByName("UserAttachment"));
     // Template's IExternalNode attachment is present
     EXPECT_TRUE(GetExternalNodeAttachment(n));
-}
-
-UNIT_TEST_F(API_NodeTemplateImportTest, ImportAttachmentName, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/attachment_named.json");
-    ASSERT_TRUE(scene);
-    auto root = scene->GetRootNode().GetResult();
-    ASSERT_TRUE(root);
-    auto att = interface_cast<META_NS::IAttach>(root)->GetAttachmentContainer()->FindByName("MyAttachment");
-    ASSERT_TRUE(att);
-    EXPECT_EQ(att->GetName(), "MyAttachment");
 }
 
 /**
@@ -824,207 +772,6 @@ UNIT_TEST_F(API_NodeTemplateImportTest, SceneIndexAndTemplateIndexShareMaterial,
 }
 
 /**
- * @tc.name: SceneLoadsNodeTemplateGltfMaterialOverride
- * @tc.desc: Scene JSON references a node template whose own index overrides a material that
- *           comes from a gltf loaded inside that template (the index entry id matches the
- *           gltf-defined material name "AnimatedCube"). The override must land both in the
- *           resource manager and on the live submesh material when the scene is imported
- *           via the scene importer path.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, SceneLoadsNodeTemplateGltfMaterialOverride, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_gltf_mat_override.json");
-    ASSERT_TRUE(scene);
-
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-
-    // The gltf defines a material named "AnimatedCube". With resourceGroup=mat-group the gltf
-    // loader places it under mat-group. The template index overrides alphaCutoff and
-    // lightingFlags for that same id.
-    CORE_NS::ResourceId matId{"AnimatedCube", "mat-group"};
-    auto rmMat = interface_pointer_cast<IMaterial>(rman->GetResource({matId, scene}));
-    ASSERT_TRUE(rmMat);
-
-    // node_template_gltf_mat_override_index.json: alphaCutoff=0.5, lightingFlags=shadowCaster (=2)
-    EXPECT_FLOAT_EQ(META_NS::GetValue(rmMat->AlphaCutoff()), 0.5f);
-    EXPECT_EQ(META_NS::GetValue(rmMat->LightingFlags()), static_cast<LightingFlags>(2));
-
-    // And the override must also have landed on the gltf-loaded mesh's submesh material —
-    // not just the resource manager entry.
-    auto mesh = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
-    ASSERT_TRUE(mesh);
-    auto subs = mesh->SubMeshes()->GetValue();
-    ASSERT_FALSE(subs.empty());
-    auto subMat = subs[0]->Material()->GetValue();
-    ASSERT_TRUE(subMat);
-    EXPECT_FLOAT_EQ(META_NS::GetValue(subMat->AlphaCutoff()), 0.5f);
-    EXPECT_EQ(META_NS::GetValue(subMat->LightingFlags()), static_cast<LightingFlags>(2));
-    EXPECT_EQ(subMat, rmMat);
-
-    // The override also assigns a baseColor texture pointing at an image defined in the same
-    // template index ("ntLogo" in mat-group, path test://images/logo.png — 1200x1219). The
-    // gltf's own baseColor image is 512x512, so a successful override is observable by the
-    // image dimensions on the live material's baseColor slot.
-    auto ntLogo =
-        interface_pointer_cast<IImage>(rman->GetResource({CORE_NS::ResourceId("ntLogo", "mat-group"), scene}));
-    ASSERT_TRUE(ntLogo);
-    const auto ntLogoSize = META_NS::GetValue(ntLogo->Size());
-
-    auto textures = subMat->Textures();
-    ASSERT_TRUE(textures);
-    auto baseColor = textures->GetValueAt(MaterialComponent::TextureIndex::BASE_COLOR);
-    ASSERT_TRUE(baseColor);
-    auto baseImg = META_NS::GetValue(baseColor->Image());
-    ASSERT_TRUE(baseImg) << "baseColor image was not resolved from the node template's index";
-    EXPECT_EQ(META_NS::GetValue(baseImg->Size()), ntLogoSize)
-        << "baseColor image should be the override (ntLogo / logo.png) but its dimensions "
-           "match the gltf's own baseColor image — the template index override did not apply";
-}
-
-/**
- * @tc.name: SceneLoadsNodeTemplateGltfImageRef
- * @tc.desc: A material override in a node template's index points its baseColor image at a
- *           gltf-loaded image (no separate file path). The index forward-declares the image
- *           id with `type: image` and no path; the gltf load is expected to supply the
- *           instance for that id. The override must land on the live material's baseColor
- *           slot when the scene is imported. Detection: the override targets images/1
- *           (MetallicRoughness, distinct dimensions from the gltf's own BaseColor image),
- *           so the swap is observable.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, SceneLoadsNodeTemplateGltfImageRef, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_gltf_img_override.json");
-    ASSERT_TRUE(scene);
-
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-
-    auto gltfMR = interface_pointer_cast<IImage>(
-        rman->GetResource({CORE_NS::ResourceId("AnimatedCube.gltf/images/1", "mat-group"), scene}));
-    ASSERT_TRUE(gltfMR);
-    const auto mrSize = META_NS::GetValue(gltfMR->Size());
-
-    auto mesh = scene->FindNode<IMesh>("//ext//AnimatedCube").GetResult();
-    ASSERT_TRUE(mesh);
-    auto subs = mesh->SubMeshes()->GetValue();
-    ASSERT_FALSE(subs.empty());
-    auto subMat = subs[0]->Material()->GetValue();
-    ASSERT_TRUE(subMat);
-
-    auto textures = subMat->Textures();
-    ASSERT_TRUE(textures);
-    auto baseColor = textures->GetValueAt(MaterialComponent::TextureIndex::BASE_COLOR);
-    ASSERT_TRUE(baseColor);
-    auto baseImg = META_NS::GetValue(baseColor->Image());
-    ASSERT_TRUE(baseImg) << "baseColor image was not assigned";
-
-    EXPECT_EQ(META_NS::GetValue(baseImg->Size()), mrSize)
-        << "baseColor image should be the MetallicRoughness image (images/1, referenced by "
-           "the template's index override) but its dimensions don't match — the override "
-           "did not land on the gltf-loaded baseColor slot";
-}
-
-/**
- * @tc.name: NodeTemplateIndexMaterialShaderLazyRef
- * @tc.desc: A node template's index defines a shader and a material that references it via
- *           materialShader and depthShader. After scene import, instantiating the material
- *           via the resource manager must bind both shader slots to the index-defined
- *           shader — verifies lazy resolution of MaterialShader$ref / DepthShader$ref at
- *           apply time against the live scene's resource manager.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, NodeTemplateIndexMaterialShaderLazyRef, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_mat_shader.json");
-    ASSERT_TRUE(scene);
-
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-
-    auto expected = interface_pointer_cast<IShader>(rman->GetResource({"ntShader", scene}));
-    ASSERT_TRUE(expected);
-
-    auto mat = interface_pointer_cast<IMaterial>(rman->GetResource({"ntMat", scene}));
-    ASSERT_TRUE(mat);
-
-    auto matShader = META_NS::GetValue(mat->MaterialShader());
-    ASSERT_TRUE(matShader);
-    EXPECT_EQ(matShader, expected);
-
-    auto depthShader = META_NS::GetValue(mat->DepthShader());
-    ASSERT_TRUE(depthShader);
-    EXPECT_EQ(depthShader, expected);
-}
-
-/**
- * @tc.name: NodeTemplateIndexEnvironmentImageLazyRefs
- * @tc.desc: A node template's index defines two images and an environment that references
- *           them via radianceImage and environmentImage. Instantiating the environment
- *           after scene import must bind both image slots — verifies lazy resolution of
- *           RadianceImage$ref / EnvironmentImage$ref at apply time on an Environment
- *           resource.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, NodeTemplateIndexEnvironmentImageLazyRefs, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_env.json");
-    ASSERT_TRUE(scene);
-
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-
-    auto radiance = interface_pointer_cast<IImage>(rman->GetResource({"ntRadiance", scene}));
-    ASSERT_TRUE(radiance);
-    auto envImg = interface_pointer_cast<IImage>(rman->GetResource({"ntEnvImg", scene}));
-    ASSERT_TRUE(envImg);
-
-    auto env = interface_pointer_cast<IEnvironment>(rman->GetResource({"ntEnv", scene}));
-    ASSERT_TRUE(env);
-
-    auto boundRadiance = META_NS::GetValue(env->RadianceImage());
-    ASSERT_TRUE(boundRadiance);
-    EXPECT_EQ(boundRadiance, radiance);
-
-    auto boundEnvImg = META_NS::GetValue(env->EnvironmentImage());
-    ASSERT_TRUE(boundEnvImg);
-    EXPECT_EQ(boundEnvImg, envImg);
-}
-
-/**
- * @tc.name: NodeTemplateIndexPostProcessImageLazyRef
- * @tc.desc: A node template's index defines an image and a postProcess whose bloom
- *           dirtMaskImage references that image. Instantiating the postProcess after scene
- *           import must bind the nested DirtMaskImage slot — verifies lazy resolution of
- *           refs that live on an owned sub-object (Bloom) inside the resource template.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, NodeTemplateIndexPostProcessImageLazyRef, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_pp.json");
-    ASSERT_TRUE(scene);
-
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-
-    auto dirt = interface_pointer_cast<IImage>(rman->GetResource({"ntDirt", scene}));
-    ASSERT_TRUE(dirt);
-
-    auto pp = interface_pointer_cast<IPostProcess>(rman->GetResource({"ntPP", scene}));
-    ASSERT_TRUE(pp);
-
-    auto bloom = META_NS::GetValue(pp->Bloom());
-    ASSERT_TRUE(bloom);
-    EXPECT_TRUE(META_NS::GetValue(bloom->Enabled()));
-
-    auto boundDirt = META_NS::GetValue(bloom->DirtMaskImage());
-    ASSERT_TRUE(boundDirt);
-    EXPECT_EQ(boundDirt, dirt);
-}
-
-/**
  * @tc.name: AttachmentToChildNodeViaPath
  * @tc.desc: An external node attachment with a path targets a child node, not the root.
  * @tc.type: FUNC
@@ -1416,45 +1163,6 @@ UNIT_TEST_F(API_NodeTemplateImportTest, SceneOverrideAttachmentPropertyViaPath, 
 }
 
 /**
- * @tc.name: SceneOverrideAttachmentPropertyWithForwardObjectRef
- * @tc.desc: Scene overrides a template attachment property with an objectRef pointing
- *           to a node declared later in the JSON. The override goes through
- *           ImportProperty(IProperty&), which must defer the objectRef resolution
- *           until the hierarchy is fully built.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(
-    API_NodeTemplateImportTest, SceneOverrideAttachmentPropertyWithForwardObjectRef, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_att_override_objref_forward.json");
-    ASSERT_TRUE(scene);
-
-    auto ext = scene->FindNode("//ext").GetResult();
-    ASSERT_TRUE(ext);
-
-    auto target = scene->FindNode("//target").GetResult();
-    ASSERT_TRUE(target);
-
-    META_NS::IObject::Ptr testAtt;
-    for (auto&& a : interface_cast<META_NS::IAttach>(ext)->GetAttachments()) {
-        if (META_NS::Metadata(a).GetProperty<float>("Float")) {
-            testAtt = a;
-            break;
-        }
-    }
-    ASSERT_TRUE(testAtt);
-
-    auto nodeRefProp = META_NS::Metadata(testAtt).GetProperty<INode::WeakPtr>("NodeRef");
-    ASSERT_TRUE(nodeRefProp);
-
-    // Forward reference: target is declared after ext, so the override objectRef
-    // must be deferred until the hierarchy is built.
-    auto locked = nodeRefProp->GetValue().lock();
-    ASSERT_TRUE(locked);
-    EXPECT_EQ(locked, target);
-}
-
-/**
  * @tc.name: SceneOverrideChildAttachmentPropertyViaPath
  * @tc.desc: Scene overrides a child node's attachment property using chained child+attachment+property path.
  * @tc.type: FUNC
@@ -1577,128 +1285,6 @@ UNIT_TEST_F(API_NodeTemplateImportTest, NodeTemplateMissingIndex, testing::ext::
     EXPECT_FALSE(res);
     EXPECT_DIAGNOSTIC_CONTAINS(res.error, "Failed to open file");
     EXPECT_DIAGNOSTIC_CONTAINS(res.error, "this_file_does_not_exist.index");
-}
-
-/**
- * @tc.name: LoadNodeTemplateResourceViaIndex
- * @tc.desc: A node template declared as a resource-index entry is loaded lazily through the
- *           resource manager (NodeTemplateResourceType::LoadResource) and can be instantiated.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, LoadNodeTemplateResourceViaIndex, testing::ext::TestSize.Level1)
-{
-    constexpr BASE_NS::Math::Vec3 TEMPLATE_POS{1.0f, 2.0f, 3.0f};
-    constexpr BASE_NS::Math::Vec3 TEMPLATE_SCALE{4.0f, 5.0f, 6.0f};
-
-    auto scene = CreateEmptyScene();
-    ASSERT_TRUE(scene);
-
-    SCENE_IMP_NS::ImportParameters params;
-    params.scene = scene;
-    auto res = imp->Import("test://import/node_template/index_node_template.json", params);
-    ASSERT_TRUE(res);
-    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(res.object);
-    ASSERT_TRUE(rman);
-
-    auto resource = rman->GetResource({CORE_NS::ResourceId("ext-node-template"), scene});
-    ASSERT_TRUE(resource);
-    auto templ = interface_pointer_cast<META_NS::IObjectTemplate>(resource);
-    ASSERT_TRUE(templ);
-
-    auto root = interface_pointer_cast<INodeImport>(scene->GetRootNode().GetResult());
-    ASSERT_TRUE(root);
-    auto n = root->ImportTemplate(templ).GetResult();
-    ASSERT_TRUE(n);
-
-    auto cube = scene->FindNode("//ext//AnimatedCube").GetResult();
-    ASSERT_TRUE(cube);
-    EXPECT_EQ(cube->Position()->GetValue(), TEMPLATE_POS);
-    EXPECT_EQ(cube->Scale()->GetValue(), TEMPLATE_SCALE);
-}
-
-/**
- * @tc.name: NodeTemplateResourceCachedViaIndex
- * @tc.desc: Requesting the same node template resource id twice returns the same cached
- *           instance — caching is owned by the resource manager, not the loader.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, NodeTemplateResourceCachedViaIndex, testing::ext::TestSize.Level1)
-{
-    auto scene = CreateEmptyScene();
-    ASSERT_TRUE(scene);
-
-    SCENE_IMP_NS::ImportParameters params;
-    params.scene = scene;
-    auto res = imp->Import("test://import/node_template/index_node_template.json", params);
-    ASSERT_TRUE(res);
-    auto rman = interface_pointer_cast<CORE_NS::IResourceManager>(res.object);
-    ASSERT_TRUE(rman);
-
-    auto r1 = rman->GetResource({CORE_NS::ResourceId("ext-node-template"), scene});
-    auto r2 = rman->GetResource({CORE_NS::ResourceId("ext-node-template"), scene});
-    ASSERT_TRUE(r1);
-    ASSERT_TRUE(r2);
-    EXPECT_EQ(r1, r2);
-}
-
-/**
- * @tc.name: ExternalNodeReferencesNodeTemplateResource
- * @tc.desc: An external scene node referencing a node template by resourceId resolves it
- *           through the resource manager and instantiates the external GLTF subtree.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, ExternalNodeReferencesNodeTemplateResource, testing::ext::TestSize.Level1)
-{
-    auto scene = LoadTestScene("test://import/node_template/scene_nt_resource.json");
-    ASSERT_TRUE(scene);
-
-    // The outer external entry's "name" ("ext-instance") renames the template's root
-    // node on instantiation, overriding the template-authored "ext".
-    auto cube = scene->FindNode("//ext-instance//AnimatedCube").GetResult();
-    ASSERT_TRUE(cube);
-    EXPECT_EQ(cube->Position()->GetValue(), (BASE_NS::Math::Vec3{1.f, 2.f, 3.f}));
-    EXPECT_EQ(cube->Scale()->GetValue(), (BASE_NS::Math::Vec3{4.f, 5.f, 6.f}));
-}
-
-/**
- * @tc.name: TypedResourceIdOverrideRemapsPrimaryGroup
- * @tc.desc: A property override whose value is the typed `{type:"resourceId", name, group}`
- *           form must apply the template's primaryGroup → runtime-group remap, just like the
- *           helper-parsed `GetOptResourceId` path. Regression test for
- *           ImportResourceId::Import not consulting FindResourceGroupOverride.
- * @tc.type: FUNC
- */
-UNIT_TEST_F(API_NodeTemplateImportTest, TypedResourceIdOverrideRemapsPrimaryGroup, testing::ext::TestSize.Level1)
-{
-    auto templ = LoadTestTemplate("test://import/node_template/node_template_resid_override.json");
-    ASSERT_TRUE(templ);
-
-    auto scene = CreateEmptyScene();
-    ASSERT_TRUE(scene);
-    auto root = interface_pointer_cast<INodeImport>(scene->GetRootNode().GetResult());
-    ASSERT_TRUE(root);
-
-    constexpr auto RUNTIME_GROUP = "runtime-group";
-    auto n = root->ImportTemplate(templ, RUNTIME_GROUP).GetResult();
-    ASSERT_TRUE(n);
-
-    // ImportResources moved the template's overrideMat from tmpl-group to RUNTIME_GROUP.
-    auto rman = GetResourceManager(scene);
-    ASSERT_TRUE(rman);
-    auto overrideMat = interface_pointer_cast<IMaterial>(
-        rman->GetResource({CORE_NS::ResourceId{"overrideMat", RUNTIME_GROUP}, scene}));
-    ASSERT_TRUE(overrideMat);
-
-    // The override authored against group="tmpl-group" must resolve to that relocated resource.
-    // If ImportResourceId::Import skips FindResourceGroupOverride, the lookup misses and the
-    // submesh material stays unset.
-    auto mesh = scene->FindNode<IMesh>("//meshNode").GetResult();
-    ASSERT_TRUE(mesh);
-    auto subs = mesh->SubMeshes()->GetValue();
-    ASSERT_FALSE(subs.empty());
-    auto mat = subs[0]->Material()->GetValue();
-    ASSERT_TRUE(mat);
-    EXPECT_EQ(mat, overrideMat);
 }
 
 }  // namespace UTest

@@ -98,12 +98,12 @@ public:
     void CopyValues(const CustomPropertyPodContainer& other);
 
     // Uses property handle util
-    template<typename T>
+    template <typename T>
     bool SetValue(BASE_NS::string_view propertyName, T&& propertyValue)
     {
         return CORE_NS::SetPropertyValue(*this, propertyName, BASE_NS::forward<T>(propertyValue));
     }
-    template<typename T>
+    template <typename T>
     T GetValue(BASE_NS::string_view propertyName)
     {
         return CORE_NS::GetPropertyValue<T>(*this, propertyName);
@@ -180,17 +180,17 @@ public:
     size_t GetByteSize() const;
 
     // Uses property handle util
-    template<typename T>
+    template <typename T>
     bool SetValue(const BASE_NS::string_view propertyName, T&& propertyValue)
     {
         return CORE_NS::SetPropertyValue<T>(*this, propertyName, propertyValue);
     }
-    template<typename T>
+    template <typename T>
     T GetValue(const BASE_NS::string_view propertyName) const
     {
         return CORE_NS::GetPropertyValue<T>(*this, propertyName);
     }
-    template<typename T>
+    template <typename T>
     T GetValue(size_t index) const
     {
         // the casting type needs to be known

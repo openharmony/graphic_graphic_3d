@@ -594,15 +594,12 @@ ImportResult ImportPostProcess::Import(ImportContext& context)
     if (!obj) {
         return ImportResult{context.CreateDiagnostics("Failed to create post process template")};
     }
-    auto meta = interface_cast<META_NS::IMetadata>(obj);
+    auto meta = interface_cast<META_NS::IMetadata>(obj.get());
     if (!meta) {
         return ImportResult{context.CreateDiagnostics("Post process template has no metadata")};
     }
 
     ErrorHandler h(context);
-    if (auto err = ImportResourceName(context, *meta); h.Handle(err)) {
-        return ImportResult{err};
-    }
     if (auto err = ImportAllEffects(context, *meta); h.Handle(err)) {
         return ImportResult{err};
     }

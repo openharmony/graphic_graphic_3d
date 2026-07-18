@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    template<typename T>
+    template <typename T>
     bool InitEffect(const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id);
     META_NS::IObject::Ptr CreateEffect(
         const META_NS::IProperty::Ptr& p, const META_NS::ClassInfo& id, BASE_NS::Uid pid);

@@ -30,7 +30,7 @@ namespace UTest {
 class API_ScenePluginEnvironmentComponentTest
     : public ScenePluginComponentTest<CORE3D_NS::IEnvironmentComponentManager> {
 protected:
-    template<class T>
+    template <class T>
     void TestIEnvironmentPropertyGetters(T* env)
     {
         EXPECT_TRUE(env->Background());

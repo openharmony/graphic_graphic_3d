@@ -16,20 +16,13 @@
 #ifndef SCENE_IMP_SRC_OBJECTS_MATERIAL_H
 #define SCENE_IMP_SRC_OBJECTS_MATERIAL_H
 
-#include <scene/interface/intf_material.h>
-
 #include "../import_context.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
 class ImportMaterial : public ImportBase {
 public:
-    explicit ImportMaterial(SCENE_NS::MaterialType materialType) : materialType_(materialType)
-    {}
     ImportResult Import(ImportContext& context) override;
-
-private:
-    SCENE_NS::MaterialType materialType_{};
 };
 
 SCENE_IMP_END_NAMESPACE()

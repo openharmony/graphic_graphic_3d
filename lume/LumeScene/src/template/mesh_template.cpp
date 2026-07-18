@@ -321,13 +321,6 @@ bool MeshTemplate::ApplyOptions(CORE_NS::IResource& res, const CORE_NS::Resource
         auto tid = GetResourceId();
         derived->SetTemplateId(tid.IsValid() ? tid : baseResource_);
     }
-    // Mesh building is custom (no generic metadata copy), so the imported name
-    // has to be transferred to the live mesh explicitly.
-    if (auto name = GetName(); !name.empty()) {
-        if (auto named = interface_cast<META_NS::INamed>(&res)) {
-            META_NS::SetValue(named->Name(), name);
-        }
-    }
     return true;
 }
 

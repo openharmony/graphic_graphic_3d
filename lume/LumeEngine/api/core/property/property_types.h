@@ -112,17 +112,17 @@ inline constexpr PropertyTypeDecl INVALID = PropertyTypeDecl{false, 0U, 0U, 0U, 
 
 // The following declarations should not be used at public headers anymore, it's purely implementation stuff now
 namespace PropertySystem {
-template<class T>
+template <class T>
 struct is_defined : BASE_NS::false_type {};
 
-template<class T, class B>
+template <class T, class B>
 inline constexpr auto PropertyTypeDeclFromType()
 {
     static_assert(is_defined<T>().value, "Missing DECLARE_PROPERTY_TYPE for used type.");
     return CORE_NS::PropertyTypeDecl{};
 }
 
-template<class T>
+template <class T>
 inline constexpr auto PropertyTypeDeclFromType()
 {
     return PropertyTypeDeclFromType<BASE_NS::remove_extent_t<T>, BASE_NS::is_array_t<T>>();
@@ -135,24 +135,24 @@ inline constexpr auto PropertyTypeDeclFromType()
  */
 #define DECLARE_PROPERTY_TYPE(myType)                                                   \
     namespace PropertySystem {                                                          \
-    template<>                                                                          \
+    template <>                                                                         \
     struct is_defined<myType> : BASE_NS::true_type {};                                  \
-    template<>                                                                          \
+    template <>                                                                         \
     inline constexpr auto PropertyTypeDeclFromType<const myType, BASE_NS::false_type>() \
     {                                                                                   \
         return PROPERTYTYPE(myType);                                                    \
     }                                                                                   \
-    template<>                                                                          \
+    template <>                                                                         \
     inline constexpr auto PropertyTypeDeclFromType<const myType, BASE_NS::true_type>()  \
     {                                                                                   \
         return PROPERTYTYPE_ARRAY(myType);                                              \
     }                                                                                   \
-    template<>                                                                          \
+    template <>                                                                         \
     inline constexpr auto PropertyTypeDeclFromType<myType, BASE_NS::false_type>()       \
     {                                                                                   \
         return PROPERTYTYPE(myType);                                                    \
     }                                                                                   \
-    template<>                                                                          \
+    template <>                                                                         \
     inline constexpr auto PropertyTypeDeclFromType<myType, BASE_NS::true_type>()        \
     {                                                                                   \
         return PROPERTYTYPE_ARRAY(myType);                                              \

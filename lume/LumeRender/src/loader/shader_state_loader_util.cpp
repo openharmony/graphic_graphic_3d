@@ -326,7 +326,7 @@ void ParseSingleState(const json::value& jsonData, ShaderStateResult& ssr)
 ShaderStateResult LoadStates(const json::value& jsonData)
 {
     ShaderStateResult ssr;
-    if (const json::value* iter = jsonData.find("shaderStates"); iter && iter->is_array()) {
+    if (const json::value* iter = jsonData.find("shaderStates"); iter) {
         const auto& allStates = iter->array_;
         ssr.states.states.reserve(allStates.size());
         for (auto const& state : allStates) {

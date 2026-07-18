@@ -78,7 +78,7 @@ class DefaultInterpolator : public IntroduceInterfaces<BaseObject, IInterpolator
 };
 
 namespace {
-template<typename T>
+template <typename T>
 T InterpolateComponent(T a, T b, float t)
 {
     return static_cast<T>(BASE_NS::Math::round(a + (b - a) * t));

@@ -17,13 +17,13 @@
 
 #include <array>
 
-template<typename Key, typename Value>
+template <typename Key, typename Value>
 struct PairLike {
     Key first;
     Value second;
 };
 
-template<typename Key, typename Value, size_t Size>
+template <typename Key, typename Value, size_t Size>
 struct CTMap {
     std::array<PairLike<Key, Value>, Size> data;
     constexpr const Value& at(const Key& key) const

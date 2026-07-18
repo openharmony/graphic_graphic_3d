@@ -32,14 +32,14 @@ META_BEGIN_NAMESPACE()
 namespace Internal {
 
 // workaround for VC bug not being able to handle decltype(out.x) in lambda below
-template<typename T>
+template <typename T>
 static ISerNode::Ptr ExportVector(IExportFunctions& f, const T* v, size_t size)
 {
     return f.ExportToNode(ArrayAny<T>(BASE_NS::array_view<const T>(v, v + size)));
 }
 
 // workaround for VC bug not being able to handle decltype(out.x) in lambda below
-template<typename T, size_t Size>
+template <typename T, size_t Size>
 static bool ImportVector(IImportFunctions& f, const ISerNode::ConstPtr& node, T (&out)[Size])
 {
     ArrayAny<T> arr;

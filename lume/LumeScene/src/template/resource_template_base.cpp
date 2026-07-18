@@ -15,14 +15,8 @@
 
 #include "resource_template_base.h"
 
-#include <scene/ext/intf_ecs_object_access.h>
 #include <scene/ext/scene_utils.h>
-#include <scene/interface/intf_environment.h>
-#include <scene/interface/intf_image.h>
-#include <scene/interface/intf_postprocess.h>
-#include <scene/interface/intf_shader.h>
 #include <scene/interface/resource/intf_resource_context.h>
-#include <scene/interface/template/intf_template_options.h>
 
 #include <meta/api/metadata_util.h>
 #include <meta/api/util.h>
@@ -34,6 +28,9 @@
 #include "template_copy_helpers.h"
 
 SCENE_BEGIN_NAMESPACE()
+
+// Mirrors the bit used by the importer plugin to mark resources whose values came from a template entry.
+static constexpr uint64_t IMPORTED_FROM_TEMPLATE_BIT = 128;
 
 // ---------------------------------------------------------------------------
 // Promote helpers
@@ -164,196 +161,14 @@ static void CopyMetadataProperty(META_NS::IMetadata& dst, const META_NS::IProper
     }
 }
 
-// ---------------------------------------------------------------------------
-// Resource-id reference helpers (see template_copy_helpers.h)
-// ---------------------------------------------------------------------------
-
-static CORE_NS::IResourceManager::Ptr GetResourceManagerFromContext(const CORE_NS::ResourceContextPtr& context);
-
-bool IsResourceIdProperty(const META_NS::IProperty::ConstPtr& prop)
-{
-    return prop && prop->IsCompatible(META_NS::UidFromType<CORE_NS::ResourceId>());
-}
-
-template<typename TPtr>
-static void AssignTypedAsValueOrDefault(const META_NS::IProperty::Ptr& dstProp, const TPtr& typed, bool asDefault)
-{
-    if (!asDefault) {
-        META_NS::SetValue<TPtr>(dstProp, typed);
-        return;
-    }
-    META_NS::PropertyLock l{dstProp.get()};
-    auto any = l->GetValueAny().Clone();
-    if (!any || !META_NS::SetPointer(*any, interface_pointer_cast<CORE_NS::IInterface>(typed))) {
-        return;
-    }
-    l->SetDefaultValueAny(*any);
-    if (!META_NS::IsValueSet(*dstProp)) {
-        dstProp->ResetValue();
-    }
-}
-
-void AssignTypedResource(
-    const META_NS::IProperty::Ptr& dstProp, const CORE_NS::IResource::Ptr& resource, bool asDefault)
-{
-    if (auto image = interface_pointer_cast<SCENE_NS::IImage>(resource)) {
-        AssignTypedAsValueOrDefault(dstProp, image, asDefault);
-    } else if (auto shader = interface_pointer_cast<SCENE_NS::IShader>(resource)) {
-        AssignTypedAsValueOrDefault(dstProp, shader, asDefault);
-    } else if (auto env = interface_pointer_cast<SCENE_NS::IEnvironment>(resource)) {
-        AssignTypedAsValueOrDefault(dstProp, env, asDefault);
-    } else if (auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(resource)) {
-        AssignTypedAsValueOrDefault(dstProp, pp, asDefault);
-    }
-}
-
-CORE_NS::IResource::Ptr ResolveResourceId(
-    const CORE_NS::ResourceId& id, BASE_NS::string_view propName, const CORE_NS::ResourceContextPtr& context)
-{
-    if (!id.IsValid()) {
-        return nullptr;
-    }
-    auto rm = GetResourceManagerFromContext(context);
-    if (!rm) {
-        CORE_LOG_W("Resource ref '%.*s' (%s): no resource manager in apply context",
-            static_cast<int>(propName.size()),
-            propName.data(),
-            id.ToString().c_str());
-        return nullptr;
-    }
-    auto resource = rm->GetResource({id, context});
-    if (!resource) {
-        resource = rm->GetResource(CORE_NS::ResourceIdContext{id});
-    }
-    if (!resource) {
-        CORE_LOG_W("Resource ref '%.*s' (%s) could not be resolved at apply time",
-            static_cast<int>(propName.size()),
-            propName.data(),
-            id.ToString().c_str());
-    }
-    return resource;
-}
-
-// Recurse into an owned sub-object (e.g. PostProcess's Bloom). Resources themselves are
-// excluded — they are leaf refs, not owners.
-static void TryRecurseIntoSubObject(const META_NS::IProperty::ConstPtr& srcProp, const META_NS::IProperty::Ptr& dstProp,
-    const CORE_NS::ResourceContextPtr& context, bool asDefault)
-{
-    auto srcSub = META_NS::GetPointer<META_NS::IMetadata>(srcProp);
-    if (!srcSub || interface_cast<CORE_NS::IResource>(srcSub.get())) {
-        return;
-    }
-    auto dstSub = META_NS::GetPointer<META_NS::IMetadata>(dstProp);
-    if (dstSub) {
-        ResolveResourceIdRefs(*srcSub, *dstSub, context, asDefault);
-    }
-}
-
-static void ResolveOneIdRef(const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dst,
-    const CORE_NS::ResourceContextPtr& context, bool asDefault)
-{
-    const auto name = srcProp->GetName();
-    auto dstProp = dst.GetProperty(name);
-    if (!dstProp) {
-        return;
-    }
-    auto typedSrc = META_NS::Property<const CORE_NS::ResourceId>(srcProp);
-    if (!typedSrc) {
-        return;
-    }
-    auto resource = ResolveResourceId(META_NS::GetValue(typedSrc), name, context);
-    if (resource) {
-        AssignTypedResource(dstProp, resource, asDefault);
-    }
-}
-
-void ResolveResourceIdRefs(
-    const META_NS::IMetadata& src, META_NS::IMetadata& dst, const CORE_NS::ResourceContextPtr& context, bool asDefault)
-{
-    if (!context) {
-        return;
-    }
-    for (auto&& srcProp : src.GetProperties()) {
-        if (IsResourceIdProperty(srcProp)) {
-            ResolveOneIdRef(srcProp, dst, context, asDefault);
-        } else {
-            TryRecurseIntoSubObject(srcProp, dst.GetProperty(srcProp->GetName()), context, asDefault);
-        }
-    }
-}
-
-// Exposed via template_copy_helpers.h
-bool CaptureResourceRefAsId(const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dst)
-{
-    if (!srcProp) {
-        return false;
-    }
-    auto resource = META_NS::GetPointer<CORE_NS::IResource>(srcProp);
-    if (!resource) {
-        return false;
-    }
-    auto id = resource->GetResourceId();
-    if (!id.IsValid()) {
-        return false;
-    }
-    if (auto existing = dst.GetProperty<CORE_NS::ResourceId>(srcProp->GetName(), META_NS::MetadataQuery::EXISTING)) {
-        META_NS::SetValue(existing, id);
-        return true;
-    }
-    auto idProp = META_NS::ConstructProperty<CORE_NS::ResourceId>(srcProp->GetName());
-    META_NS::SetValue<CORE_NS::ResourceId>(idProp.GetProperty(), id);
-    dst.AddProperty(idProp.GetProperty());
-    return true;
-}
-
-// True when src's value is a typed pointer to a CORE_NS::IResource (e.g. IImage::Ptr,
-// IShader::Ptr). Used to decide whether a generic copy should be redirected through
-// CaptureResourceRefAsId for live→template captures.
-static bool IsResourcePointerProperty(const META_NS::IProperty::ConstPtr& srcProp)
-{
-    return srcProp && META_NS::GetPointer<CORE_NS::IResource>(srcProp) != nullptr;
-}
-
-// Deep-copy `srcSub` into a fresh META_NS::ClassId::Object instance attached to `dst` under
-// `name`. The recursive CopyMetadata picks up CopyOnePropertyExcept's capture rules so any
-// resource-pointer sub-properties become ResourceId on the captured sub-object, and any
-// nested owned sub-objects get their own fresh copies. The fresh instance gives the captured
-// template an independent copy of the source's sub-object state rather than a shared
-// pointer back into the live source. `srcWasSet` mirrors the source property's IsValueSet
-// state onto the new property (matches the META_NS::Clone behaviour this branch replaces).
-static void CaptureSubObjectInto(
-    BASE_NS::string_view name, const META_NS::IMetadata& srcSub, META_NS::IMetadata& dst, CopyMode mode, bool srcWasSet)
-{
-    auto newSub = META_NS::GetObjectRegistry().Create<META_NS::IObject>(META_NS::ClassId::Object);
-    auto newSubMeta = interface_cast<META_NS::IMetadata>(newSub);
-    if (!newSubMeta) {
-        return;
-    }
-    CopyMetadata(srcSub, *newSubMeta, mode);
-    auto prop = META_NS::ConstructProperty<META_NS::IObject::Ptr>(name);
-    dst.AddProperty(prop.GetProperty());
-    if (srcWasSet) {
-        META_NS::SetValue<META_NS::IObject::Ptr>(prop.GetProperty(), newSub);
-    }
-}
-
 // Exposed via template_copy_helpers.h
 void CopyToDefaultMaybeDeep(META_NS::IMetadata& dst, const META_NS::IProperty::ConstPtr& srcProp)
 {
-    // ResourceId-typed source props are bound by ResolveResourceIdRefs at apply time; their
-    // dst counterpart is a typed pointer, so a default-slot copy here would be a type
-    // mismatch.
-    if (IsResourceIdProperty(srcProp)) {
-        return;
-    }
     auto dstProp = dst.GetProperty(srcProp->GetName());
     if (dstProp && NeedsDeepCopy(dst, srcProp)) {
         CopyReadonlyProperty(srcProp, dstProp, CopyMode::WITH_DEFAULTS);
     } else {
-        // Update the default slot but keep any user override (reset only when not explicitly set),
-        // matching the resource-ref bind path. For the base-resource apply (fresh destination, no
-        // override yet) this is equivalent to a reset.
-        META_NS::CopyToDefault(srcProp, dst);
+        META_NS::CopyToDefaultAndReset(srcProp, dst);
     }
 }
 
@@ -391,14 +206,6 @@ void CopyReadonlyProperty(
 
 void CopyProperty(const META_NS::IProperty::ConstPtr& srcProp, META_NS::IProperty& dstProp, CopyMode mode)
 {
-    if (mode == CopyMode::SET_AS_DEFAULTS) {
-        if (srcProp->IsValueSet()) {
-            // Land the value on dst's default slot, but only clear the override when the user has
-            // not explicitly set one — re-applying a template must not stomp a user override.
-            META_NS::CopyToDefault(srcProp, dstProp);
-        }
-        return;
-    }
     if (mode == CopyMode::WITH_DEFAULTS) {
         CopyDefaultToDefault(srcProp, dstProp);
     }
@@ -422,57 +229,21 @@ static bool IsExcludedName(std::initializer_list<BASE_NS::string_view> skipNames
     return false;
 }
 
-// Copy one property from src onto dst, honoring the skip list and the resource-id
-// convention. Used by CopyMetadataExcept's per-property loop.
-static void CopyOnePropertyExcept(const META_NS::IProperty::ConstPtr& srcProp, META_NS::IMetadata& dst, CopyMode mode,
-    std::initializer_list<BASE_NS::string_view> skipNames)
-{
-    // ResourceId-typed source properties are bound onto the live instance's typed pointer
-    // property of the same name by ResolveResourceIdRefs at apply time. A generic copy here
-    // would be a type mismatch (ResourceId → IShader::Ptr etc.).
-    if (IsResourceIdProperty(srcProp)) {
-        return;
-    }
-    if (IsExcludedName(skipNames, srcProp->GetName())) {
-        return;
-    }
-    // Live-to-template capture: when src is a resource-pointer property and dst either
-    // lacks the property or already has a ResourceId-typed slot of that name (i.e. dst is
-    // a template), capture the bound resource's id rather than attempting a typed copy.
-    // When dst has a same-typed pointer property (live-to-live copy), fall through.
-    if (IsResourcePointerProperty(srcProp)) {
-        auto dstProp = dst.GetProperty(srcProp->GetName());
-        if (!dstProp || IsResourceIdProperty(dstProp)) {
-            CaptureResourceRefAsId(srcProp, dst);
-            return;
-        }
-    }
-    const bool isSubObject = IsArrayOfSubObjects(srcProp) || IsOwnedSubObject(srcProp);
-    const bool shouldCopy = mode == CopyMode::WITH_DEFAULTS || srcProp->IsValueSet() || isSubObject;
-    if (!shouldCopy) {
-        return;
-    }
-    auto dstProp = dst.GetProperty(srcProp->GetName());
-    if (dstProp) {
-        CopyMetadataProperty(dst, srcProp, mode);
-    } else if (IsOwnedSubObject(srcProp)) {
-        // Capture-into-template path for owned sub-objects (e.g. IPostProcess's Bloom):
-        // create a fresh, independent sub-object on dst and deep-copy contents. The
-        // recursive copy hits this same function and so nested resource-pointer fields
-        // inside the sub-object (e.g. IBloom::DirtMaskImage) get captured as ResourceIds.
-        if (auto srcSub = META_NS::GetPointer<META_NS::IMetadata>(srcProp)) {
-            CaptureSubObjectInto(srcProp->GetName(), *srcSub, dst, mode, srcProp->IsValueSet());
-        }
-    } else if (mode == CopyMode::OVERRIDES_ONLY && srcProp->IsValueSet()) {
-        META_NS::Clone(srcProp, dst);
-    }
-}
-
 void CopyMetadataExcept(const META_NS::IMetadata& src, META_NS::IMetadata& dst, CopyMode mode,
     std::initializer_list<BASE_NS::string_view> skipNames)
 {
     for (auto&& srcProp : src.GetProperties()) {
-        CopyOnePropertyExcept(srcProp, dst, mode, skipNames);
+        const bool excluded = IsExcludedName(skipNames, srcProp->GetName());
+        const bool isSubObject = !excluded && (IsArrayOfSubObjects(srcProp) || IsOwnedSubObject(srcProp));
+        const bool shouldCopy = !excluded && (mode == CopyMode::WITH_DEFAULTS || srcProp->IsValueSet() || isSubObject);
+        if (shouldCopy) {
+            auto dstProp = dst.GetProperty(srcProp->GetName());
+            if (dstProp) {
+                CopyMetadataProperty(dst, srcProp, mode);
+            } else if (mode == CopyMode::OVERRIDES_ONLY && srcProp->IsValueSet()) {
+                META_NS::Clone(srcProp, dst);
+            }
+        }
     }
 }
 
@@ -546,23 +317,6 @@ static CORE_NS::IResourceManager::Ptr GetResourceManagerFromContext(const CORE_N
     return nullptr;
 }
 
-CORE_NS::ResourceContextPtr GetApplyContextFromObject(const META_NS::IObject& target)
-{
-    if (auto access = interface_cast<IEcsObjectAccess>(&target)) {
-        if (auto ecsObject = access->GetEcsObject()) {
-            if (auto internalScene = ecsObject->GetScene()) {
-                return interface_pointer_cast<CORE_NS::IInterface>(internalScene->GetScene());
-            }
-        }
-    }
-    // Fallback: ECS object not yet initialised (no associated scene) — use the context the
-    // resource itself was created with, from its ResourceId context.
-    if (auto resource = interface_cast<CORE_NS::IResource>(&target)) {
-        return resource->GetContext().lock();
-    }
-    return nullptr;
-}
-
 // Default impl of the base-defaults property walk. Enumerates via
 // GetAllMetadatas / GetProperty so forwarded/lazy properties on the base
 // resource (e.g. Material's META_FORWARDED_PROPERTY entries) are instantiated
@@ -628,17 +382,11 @@ void ResourceTemplateBase::CloneSubObjects(const META_NS::IMetadata& srcMeta, ME
 
 bool ResourceTemplateBase::ApplyTo(META_NS::IObject& target) const
 {
-    // Standalone apply: template-supplied values manifest as defaults on the live instance.
-    return ApplyToTarget(target, /*asDefault=*/true);
-}
-
-bool ResourceTemplateBase::ApplyToTarget(META_NS::IObject& target, bool asDefault) const
-{
     auto dst = interface_cast<META_NS::IMetadata>(&target);
     if (!dst) {
         return false;
     }
-    CopyMetadata(*this, *dst, asDefault ? CopyMode::SET_AS_DEFAULTS : CopyMode::OVERRIDES_ONLY);
+    CopyMetadata(*this, *dst, CopyMode::OVERRIDES_ONLY);
     return true;
 }
 
@@ -686,11 +434,8 @@ void ResourceTemplateBase::ApplyBaseResource(
     // lives outside the meta-property surface (container children delivered via
     // AddAnimation, etc.) is installed before the derived template's ApplyTo layers
     // its overrides on top.
-    // Run the base template's structural apply with asDefault=false to preserve the historical
-    // override semantics inside the ApplyOptions flow (the standalone defaults path is reached only
-    // via the public IResourceTemplate::ApplyTo wrapper).
-    if (auto baseApply = interface_cast<ITemplateApplyTarget>(base.get())) {
-        baseApply->ApplyToTarget(*resObj, /*asDefault=*/false);
+    if (auto baseTmpl = interface_pointer_cast<IResourceTemplate>(base)) {
+        baseTmpl->ApplyTo(*resObj);
     }
     if (auto derived = interface_cast<META_NS::IDerivedFromTemplate>(&res)) {
         derived->SetTemplateId(baseResource_);
@@ -708,13 +453,6 @@ void ResourceTemplateBase::StampTemplateId(CORE_NS::IResource& res) const
 void ResourceTemplateBase::MarkImportedFromTemplate(META_NS::IMetadata& resMeta) const
 {
     META_NS::SetObjectFlags(&resMeta, IMPORTED_FROM_TEMPLATE_BIT, true);
-}
-
-void ResourceTemplateBase::ResolveRefsFromTarget(META_NS::IObject& target, bool asDefault) const
-{
-    if (auto dst = interface_cast<META_NS::IMetadata>(&target)) {
-        ResolveResourceIdRefs(*this, *dst, GetApplyContextFromObject(target), asDefault);
-    }
 }
 
 bool ResourceTemplateBase::CopyFrom(const META_NS::IObject& source, bool onlySetValues)
@@ -752,7 +490,7 @@ bool ResourceTemplateBase::ApplyOptions(CORE_NS::IResource& res, const CORE_NS::
         // Controller registration on Animations that ApplyTo doesn't reinstall.
         CopyMetadata(*this, *resMeta, CopyMode::WITH_DEFAULTS);
     }
-    auto applied = ApplyToTarget(*resObj, /*asDefault=*/false);
+    auto applied = ApplyTo(*resObj);
     if (applied && templateContext_ && resMeta) {
         if (baseResource_.IsValid()) {
             // The JSON parser stores derived's values as defaults rather than overrides,
@@ -762,14 +500,6 @@ bool ResourceTemplateBase::ApplyOptions(CORE_NS::IResource& res, const CORE_NS::
             CopyMetadata(*this, *resMeta, CopyMode::WITH_DEFAULTS);
         }
         MarkImportedFromTemplate(*resMeta);
-    }
-    // Bind any ResourceId refs (e.g. RadianceImage on Environment, DirtMaskImage on
-    // PostProcess's Bloom) against the apply context's resource manager. Done after the
-    // main copy so the refs override any defaults that ApplyTo just established. In
-    // template context the refs land on the default slot, matching the rest of the
-    // template-context invariant (template-supplied values are property defaults).
-    if (resMeta) {
-        ResolveResourceIdRefs(*this, *resMeta, context, templateContext_);
     }
     return applied;
 }

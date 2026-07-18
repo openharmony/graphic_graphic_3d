@@ -53,7 +53,6 @@ public:
      */
     virtual void ExecuteBackendCommand(
         const ILowLevelDevice& device, const RenderBackendRecordingState& recordingState) = 0;
-
 protected:
     IRenderBackendCommand() = default;
     virtual ~IRenderBackendCommand() = default;

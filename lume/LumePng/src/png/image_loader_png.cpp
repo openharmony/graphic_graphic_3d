@@ -117,7 +117,7 @@ bool PremultiplyAlpha(
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool MulOverflow(T a, T b, T* res)
 {
 #if defined(__GNUC__) || defined(__clang__)
@@ -159,7 +159,7 @@ bool MulOverflow(T a, T b, T* res)
 #endif
 }
 
-template<typename T>
+template <typename T>
 bool SafeMultiplyInt(T& result, std::initializer_list<T> nums)
 {
     if (!std::is_integral_v<T> || std::is_same_v<T, bool> || nums.begin() == nums.end()) {
@@ -693,10 +693,7 @@ public:
         if (!CreatePngReadStructs(png, info)) {
             return "Initialization failed.";
         }
-        // clang-format off
-        BASE_NS::unique_ptr<png_byte* []> rows;
-        // clang-format on
-
+        BASE_NS::unique_ptr<png_byte*[]> rows;
         // rows/decoded.image are reset explicitly on the longjmp path; suppress C4611.
         // libpng's png_jmpbuf macro passes longjmp through an extern "C" callback; suppress C5039.
 #if defined(_MSC_VER)
@@ -756,15 +753,6 @@ public:
         const string_view decodeError = DecodePngImage(imageFileBytes, loadFlags, decoded);
         if (!decodeError.empty()) {
             return ResultFailure(decodeError);
-        }
-        // METADATA_ONLY leaves decoded.image null; the 3D copy would deref it.
-        if (!decoded.image) {
-            return CreateImage(BASE_NS::move(decoded.image),
-                decoded.width,
-                decoded.height,
-                decoded.channels,
-                loadFlags,
-                decoded.is16bpc);
         }
         Texture3DLoadInfo info;
         const string_view layoutError =

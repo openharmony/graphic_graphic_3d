@@ -37,12 +37,7 @@ struct RNamedType {
     CORE_NS::ResourceType type;
 };
 
-static BASE_NS::vector<RNamedType> TYPES = {{"mesh", SCENE_NS::ClassId::MeshResource.Id().ToUid()},
-    {"metallicRoughnessMaterial", SCENE_NS::ClassId::MaterialResource.Id().ToUid()},
-    {"unlitMaterial", SCENE_NS::ClassId::MaterialResource.Id().ToUid()},
-    {"unlitShadowAlphaMaterial", SCENE_NS::ClassId::MaterialResource.Id().ToUid()},
-    {"customMaterial", SCENE_NS::ClassId::MaterialResource.Id().ToUid()},
-    {"occlusionMaterial", SCENE_NS::ClassId::OcclusionMaterialResource.Id().ToUid()},
+static BASE_NS::vector<RNamedType> TYPES = {{"material", SCENE_NS::ClassId::MaterialResource.Id().ToUid()},
     {"image", SCENE_NS::ClassId::ImageResource.Id().ToUid()},
     {"shader", SCENE_NS::ClassId::ShaderResource.Id().ToUid()},
     {"gltfAnimation", SCENE_NS::ClassId::AnimationResource.Id().ToUid()},
@@ -53,14 +48,11 @@ static BASE_NS::vector<RNamedType> TYPES = {{"mesh", SCENE_NS::ClassId::MeshReso
     {"scene", SCENE_NS::ClassId::SceneResource.Id().ToUid()},
     {"gltf", SCENE_NS::ClassId::GltfSceneResource.Id().ToUid()},
     {"environment", SCENE_NS::ClassId::EnvironmentResource.Id().ToUid()},
+    {"occlusionMaterial", SCENE_NS::ClassId::OcclusionMaterialResource.Id().ToUid()},
     {"postProcess", SCENE_NS::ClassId::PostProcessResource.Id().ToUid()},
-    {"nodeTemplate", SCENE_NS::ClassId::NodeTemplateResource.Id().ToUid()},
+    {"nodeTemplate", SCENE_NS::ClassId::NodeTemplate.Id().ToUid()},
     // resource templates
-    {"metallicRoughnessMaterialTemplate", SCENE_NS::ClassId::MaterialResourceTemplate.Id().ToUid()},
-    {"unlitMaterialTemplate", SCENE_NS::ClassId::MaterialResourceTemplate.Id().ToUid()},
-    {"unlitShadowAlphaMaterialTemplate", SCENE_NS::ClassId::MaterialResourceTemplate.Id().ToUid()},
-    {"customMaterialTemplate", SCENE_NS::ClassId::MaterialResourceTemplate.Id().ToUid()},
-    {"meshTemplate", SCENE_NS::ClassId::MeshResourceTemplate.Id().ToUid()},
+    {"materialTemplate", SCENE_NS::ClassId::MaterialResourceTemplate.Id().ToUid()},
     {"occlusionMaterialTemplate", SCENE_NS::ClassId::OcclusionMaterialResourceTemplate.Id().ToUid()},
     {"postProcessTemplate", SCENE_NS::ClassId::PostProcessResourceTemplate.Id().ToUid()},
     {"animationTemplate", SCENE_NS::ClassId::AnimationResourceTemplate.Id().ToUid()},
@@ -82,7 +74,15 @@ static IDiagnostics::Ptr ConfigureOptions(ImportContext& context, const CORE_NS:
     if (auto tc = interface_pointer_cast<SCENE_NS::ITemplateOptions>(options)) {
         tc->SetTemplateContext(context.IsTemplateContext());
     }
-    // derivedFrom registration is handled centrally in ImportContext::ImportSubType.
+    if (auto derived = interface_pointer_cast<META_NS::IDerivedResourceOptions>(options)) {
+        auto rid = GetOptResourceId(context, "derivedFrom");
+        if (h.HandleOptValue(rid)) {
+            if (rid.error) {
+                return rid.error;
+            }
+            derived->SetBaseResource(*rid.value);
+        }
+    }
     return h;
 }
 
@@ -116,7 +116,7 @@ OptValue<CORE_NS::IResourceOptions::Ptr> GetOptionsData(ImportContext& context, 
         return OptValue<CORE_NS::IResourceOptions::Ptr>{result.error};
     }
     // Every import handler now produces a typed template object that implements
-    // IResourceOptions directly (MaterialTemplate, ImageTemplate, etc.).
+    // IResourceOptions directly (MaterialTemplate, ShaderTemplate, ImageTemplate, etc.).
     auto direct = interface_pointer_cast<CORE_NS::IResourceOptions>(result.object);
     if (!direct) {
         CORE_LOG_E("Import handler for '%s' did not produce an IResourceOptions", BASE_NS::string(type).c_str());
@@ -131,28 +131,16 @@ OptValue<CORE_NS::IResourceOptions::Ptr> GetOptionsData(ImportContext& context, 
     return ret;
 }
 
-// Resolve the resource options for an index entry. Runs the type handler
-// whenever the entry declares an `options` block — even an empty `{}` — so the
-// produced template carries the resource-type identity (e.g. MaterialType for
-// material variants). Returns an empty value (no error) when the entry has no
-// `options` block.
-static OptValue<CORE_NS::IResourceOptions::Ptr> ResolveEntryOptions(ImportContext& context, BASE_NS::string_view type)
-{
-    if (!context.GetOptValue("options").is_object()) {
-        return OptValue<CORE_NS::IResourceOptions::Ptr>{};
-    }
-    auto ncont = context.CreateContext(context.GetOptObject("options"));
-    return GetOptionsData(ncont, type);
-}
-
 IDiagnostics::Ptr ImportIndexEntry(
     ImportContext& context, const SCENE_NS::IScene::Ptr& scene, META_NS::IResourceManagerExtension& res)
 {
     SCENE_IMP_CPU_PERF_SCOPE("ImportIndexEntry", "Entry");
     ErrorHandler h(context);
     auto rid = GetOptResourceId(context, "resourceId");
-    if (h.HandleOptValue(rid) && rid.error) {
-        return rid.error;
+    if (h.HandleOptValue(rid)) {
+        if (rid.error) {
+            return rid.error;
+        }
     }
     if (!rid.value) {
         CORE_LOG_E("Index entry missing resourceId");
@@ -164,6 +152,7 @@ IDiagnostics::Ptr ImportIndexEntry(
     }
     auto name = context.GetOptString("name");
     auto path = context.GetOptString("path");
+    auto options = context.GetOptObject("options");
 
     CORE_NS::ResourceType rtype = GetResourceType(type);
     if (rtype == CORE_NS::ResourceType{}) {
@@ -172,12 +161,17 @@ IDiagnostics::Ptr ImportIndexEntry(
     }
 
     CORE_NS::IResourceOptions::Ptr opts;
-    auto optsCont = ResolveEntryOptions(context, type);
-    if (h.HandleOptValue(optsCont) && optsCont.error) {
-        return optsCont.error;
-    }
-    if (optsCont.value) {
-        opts = *optsCont.value;
+    if (!options.empty()) {
+        auto ncont = context.CreateContext(BASE_NS::move(options));
+        auto optsCont = GetOptionsData(ncont, type);
+        if (h.HandleOptValue(optsCont)) {
+            if (optsCont.error) {
+                return optsCont.error;
+            }
+        }
+        if (optsCont.value) {
+            opts = *optsCont.value;
+        }
     }
 
     META_NS::ResourceData d;

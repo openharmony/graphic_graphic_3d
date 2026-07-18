@@ -139,11 +139,6 @@ public:
         }
         ImportParameters params;
         params.filename = s.path;
-        // Forward the scene from the load context so deferred path resolutions
-        // inside the payload (e.g. AnimationTemplate's PropertyPath) can anchor
-        // against the scene's hierarchy. Mirrors MetaAnimationResourceType.
-        auto rcontext = interface_cast<SCENE_NS::IResourceContext>(s.context);
-        params.scene = rcontext ? rcontext->GetScene() : interface_pointer_cast<SCENE_NS::IScene>(s.context);
         auto impRes = importer->Import(*s.payload, params);
         auto res = interface_pointer_cast<CORE_NS::IResource>(impRes.object);
         if (res && s.options) {

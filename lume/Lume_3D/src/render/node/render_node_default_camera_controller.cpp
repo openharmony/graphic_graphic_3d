@@ -973,9 +973,9 @@ void RenderNodeDefaultCameraController::RegisterOutputs()
         camRes_.historyFlipFrame = nextIndex;
     }
 
-    const auto& gpuResMgr = renderNodeContextMgr_->GetGpuResourceManager();
     // output custom targets
     for (const auto& name : camRes_.inputImageDescs.customTargets) {
+        const auto& gpuResMgr = renderNodeContextMgr_->GetGpuResourceManager();
         auto handle = gpuResMgr.GetImageHandle(name);
         if (!RenderHandleUtil::IsValid(handle)) {
             PLUGIN_LOG_E("custom Targets: img handle is invalid for %s", name.c_str());
@@ -1257,9 +1257,7 @@ Math::UVec4 GetMultiEnvironmentIndices(const RenderCamera& cam)
         Math::UVec4 multiEnvIndices = {0U, 0U, 0U, 0U};
         // the first value in multiEnvIndices is the count
         // first index is the main environment, next indices are the blend environments
-        // only 3 indices fit alongside the count in the UVec4
-        const uint32_t envIndexCount = Math::min(cam.environment.multiEnvCount, 3U);
-        for (uint32_t idx = 1U; idx < envIndexCount + 1U; ++idx) {
+        for (uint32_t idx = 1U; idx < cam.environment.multiEnvCount + 1U; ++idx) {
             multiEnvIndices[0U]++;
             multiEnvIndices[idx] = idx;
         }

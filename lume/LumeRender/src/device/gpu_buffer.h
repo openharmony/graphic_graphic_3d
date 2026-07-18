@@ -36,10 +36,7 @@ public:
 
     virtual const GpuBufferDesc& GetDesc() const = 0;
 
-    virtual uint64_t GetDeviceAddress() const
-    {
-        return 0U;
-    }
+    virtual uint64_t GetDeviceAddress() const = 0;
 
     // Map will return a pointer to the data.
     // If mapBufferingCount is bigger than 1, the pointer advances to next block with every call (ring buffer)

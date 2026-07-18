@@ -201,18 +201,6 @@ target_link_libraries(${executable} PRIVATE
     ${LibName}
 )
 
-set(LONG_PATH_AWARENESS_MANIFEST "${CMAKE_CURRENT_LIST_DIR}/LongPathAwareness.manifest")
-
-function(enable_windows_long_path_support target_name)
-    if(WIN32 AND MSVC)
-        target_link_options(${target_name} PRIVATE
-            "/MANIFESTINPUT:${LONG_PATH_AWARENESS_MANIFEST}"
-        )
-    endif()
-endfunction()
-
-enable_windows_long_path_support(${executable})
-
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
     target_link_libraries(${executable} PRIVATE c++abi)
     set_target_properties(${executable} PROPERTIES LINK_FLAGS_RELEASE -s)
@@ -229,7 +217,9 @@ option(SHADERCOMPILER_UNIT_TESTS_ENABLED "Build SHADERCOMPILER unit tests" OFF)
 if(SHADERCOMPILER_UNIT_TESTS_ENABLED)
 	# API Unit tests
 	add_subdirectory(test/src_unit_test)
-	add_test(NAME shaderCompilerSRC COMMAND $<TARGET_FILE:ShaderCompilerSRCTestRunner>)
+	add_test(NAME shaderCompilerSRC COMMAND shaderCompilerSRCTestRunner)
 
 	enable_testing()
 endif()
+
+

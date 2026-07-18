@@ -104,7 +104,7 @@ public:
         if (resm && m) {
             for (auto&& p : resm->GetProperties()) {
                 if (!m->GetMetadata(MetadataType::PROPERTY, p->GetName()).readOnly) {
-                    CopyToDefault(p, *m);
+                    CopyToDefaultAndReset(p, *m);
                 }
             }
             if (auto id = interface_cast<META_NS::IDerivedFromTemplate>(res)) {

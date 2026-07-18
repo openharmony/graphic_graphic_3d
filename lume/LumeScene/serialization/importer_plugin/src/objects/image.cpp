@@ -77,9 +77,6 @@ ImportResult ImportImage::Import(ImportContext& context)
     }
 
     ErrorHandler h(context);
-    if (auto err = ImportResourceName(context, *meta); h.Handle(err)) {
-        return ImportResult{err};
-    }
     SCENE_NS::ImageLoadInfo loadInfo = SCENE_NS::DEFAULT_IMAGE_LOAD_INFO;
     auto loadFlagsArr = context.GetOptArray("loadFlags");
     if (!loadFlagsArr.empty()) {

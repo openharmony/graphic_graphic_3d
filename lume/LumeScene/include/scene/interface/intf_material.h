@@ -77,10 +77,6 @@ enum class LightingFlags : uint32_t {
     PUNCTUAL_LIGHT_RECEIVER_BIT = (1 << 2),
     /** Defines whether this material will receive indirect light from SH and cubemaps */
     INDIRECT_LIGHT_RECEIVER_BIT = (1 << 3),
-    /** Defines whether this material receives indirect irradiance light (e.g. from SH only) */
-    INDIRECT_IRRADIANCE_LIGHT_RECEIVER_BIT = (1 << 4),
-    /** Defines whether this material receives light from light probes */
-    LIGHT_PROBE_RECEIVER_BIT = (1 << 5),
 };
 
 inline LightingFlags operator|(LightingFlags l, LightingFlags r)
@@ -143,12 +139,12 @@ public:
      */
     virtual META_NS::IProperty::Ptr GetCustomProperty(BASE_NS::string_view name) const = 0;
 
-    template<typename Type>
+    template <typename Type>
     META_NS::Property<Type> GetCustomProperty(BASE_NS::string_view name) const
     {
         return META_NS::Property<Type>(GetCustomProperty(name));
     }
-    template<typename Type>
+    template <typename Type>
     META_NS::ArrayProperty<Type> GetCustomArrayProperty(BASE_NS::string_view name) const
     {
         return META_NS::ArrayProperty<Type>(GetCustomProperty(name));

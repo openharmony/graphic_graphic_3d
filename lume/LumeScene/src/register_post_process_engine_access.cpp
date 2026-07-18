@@ -74,7 +74,7 @@ SCENE_BEGIN_NAMESPACE()
 
 namespace Internal {
 
-template<typename Prop>
+template <typename Prop>
 void RegisterEngineAccessImpl()
 {
     static_assert(CORE_NS::PropertySystem::is_defined<Prop>().value);
@@ -82,7 +82,7 @@ void RegisterEngineAccessImpl()
         META_NS::MetaType<Prop>::coreType, CreateShared<META_NS::EngineInternalValueAccess<Prop>>());
 }
 
-template<typename Prop, typename AccessType>
+template <typename Prop, typename AccessType>
 void RegisterMapEngineAccessImpl()
 {
     static_assert(CORE_NS::PropertySystem::is_defined<Prop>().value);
@@ -92,7 +92,7 @@ void RegisterMapEngineAccessImpl()
         META_NS::MetaType<Prop>::coreType, CreateShared<META_NS::EngineInternalValueAccess<Prop, AccessType>>());
 }
 
-template<typename Prop>
+template <typename Prop>
 void UnregisterEngineAccessImpl()
 {
     META_NS::GetObjectRegistry().GetEngineData().UnregisterInternalValueAccess(META_NS::MetaType<Prop>::coreType);

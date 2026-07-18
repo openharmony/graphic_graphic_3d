@@ -183,17 +183,17 @@ public:
     META_EVENT(IOnChanged, OnStopped)
     META_EVENT(IOnChanged, OnTicked)
 
-    template<class Callback>
+    template <class Callback>
     void AddOnStarted(Callback&& callback)
     {
         OnStarted()->AddHandler(MakeCallback<IOnChanged>(callback));
     }
-    template<class Callback>
+    template <class Callback>
     void AddOnStopped(Callback&& callback)
     {
         OnStopped()->AddHandler(MakeCallback<IOnChanged>(callback));
     }
-    template<class Callback>
+    template <class Callback>
     void AddOnTicked(Callback&& callback)
     {
         OnTicked()->AddHandler(MakeCallback<IOnChanged>(callback));
@@ -274,27 +274,27 @@ ITestAttachment::Ptr CreateTestAttachment(const BASE_NS::string_view name = {});
 ITestStartable::Ptr CreateTestStartable(
     const BASE_NS::string_view name = {}, StartBehavior behavior = StartBehavior::MANUAL);
 
-template<class T>
+template <class T>
 typename T::Ptr CreateTestType(const BASE_NS::string_view name = {})
 {
     return interface_pointer_cast<T>(CreateTestType(name));
 }
 
-template<class T>
+template <class T>
 typename T::Ptr CreateTestContainer(
     const BASE_NS::string_view name = {}, ClassInfo type = META_NS::ClassId::TestContainer)
 {
     return interface_pointer_cast<T>(CreateTestContainer(name, type));
 }
 
-template<class T>
+template <class T>
 typename T::Ptr CreateTestAttachment(
     const BASE_NS::string_view name = {}, ClassInfo type = META_NS::ClassId::TestContainer)
 {
     return interface_pointer_cast<T>(CreateTestAttachment(name));
 }
 
-template<class T>
+template <class T>
 typename T::Ptr CreateTestStartable(
     const BASE_NS::string_view name = {}, ClassInfo type = META_NS::ClassId::TestStartable)
 {

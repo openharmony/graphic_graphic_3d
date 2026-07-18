@@ -50,10 +50,8 @@ private:
 
 private:
     CORE3D_NS::IGraphicsContext* graphicsContext_{};
+    CORE3D_NS::IGLTF2Importer::Ptr importer_{};
     CORE_NS::IEcs::Ptr ecs_{};
-    // Keeps the imported resource entities (materials, images, animations, ...) alive for the
-    // lifetime of this asset. We hold only the entity references, not the whole importer.
-    CORE3D_NS::GLTFResourceData importedResources_;
 };
 
 SCENE_END_NAMESPACE()

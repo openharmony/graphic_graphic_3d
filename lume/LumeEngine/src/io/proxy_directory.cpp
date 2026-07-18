@@ -30,14 +30,14 @@
 #include <core/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<>
+template <>
 uint64_t hash(const CORE_NS::IDirectory::Entry::Type& val)
 {
     return static_cast<uint64_t>(val);
 }
 BASE_END_NAMESPACE()
 
-template<>
+template <>
 struct std::hash<CORE_NS::IDirectory::Entry> {
     using argument_type = CORE_NS::IDirectory::Entry;
     using result_type = uint64_t;

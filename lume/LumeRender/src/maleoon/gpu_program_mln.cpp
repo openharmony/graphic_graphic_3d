@@ -32,6 +32,8 @@ RENDER_BEGIN_NAMESPACE()
 
 GpuShaderProgramMln::GpuShaderProgramMln(const GpuShaderProgramCreateData& createData)
 {
+    MLN_LOG_INIT("GpuShaderProgramMln: creating graphics shader program (vert=%p, frag=%p)",
+        createData.vertShaderModule, createData.fragShaderModule);
     if (createData.vertShaderModule) {
         vertShaderModule_ = static_cast<ShaderModuleMln*>(createData.vertShaderModule);
         const auto& vertPlat = vertShaderModule_->GetPlatformDataMln();
@@ -100,7 +102,7 @@ GpuShaderProgramMln::GpuShaderProgramMln(const GpuShaderProgramCreateData& creat
         }
     }
 
-    reflection_.shaderSpecializationConstantView = {constants_};
+    reflection_.shaderSpecializationConstantView = { constants_ };
 
     // Vertex input from vertex shader only
     if (vertShaderModule_) {
@@ -124,6 +126,7 @@ const GpuShaderProgramPlatformDataMln& GpuShaderProgramMln::GetPlatformData() co
 
 GpuComputeProgramMln::GpuComputeProgramMln(const GpuComputeProgramCreateData& createData)
 {
+    MLN_LOG_INIT("GpuComputeProgramMln: creating compute shader program (comp=%p)", createData.compShaderModule);
     if (createData.compShaderModule) {
         shaderModule_ = static_cast<ShaderModuleMln*>(createData.compShaderModule);
         const auto& compPlat = shaderModule_->GetPlatformDataMln();
@@ -135,7 +138,7 @@ GpuComputeProgramMln::GpuComputeProgramMln(const GpuComputeProgramCreateData& cr
         const auto specConst = shaderModule_->GetSpecilization();
         constants_.clear();
         GpuProgramUtil::CombineSpecializationConstants(specConst.constants, constants_);
-        reflection_.shaderSpecializationConstantView = {constants_};
+        reflection_.shaderSpecializationConstantView = { constants_ };
 
         const auto tgs = shaderModule_->GetThreadGroupSize();
         reflection_.threadGroupSizeX = tgs.x;

@@ -61,14 +61,14 @@ struct Class : IntroduceInterfaces<BaseA, BaseB, BaseC, BaseD, BaseE> {
     using MyBase = IntroduceInterfaces<BaseA, BaseB, BaseC, BaseD, BaseE>;
     using MyBase::GetInterface;
 
-    template<typename T>
+    template <typename T>
     T* Cast()
     {
         return static_cast<T*>(this);
     }
 };
 
-template<size_t S>
+template <size_t S>
 constexpr bool Contains(Internal::UIDArray<S> arr, const BASE_NS::Uid& uid)
 {
     for (size_t i = 0; i != S; ++i) {
@@ -190,7 +190,7 @@ struct TopClass : IntroduceInterfaces<Class, BaseH, AnotherClass> {
     using MyBase = IntroduceInterfaces<Class, BaseH, AnotherClass>;
     using MyBase::GetInterface;
 
-    template<typename T>
+    template <typename T>
     T* Cast()
     {
         return static_cast<T*>(this);

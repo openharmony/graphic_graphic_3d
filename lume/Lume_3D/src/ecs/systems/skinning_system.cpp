@@ -61,10 +61,10 @@ void UpdateJointBounds(IPicking& pick, const array_view<const float>& jointBound
     const Math::Mat4X4& skinEntityWorld, JointMatricesComponent& jointMatrices)
 {
     const size_t jointBoundsDataSize = jointBoundsData.size();
-    const size_t boundsCount = std::min(jointBoundsDataSize / 6U, jointMatrices.count);
+    const size_t boundsCount = jointBoundsDataSize / 6U;
 
     PLUGIN_ASSERT(jointBoundsData.size() % 6U == 0);  // 6: should be multiple of 6
-    PLUGIN_ASSERT(jointMatrices.count >= jointBoundsDataSize / 6U);
+    PLUGIN_ASSERT(jointMatrices.count >= boundsCount);
 
     static constexpr float maxFloat = std::numeric_limits<float>::max();
     static constexpr Math::Vec3 minDefault(maxFloat, maxFloat, maxFloat);
@@ -414,10 +414,9 @@ void SkinningSystem::CreateInstance(
 
         if (auto skinInstanceHandle = skinJointsManager_.Write(entity); skinInstanceHandle) {
             auto& skinInstance = *skinInstanceHandle;
-            // matrices.size() comes straight from the glTF skin and is not bounded to the fixed array.
-            skinInstance.count = Math::min(skinIbm.matrices.size(), countof(skinInstance.jointEntities));
+            skinInstance.count = skinIbm.matrices.size();
             auto jointEntities = array_view<Entity>(skinInstance.jointEntities, skinInstance.count);
-            std::copy_n(joints.begin(), skinInstance.count, jointEntities.begin());
+            std::copy(joints.begin(), joints.end(), jointEntities.begin());
         }
     }
 }
@@ -431,8 +430,7 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
 
     // validate skin joints
     if (const auto jointsHandle = skinJointsManager_.Read(skinIbmEntity); jointsHandle) {
-        const auto joints = array_view(
-            jointsHandle->jointEntities, std::min(jointsHandle->count, countof(jointsHandle->jointEntities)));
+        const auto joints = array_view(jointsHandle->jointEntities, jointsHandle->count);
         if (!std::all_of(
                 joints.begin(), joints.end(), [](const Entity& entity) { return EntityUtil::IsValid(entity); })) {
             return;
@@ -458,8 +456,10 @@ void SkinningSystem::CreateInstance(Entity const& skinIbmEntity, Entity const& e
     const auto dstJointsHandle = skinJointsManager_.Write(entity);
     const auto srcJointsHandle = skinJointsManager_.Read(skinIbmEntity);
     if (dstJointsHandle && srcJointsHandle) {
-        dstJointsHandle->count = std::min(srcJointsHandle->count, countof(srcJointsHandle->jointEntities));
-        std::copy_n(srcJointsHandle->jointEntities, dstJointsHandle->count, dstJointsHandle->jointEntities);
+        dstJointsHandle->count = srcJointsHandle->count;
+        std::copy(srcJointsHandle->jointEntities,
+            srcJointsHandle->jointEntities + static_cast<ptrdiff_t>(srcJointsHandle->count),
+            dstJointsHandle->jointEntities);
     }
 
     // joint matrices will be written during Update call

@@ -37,9 +37,6 @@ META_REGISTER_CLASS(
     NodeTemplateLoader, "0936dac2-4555-4fc3-b221-906ab0331743", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(PostProcessLoader, "06b80fd4-34b0-4f9c-ac1b-bd56bda4d5ee", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(SceneLoader, "fbb393fc-a0f0-4a9e-853a-2b2b8aa6bc31", META_NS::ObjectCategoryBits::NO_CATEGORY)
-META_REGISTER_CLASS(MeshLoader, "d7a31f8e-6c4a-4b23-9f0d-8e2c5a1b3d7f", META_NS::ObjectCategoryBits::NO_CATEGORY)
-META_REGISTER_CLASS(
-    MeshTemplateLoader, "5e6f1b2a-94d3-4c87-aa10-c2f8093d7a5e", META_NS::ObjectCategoryBits::NO_CATEGORY)
 META_REGISTER_CLASS(ShaderLoader, "730334ee-bac4-4ea1-92e6-e0facd82a958", META_NS::ObjectCategoryBits::NO_CATEGORY)
 
 META_REGISTER_CLASS(

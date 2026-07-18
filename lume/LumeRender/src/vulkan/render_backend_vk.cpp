@@ -515,15 +515,6 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
         }
     }
 
-    // If any of the presentation infos require a swapchain is not validly acquired, do not submit any command buffer to
-    // avoid that, the next frame-in-flight resets the command buffer before it's finished.
-    for (const auto& presRef : presentationData_.infos) {
-        if (!presRef.validAcquire && presRef.swapchainSemaphore) {
-            PLUGIN_LOG_E("Swapchain image acquire failed, dropping this frame.");
-            return;
-        }
-    }
-
     for (size_t cmdBufferIdx = 0; cmdBufferIdx < commandBufferSubmitter_.commandBuffers.size(); ++cmdBufferIdx) {
         const auto& cmdSubmitterRef = commandBufferSubmitter_.commandBuffers[cmdBufferIdx];
         if (cmdSubmitterRef.commandBuffer == VK_NULL_HANDLE) {
@@ -548,12 +539,16 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
             }
         }
 
+        bool validAcquire = true;
         if ((!swapchainSemaphoreWaited) && (renderContextRef.submitDepencies.waitForSwapchainAcquireSignal) &&
             (!presentationData_.infos.empty())) {
             swapchainSemaphoreWaited = true;
             // go through all swapchain semaphores
             for (const auto& presRef : presentationData_.infos) {
-                if (presRef.swapchainSemaphore) {
+                if (!presRef.validAcquire && presRef.swapchainSemaphore) {
+                    swapchainSemaphoreWaited = false;
+                    validAcquire = false;
+                } else if (presRef.validAcquire && presRef.swapchainSemaphore) {
                     waitSemaphores.push_back(presRef.swapchainSemaphore);
                     // Per Vulkan spec section 7.7.4, acquire semaphore signals when presentation is done reading.
                     // COLOR_ATTACHMENT_OUTPUT_BIT gates the first color attachment write in the render pass. The
@@ -568,7 +563,8 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
         VkFence fence = VK_NULL_HANDLE;
         if (finalCommandBufferSubmissionIndex == cmdBufferIdx) {  // final presentation
             // add fence signaling to last submission for frame sync
-            if (auto frameSync = static_cast<RenderFrameSyncVk*>(renderCommandFrameData.renderFrameSync); frameSync) {
+            if (auto frameSync = static_cast<RenderFrameSyncVk*>(renderCommandFrameData.renderFrameSync);
+                validAcquire && frameSync) {
                 fence = frameSync->GetFrameFence().fence;
                 frameSync->FrameFenceIsSignalled();
             }
@@ -609,7 +605,7 @@ void RenderBackendVk::RenderProcessSubmitCommandLists(
         }
 
         const VkQueue queue = deviceVk_.GetGpuQueue(renderContextRef.renderCommandList->GetGpuQueue()).queue;
-        if (queue) {
+        if (validAcquire && queue) {
             const VkSubmitInfo submitInfo{
                 VK_STRUCTURE_TYPE_SUBMIT_INFO,                               // sType
                 nullptr,                                                     // pNext
@@ -2733,13 +2729,9 @@ void RenderBackendVk::RenderCommand(const RenderCommandBuildAccelerationStructur
         arrayIndex++;
     }
 
-    // Align up to the device requirement; the staging node pads the buffer for this shift.
-    const VkDeviceSize scratchAlign =
-        deviceVk_.GetCommonDeviceProperties().accelerationStructureProperties.minScratchOffsetAlignment;
-    const VkDeviceAddress scratchAddr = GetValidDeviceAddress(
+    const VkDeviceOrHostAddressKHR scratchData = {GetValidDeviceAddress(
         {scratchBuffer->GetPlatformData().deviceAddress, geometry.scratchBuffer.offset}, validAddresses)
-                                            .deviceAddress;
-    const VkDeviceOrHostAddressKHR scratchData{(scratchAddr + (scratchAlign - 1U)) & ~(scratchAlign - 1U)};
+                                                      .deviceAddress};
 
     const uint32_t geometryCount = isTopLevel ? 1U : arrayIndex;
     const VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo{

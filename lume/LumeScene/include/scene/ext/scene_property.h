@@ -23,7 +23,7 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<typename Type, bool IsDynamic>
+template <typename Type, bool IsDynamic>
 META_NS::Internal::MetadataCtor* CreateScenePropertyCtor()
 {
     return [](const BASE_NS::shared_ptr<META_NS::IOwner>& owner, const META_NS::StaticMetadata& d) {

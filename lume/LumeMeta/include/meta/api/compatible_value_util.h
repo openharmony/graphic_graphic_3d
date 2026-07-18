@@ -21,7 +21,7 @@
 META_BEGIN_NAMESPACE()
 
 namespace Internal {
-template<typename Type, typename Out>
+template <typename Type, typename Out>
 AnyReturnValue ExtractAnyValue(const IAny& value, Out& out)
 {
     Type v{};
@@ -40,7 +40,7 @@ AnyReturnValue ExtractAnyValue(const IAny& value, Out& out)
  * @param TypeList Type list of types which are tried for the extraction
  * @return Result of getting the value.
  */
-template<typename Type, typename... Builtins>
+template <typename Type, typename... Builtins>
 AnyReturnValue GetCompatibleValue(const IAny& value, Type& out, TypeList<Builtins...>)
 {
     AnyReturnValue res = AnyReturn::FAIL;
@@ -57,7 +57,7 @@ AnyReturnValue GetCompatibleValue(const IAny& value, Type& out, TypeList<Builtin
  * @param TypeList Type list of types which are tried for the insertion
  * @return Result of setting the value.
  */
-template<typename Type, typename... Builtins>
+template <typename Type, typename... Builtins>
 AnyReturnValue SetCompatibleValue(const Type& value, IAny& any, TypeList<Builtins...>)
 {
     AnyReturnValue res = AnyReturn::FAIL;

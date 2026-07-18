@@ -400,7 +400,6 @@
         "vulkan-loader",
         "vulkan-headers",
         "skia",
-        "vma",
         "freetype",
         "zlib",
         "runtime_core",

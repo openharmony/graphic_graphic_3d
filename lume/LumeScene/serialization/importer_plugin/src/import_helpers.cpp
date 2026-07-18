@@ -19,7 +19,6 @@
 #include <scene/ext/util.h>
 #include <scene/interface/intf_environment.h>
 #include <scene/interface/intf_image.h>
-#include <scene/interface/intf_postprocess.h>
 #include <scene/interface/intf_shader.h>
 
 #include <core/intf_engine.h>
@@ -107,7 +106,7 @@ OptValue<bool> GetOptBool(ImportContext& context, BASE_NS::string_view name)
     return OptValue<bool>{v.boolean_};
 }
 
-template<typename Type, size_t... Index>
+template <typename Type, size_t... Index>
 static OptValue<Type> GetOptVecImpl(ImportContext& context, BASE_NS::string_view name, META_NS::IndexSequence<Index...>)
 {
     auto arr = context.GetOptArray(name);
@@ -121,7 +120,7 @@ static OptValue<Type> GetOptVecImpl(ImportContext& context, BASE_NS::string_view
     return OptValue<Type>{Type{arr[Index].as_number<float>()...}};
 }
 
-template<typename Type, size_t Elements>
+template <typename Type, size_t Elements>
 static OptValue<Type> GetOptVec(ImportContext& context, BASE_NS::string_view name)
 {
     return GetOptVecImpl<Type>(context, name, META_NS::MakeIndexSequence<Elements>());
@@ -148,64 +147,19 @@ OptValue<BASE_NS::Color> GetOptColor(ImportContext& context, BASE_NS::string_vie
     return GetOptVec<BASE_NS::Color, 4>(context, name);
 }
 
-template<typename Type, typename Element, size_t... Index>
-static OptValue<Type> GetOptIntVecImpl(
-    ImportContext& context, BASE_NS::string_view name, META_NS::IndexSequence<Index...>)
+OptValue<BASE_NS::Math::UVec2> GetOptUVec2(ImportContext& context, BASE_NS::string_view name)
 {
     auto arr = context.GetOptArray(name);
     if (arr.empty()) {
         return {};
     }
-    if (arr.size() != sizeof...(Index) || (false || ... || !arr[Index].is_number())) {
-        return OptValue<Type>{
+    if (arr.size() != 2 || !arr[0].is_number() || !arr[1].is_number()) {
+        CORE_LOG_W("Size or type mismatch with UVec2: %s", BASE_NS::string(name).c_str());
+        return OptValue<BASE_NS::Math::UVec2>{
             context.CreateDiagnostics(BASE_NS::string("invalid property value (property: ") + name + ")")};
     }
-    return OptValue<Type>{Type{arr[Index].as_number<Element>()...}};
-}
-
-template<typename Type, typename Element, size_t Elements>
-static OptValue<Type> GetOptIntVec(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVecImpl<Type, Element>(context, name, META_NS::MakeIndexSequence<Elements>());
-}
-
-OptValue<BASE_NS::Math::UVec2> GetOptUVec2(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::UVec2, uint32_t, 2>(context, name);
-}
-OptValue<BASE_NS::Math::UVec3> GetOptUVec3(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::UVec3, uint32_t, 3>(context, name);
-}
-OptValue<BASE_NS::Math::UVec4> GetOptUVec4(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::UVec4, uint32_t, 4>(context, name);
-}
-OptValue<BASE_NS::Math::IVec2> GetOptIVec2(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::IVec2, int32_t, 2>(context, name);
-}
-OptValue<BASE_NS::Math::IVec3> GetOptIVec3(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::IVec3, int32_t, 3>(context, name);
-}
-OptValue<BASE_NS::Math::IVec4> GetOptIVec4(ImportContext& context, BASE_NS::string_view name)
-{
-    return GetOptIntVec<BASE_NS::Math::IVec4, int32_t, 4>(context, name);
-}
-
-OptValue<META_NS::TimeSpan> GetOptTimeSpan(ImportContext& context, BASE_NS::string_view name)
-{
-    auto v = context.GetOptValue(name);
-    if (!v) {
-        return {};
-    }
-    if (!v.is_number()) {
-        CORE_LOG_W("property '%s' type mismatch, expected number (timeSpan ms)", BASE_NS::string(name).c_str());
-        return OptValue<META_NS::TimeSpan>{context.CreateDiagnostics(
-            BASE_NS::string("property '" + name + "' type mismatch, expected number (timeSpan ms)"))};
-    }
-    return OptValue<META_NS::TimeSpan>{META_NS::TimeSpan::Milliseconds(v.as_number<int64_t>())};
+    return OptValue<BASE_NS::Math::UVec2>{
+        BASE_NS::Math::UVec2{arr[0].as_number<uint32_t>(), arr[1].as_number<uint32_t>()}};
 }
 
 static OptValue<BASE_NS::Math::Vec4> ParseMat4Column(
@@ -333,46 +287,41 @@ static DeferredContext MakeDeferredContext(ImportContext& context)
         context.GetTrace()};
 }
 
-IDiagnostics::Ptr ImportResourceName(ImportContext& context, META_NS::IMetadata& meta)
-{
-    ErrorHandler h(context);
-    if (auto value = GetOptString(context, "name"); h.HandleOptValue(value)) {
-        if (value.error) {
-            return value.error;
-        }
-        AddSetProperty(meta, "Name", value.GetValue());
-    }
-    return h;
-}
-
-IDiagnostics::Ptr AddResourceIdProperty(
-    ImportContext& context, META_NS::IMetadata& meta, BASE_NS::string_view jsonName, BASE_NS::string_view propName)
-{
-    ErrorHandler h(context);
-    auto rid = GetOptResourceId(context, jsonName);
-    if (!h.HandleOptValue(rid)) {
-        return h;
-    }
-    if (rid.error) {
-        return rid.error;
-    }
-    AddSetProperty<CORE_NS::ResourceId>(meta, propName, rid.GetValue());
-    return h;
-}
-
 IDiagnostics::Ptr ImportImageProperty(ImportContext& context, const META_NS::IObject::Ptr& metaOwner,
     BASE_NS::string_view jsonName, BASE_NS::string_view propName)
 {
     ErrorHandler h(context);
-    if (context.GetOptValue(jsonName).is_null()) {
-        return h;
-    }
-    auto meta = interface_cast<META_NS::IMetadata>(metaOwner);
-    if (!meta) {
-        return h;
-    }
-    if (auto err = AddResourceIdProperty(context, *meta, jsonName, propName); h.Handle(err)) {
-        return err;
+    if (auto rid = GetOptResourceId(context, jsonName); h.HandleOptValue(rid)) {
+        if (rid.error) {
+            return rid.error;
+        }
+        auto resourceId = rid.GetValue();
+        auto pName = BASE_NS::string(propName);
+        auto dc = MakeDeferredContext(context);
+        context.AddDeferredAction(
+            ImportContext::DeferTier::Resource, [metaOwner, resourceId, pName, dc]() -> IDiagnostics::Ptr {
+                auto resource = ResolveDeferredResource(dc.params, dc.renderContext, resourceId);
+                if (!resource) {
+                    CORE_LOG_E("Failed to resolve image resource: %s (property: %s)",
+                        resourceId.ToString().c_str(),
+                        pName.c_str());
+                    return dc.CreateError("Failed to resolve image resource '" + resourceId.ToString() +
+                                          "' for property '" + pName + "'");
+                }
+                auto image = interface_pointer_cast<SCENE_NS::IImage>(resource);
+                if (!image) {
+                    CORE_LOG_E(
+                        "Resource is not an image: %s (property: %s)", resourceId.ToString().c_str(), pName.c_str());
+                    return dc.CreateError(
+                        "Resource is not an image: '" + resourceId.ToString() + "' for property '" + pName + "'");
+                }
+                if (auto meta = interface_cast<META_NS::IMetadata>(metaOwner)) {
+                    auto prop = META_NS::ConstructProperty<SCENE_NS::IImage::Ptr>(pName);
+                    meta->AddProperty(prop.GetProperty());
+                    META_NS::SetValue<SCENE_NS::IImage::Ptr>(prop.GetProperty(), image);
+                }
+                return nullptr;
+            });
     }
     return h;
 }
@@ -415,72 +364,6 @@ IDiagnostics::Ptr ImportEnvironmentProperty(
             return nullptr;
         });
     return h;
-}
-
-IDiagnostics::Ptr ImportPostProcessProperty(
-    ImportContext& context, const META_NS::IProperty::Ptr& target, BASE_NS::string_view jsonName)
-{
-    if (!target) {
-        return context.CreateDiagnostics("PostProcess target property is null");
-    }
-    ErrorHandler h(context);
-    auto rid = GetOptResourceId(context, jsonName);
-    if (!h.HandleOptValue(rid)) {
-        return h;
-    }
-    if (rid.error) {
-        return rid.error;
-    }
-    auto resourceId = rid.GetValue();
-    auto pName = BASE_NS::string(jsonName);
-    auto dc = MakeDeferredContext(context);
-    context.AddDeferredAction(
-        ImportContext::DeferTier::Resource, [target, resourceId, pName, dc]() -> IDiagnostics::Ptr {
-            auto resource = ResolveDeferredResource(dc.params, dc.renderContext, resourceId);
-            if (!resource) {
-                CORE_LOG_E("Failed to resolve postProcess resource: %s (property: %s)",
-                    resourceId.ToString().c_str(),
-                    pName.c_str());
-                return dc.CreateError("Failed to resolve postProcess resource '" + resourceId.ToString() +
-                                      "' for property '" + pName + "'");
-            }
-            auto pp = interface_pointer_cast<SCENE_NS::IPostProcess>(resource);
-            if (!pp) {
-                CORE_LOG_E(
-                    "Resource is not a postProcess: %s (property: %s)", resourceId.ToString().c_str(), pName.c_str());
-                return dc.CreateError(
-                    "Resource is not a postProcess: '" + resourceId.ToString() + "' for property '" + pName + "'");
-            }
-            META_NS::SetValue<SCENE_NS::IPostProcess::Ptr>(target, pp);
-            return nullptr;
-        });
-    return h;
-}
-
-OptValue<SCENE_NS::RenderSort> ImportOptRenderSort(ImportContext& context)
-{
-    auto sortObj = context.GetOptObject("renderSort");
-    if (sortObj.empty()) {
-        return {};
-    }
-    auto sortContext = context.CreateContext(BASE_NS::move(sortObj));
-    ErrorHandler h(context);
-    SCENE_NS::RenderSort out{};
-    if (auto v = GetOptUInt(sortContext, "layer"); h.HandleOptValue(v)) {
-        if (v.error) {
-            return OptValue<SCENE_NS::RenderSort>{v.error};
-        }
-        out.renderSortLayer = static_cast<uint8_t>(v.GetValue());
-    }
-    if (auto v = GetOptUInt(sortContext, "order"); h.HandleOptValue(v)) {
-        if (v.error) {
-            return OptValue<SCENE_NS::RenderSort>{v.error};
-        }
-        out.renderSortLayerOrder = static_cast<uint8_t>(v.GetValue());
-    }
-    OptValue<SCENE_NS::RenderSort> result{out};
-    result.error = h;
-    return result;
 }
 
 BASE_NS::string ResolveFilename(ImportContext& context, BASE_NS::string_view resourceIndex)

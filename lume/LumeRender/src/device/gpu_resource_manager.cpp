@@ -1145,21 +1145,19 @@ RenderHandleReference GpuResourceManager::CreateView(
     const uint32_t optionalResourceIndex =
         Math::min(emplaceResourceIndex, GetPendingOptionalResourceIndex(store, {}, name));
 
-    unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc, const GpuImagePlatformData& gpuImagePlatformData) {
-        // protect GPU memory allocations
-        auto lock = std::lock_guard(allocationMutex_);
-        return device_.CreateGpuImageView(desc, gpuImagePlatformData);
-    }(desc, gpuImagePlatformData);
-    if (!gpuImage) {
-        device_.Deactivate();
-        return {};
-    }
-
-    // safety checks
-    if ((optionalResourceIndex < emplaceResourceIndex) && (optionalResourceIndex < store.pendingData.images.size())) {
-        store.pendingData.images[optionalResourceIndex] = move(gpuImage);
-    } else {
-        store.pendingData.images.push_back(move(gpuImage));
+    if (unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc,
+                                            const GpuImagePlatformData& gpuImagePlatformData) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuImageView(desc, gpuImagePlatformData);
+        }(desc, gpuImagePlatformData)) {
+        // safety checks
+        if ((optionalResourceIndex < emplaceResourceIndex) &&
+            (optionalResourceIndex < store.pendingData.images.size())) {
+            store.pendingData.images[optionalResourceIndex] = move(gpuImage);
+        } else {
+            store.pendingData.images.push_back(move(gpuImage));
+        }
     }
     device_.Deactivate();
 
@@ -1183,26 +1181,24 @@ RenderHandleReference GpuResourceManager::CreateView(
     // additional handle flags provide information if platform conversion is needed
     uint32_t additionalHandleFlags = 0u;
 
-    unique_ptr<GpuImage> gpuImage = [this](
-                                        const GpuImageDesc& desc, const BackendSpecificImageDesc& backendSpecificData) {
-        // protect GPU memory allocations
-        auto lock = std::lock_guard(allocationMutex_);
-        return device_.CreateGpuImageView(desc, backendSpecificData);
-    }(desc, backendSpecificData);
-    if (!gpuImage) {
-        device_.Deactivate();
-        return {};
-    }
-
-    const auto additionalImageFlags = gpuImage->GetAdditionalFlags();
-    additionalHandleFlags = (additionalImageFlags & GpuImage::AdditionalFlagBits::ADDITIONAL_PLATFORM_CONVERSION_BIT)
-                                ? CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION
-                                : 0u;
-    // safety checks
-    if ((optionalResourceIndex < emplaceResourceIndex) && (optionalResourceIndex < store.pendingData.images.size())) {
-        store.pendingData.images[optionalResourceIndex] = move(gpuImage);
-    } else {
-        store.pendingData.images.push_back(move(gpuImage));
+    if (unique_ptr<GpuImage> gpuImage = [this](const GpuImageDesc& desc,
+                                            const BackendSpecificImageDesc& backendSpecificData) {
+            // protect GPU memory allocations
+            auto lock = std::lock_guard(allocationMutex_);
+            return device_.CreateGpuImageView(desc, backendSpecificData);
+        }(desc, backendSpecificData)) {
+        const auto additionalImageFlags = gpuImage->GetAdditionalFlags();
+        additionalHandleFlags =
+            (additionalImageFlags & GpuImage::AdditionalFlagBits::ADDITIONAL_PLATFORM_CONVERSION_BIT)
+                ? CORE_RESOURCE_HANDLE_PLATFORM_CONVERSION
+                : 0u;
+        // safety checks
+        if ((optionalResourceIndex < emplaceResourceIndex) &&
+            (optionalResourceIndex < store.pendingData.images.size())) {
+            store.pendingData.images[optionalResourceIndex] = move(gpuImage);
+        } else {
+            store.pendingData.images.push_back(move(gpuImage));
+        }
     }
     device_.Deactivate();
 

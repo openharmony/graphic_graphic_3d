@@ -34,7 +34,7 @@ public:
 
     // Consume a trivially-copyable type from fuzz data.
     // Non-trivially-copyable types (e.g. with vtable, internal pointers) are rejected at compile time.
-    template<typename T>
+    template <typename T>
     bool Consume(T& out)
     {
         static_assert(

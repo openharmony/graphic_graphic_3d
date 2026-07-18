@@ -22,7 +22,7 @@
 #include "util/frustum_util.h"
 
 namespace {
-template<typename T>
+template <typename T>
 void ParseEmpty()
 {
     {
@@ -48,7 +48,7 @@ UNIT_TEST(API_UtilJsonTest, parseEmpty, testing::ext::TestSize.Level1)
     ParseEmpty<CORE_NS::json::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void Constructor()
 {
     using Json = CORE_NS::json::value_t<T>;
@@ -228,7 +228,7 @@ UNIT_TEST(API_UtilJsonTest, constructors, testing::ext::TestSize.Level1)
     Constructor<CORE_NS::json::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void ParseTypes()
 {
     // check basic json types
@@ -344,7 +344,7 @@ UNIT_TEST(API_UtilJsonTest, parseTypes, testing::ext::TestSize.Level1)
     ParseTypes<CORE_NS::json::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void ParseInvalid()
 {
     {
@@ -454,7 +454,7 @@ UNIT_TEST(API_UtilJsonTest, invalid, testing::ext::TestSize.Level1)
     ParseInvalid<CORE_NS::json::writable_tag>();
 }
 
-template<typename T>
+template <typename T>
 void ToString()
 {
     {

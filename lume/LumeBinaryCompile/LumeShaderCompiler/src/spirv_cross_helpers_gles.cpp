@@ -38,7 +38,7 @@ constexpr GLenum FLOAT_TYPES[5][5] = {
     {0, GL_FLOAT_VEC4, GL_FLOAT_MAT2x4, GL_FLOAT_MAT3x4, GL_FLOAT_MAT4},
 };
 
-template<typename T>
+template <typename T>
 constexpr T Max(T&& lhs, T&& rhs)
 {
     return lhs > rhs ? std::forward<T>(lhs) : std::forward<T>(rhs);

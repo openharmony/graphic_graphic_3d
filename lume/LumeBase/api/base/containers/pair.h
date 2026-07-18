@@ -20,15 +20,15 @@
 #include <base/namespace.h>
 
 BASE_BEGIN_NAMESPACE()
-template<class T1, class T2>
+template <class T1, class T2>
 struct pair {
-    template<class U1 = T1, class U2 = T2,
+    template <class U1 = T1, class U2 = T2,
         enable_if_t<is_default_constructible_v<U1> && is_default_constructible_v<U2>, int> = 0>
     constexpr pair() noexcept(is_nothrow_default_constructible_v<U1>&& is_nothrow_default_constructible_v<U2>)
         : first(), second()
     {}
 
-    template<class U1 = T1, class U2 = T2,
+    template <class U1 = T1, class U2 = T2,
         enable_if_t<is_copy_constructible_v<U1> && is_copy_constructible_v<U2>, int> = 0>
     constexpr
 #if (__cplusplus == 202002L)
@@ -39,7 +39,7 @@ struct pair {
         : first(x), second(y)
     {}
 
-    template<class U1 = T1, class U2 = T2,
+    template <class U1 = T1, class U2 = T2,
         enable_if_t<is_constructible_v<T1, U1> && is_constructible_v<T2, U2>, int> = 0>
     constexpr
 #if (__cplusplus == 202002L)
@@ -49,7 +49,7 @@ struct pair {
         : first(BASE_NS::forward<U1>(x)), second(BASE_NS::forward<U2>(y))
     {}
 
-    template<class U1, class U2,
+    template <class U1, class U2,
         enable_if_t<is_constructible_v<T1, const U1&> && is_constructible_v<T2, const U2&>, int> = 0>
     constexpr
 #if (__cplusplus == 202002L)
@@ -59,7 +59,7 @@ struct pair {
         : first(p.first), second(p.second)
     {}
 
-    template<class U1, class U2, enable_if_t<is_constructible_v<T1, U1> && is_constructible_v<T2, U2>, int> = 0>
+    template <class U1, class U2, enable_if_t<is_constructible_v<T1, U1> && is_constructible_v<T2, U2>, int> = 0>
     constexpr
 #if (__cplusplus == 202002L)
         explicit(!(is_convertible_v<U1, T1> && is_convertible_v<U2, T2>))
@@ -81,7 +81,7 @@ struct pair {
         return *this;
     }
 
-    template<class U1, class U2,
+    template <class U1, class U2,
         enable_if_t<is_assignable_v<T1&, const U1&> && is_assignable_v<T2&, const U2&>, int> = 0>
     constexpr pair& operator=(const pair<U1, U2>& other)
     {
@@ -100,7 +100,7 @@ struct pair {
         return *this;
     }
 
-    template<class U1, class U2, enable_if_t<is_assignable_v<T1&, U1> && is_assignable_v<T2&, U2>, int> = 0>
+    template <class U1, class U2, enable_if_t<is_assignable_v<T1&, U1> && is_assignable_v<T2&, U2>, int> = 0>
     constexpr pair& operator=(pair<U1, U2>&& other) noexcept(
         is_nothrow_constructible_v<T1, U1>&& is_nothrow_constructible_v<T2, U2>)
     {
@@ -116,22 +116,22 @@ struct pair {
     second_type second;
 };
 
-template<class T1, class T2>
+template <class T1, class T2>
 pair(T1, T2) -> pair<T1, T2>;
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator==(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     return (lhs.first == rhs.first) && (lhs.second == rhs.second);
 }
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator!=(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     return !(lhs == rhs);
 }
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator<(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     if (lhs.first < rhs.first) {
@@ -146,19 +146,19 @@ constexpr bool operator<(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U
     return false;
 }
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator<=(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     return !(rhs < lhs);
 }
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator>(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     return (rhs < lhs);
 }
 
-template<class T1, class T2, class U1, class U2>
+template <class T1, class T2, class U1, class U2>
 constexpr bool operator>=(const BASE_NS::pair<T1, T2>& lhs, const BASE_NS::pair<U1, U2>& rhs)
 {
     return !(lhs < rhs);

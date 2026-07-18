@@ -202,6 +202,8 @@ ohos_source_set("lume_3d_src") {
     "src/render/node/render_node_default_light_probes.h",
     "src/render/node/render_node_default_lights.cpp",
     "src/render/node/render_node_default_lights.h",
+    "src/render/node/render_node_light_probes_env.cpp",
+    "src/render/node/render_node_light_probes_env.h",
     "src/render/node/render_node_default_material_deferred_shading.cpp",
     "src/render/node/render_node_default_material_deferred_shading.h",
     "src/render/node/render_node_default_material_objects.cpp",
@@ -214,8 +216,6 @@ ohos_source_set("lume_3d_src") {
     "src/render/node/render_node_default_shadow_render_slot.h",
     "src/render/node/render_node_generics.cpp",
     "src/render/node/render_node_generics.h",
-    "src/render/node/render_node_light_probes_env.cpp",
-    "src/render/node/render_node_light_probes_env.h",
     "src/render/node/render_node_morph.cpp",
     "src/render/node/render_node_morph.h",
     "src/render/node/render_node_weather_simulation.cpp",
@@ -250,6 +250,7 @@ ohos_source_set("lume_3d_src") {
 
   external_deps = [
     "c_utils:utils",
+    "bounds_checking_function:libsec_shared",
   ]
 
   if (!LUME_OHOS_BUILD) {

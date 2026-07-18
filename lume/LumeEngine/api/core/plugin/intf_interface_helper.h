@@ -22,7 +22,7 @@
 
 CORE_BEGIN_NAMESPACE()
 namespace Internal {
-template<typename Me, typename Interface, typename... Interfaces>
+template <typename Me, typename Interface, typename... Interfaces>
 const CORE_NS::IInterface* GetInterface(const Me* me, const BASE_NS::Uid& uid)
 {
     if (uid == Interface::UID) {
@@ -36,7 +36,7 @@ const CORE_NS::IInterface* GetInterface(const Me* me, const BASE_NS::Uid& uid)
 }
 }  // namespace Internal
 
-template<typename... Interfaces>
+template <typename... Interfaces>
 class IInterfaceHelper : public Interfaces... {
 public:
     const IInterface* GetInterface(const BASE_NS::Uid& uid) const override

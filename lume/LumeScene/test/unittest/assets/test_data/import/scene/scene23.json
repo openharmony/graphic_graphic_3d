@@ -10,6 +10,7 @@
 			"children": [
 				{
 					"type": "external",
+					"name": "ext1",
 					"source": {
 						"type": "nodeTemplate",
 						"url": "scene23_level1.nodeTemplate"

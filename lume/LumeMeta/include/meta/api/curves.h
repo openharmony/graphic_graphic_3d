@@ -135,14 +135,14 @@ public:
 }  // namespace Curves
 
 /// Return a default object which implements ICubicBezier
-template<>
+template <>
 inline auto CreateObjectInstance<ICubicBezier>()
 {
     return Curves::CubicBezier(CreateNew);
 }
 
 /// Return a default object which implements ICubicBezier.
-template<>
+template <>
 inline auto CreateObjectInstance<IEasingCurve>()
 {
     // By default return an InOutCubic easing curve for IEasingCurve

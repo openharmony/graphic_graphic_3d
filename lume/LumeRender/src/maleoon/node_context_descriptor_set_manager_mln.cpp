@@ -38,7 +38,7 @@ MlnBindingType ToMlnBindingType(DescriptorType type)
     return static_cast<MlnBindingType>(type);
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 NodeContextDescriptorSetManagerMln::NodeContextDescriptorSetManagerMln(Device& device)
     : NodeContextDescriptorSetManager(device)
@@ -63,7 +63,7 @@ void NodeContextDescriptorSetManagerMln::ResetAndReserve(const DescriptorCounts&
     if (maxSets_ > 0) {
         auto& gpuSets = gpuDescriptorSets_[DESCRIPTOR_SET_INDEX_TYPE_STATIC];
         if (!gpuSets.empty()) {
-            PendingOneFrameGpuData pendingData{};
+            PendingOneFrameGpuData pendingData {};
             pendingData.frameIndex = device_.GetFrameCount();
             pendingData.gpuSets = BASE_NS::move(gpuSets);
             pendingOneFrameGpuData_.push_back(BASE_NS::move(pendingData));
@@ -154,9 +154,7 @@ RenderHandle NodeContextDescriptorSetManagerMln::CreateDescriptorSetImpl(
     auto& cpuSets = cpuDescriptorSets_[indexType];
     const uint32_t index = static_cast<uint32_t>(cpuSets.size());
     MLN_LOG_GRAPH("NodeContextDescriptorSetManagerMln::CreateDescriptorSetImpl (type=%u, idx=%u, bindings=%zu)",
-        indexType,
-        index,
-        descriptorSetLayoutBindings.size());
+        indexType, index, descriptorSetLayoutBindings.size());
 
     CpuDescriptorSet cpuSet{};
     cpuSet.currentGpuBufferingIndex = 0;
@@ -282,7 +280,7 @@ bool NodeContextDescriptorSetManagerMln::UpdateDescriptorSetGpuHandle(const Rend
         if (gpuSet.dirtyFramesRemaining > 0) {
             gpuSet.dirtyFramesRemaining--;
         }
-        return true;  // needs GPU update
+        return true; // needs GPU update
     }
     return false;
 }

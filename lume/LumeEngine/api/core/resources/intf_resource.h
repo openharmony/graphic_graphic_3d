@@ -183,13 +183,13 @@ protected:
 
 CORE_END_NAMESPACE()
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const CORE_NS::ResourceId& id)
 {
     return BASE_NS::Hash(id.name, id.group);
 }
 
-template<>
+template <>
 inline uint64_t BASE_NS::hash(const CORE_NS::ResourceIdContext& idc)
 {
     return BASE_NS::Hash(idc.id, idc.context.GetRawPointer());

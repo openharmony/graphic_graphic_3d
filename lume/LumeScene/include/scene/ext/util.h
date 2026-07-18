@@ -24,13 +24,13 @@
 
 SCENE_BEGIN_NAMESPACE()
 
-template<typename Type>
+template <typename Type>
 Type GetBuildArg(const META_NS::IMetadata::Ptr& d, BASE_NS::string_view name)
 {
     return d ? META_NS::GetValue(d->GetProperty<Type>(name)) : Type{};
 }
 
-template<typename Interface>
+template <typename Interface>
 typename BASE_NS::shared_ptr<Interface> GetInterfaceBuildArg(
     const META_NS::IMetadata::Ptr& d, BASE_NS::string_view name)
 {
@@ -126,7 +126,7 @@ inline bool PushPropertyValue(const META_NS::IProperty::Ptr& p, const META_NS::I
 /**
  * @brief See PushPropertyValue.
  */
-template<typename Type>
+template <typename Type>
 bool PushPropertyValue(const META_NS::Property<Type>& p, const META_NS::IValue::Ptr& value)
 {
     return p && value && p->PushValue(value);
@@ -138,7 +138,7 @@ bool PushPropertyValue(const META_NS::Property<Type>& p, const META_NS::IValue::
  * @param value The value to push.
  * @return True if successful, false otherwise.
  */
-template<typename Type>
+template <typename Type>
 bool PushPropertyAsValue(const META_NS::Property<Type>& p, const META_NS::Property<Type>& value)
 {
     return p && value && p->PushValue(value.GetProperty());

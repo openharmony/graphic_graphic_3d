@@ -562,7 +562,7 @@ void BlitCube(DeviceGLES& device_, const BlitData& bd)
         data += static_cast<uintptr_t>(bd.sizeOfData);
     }
 }
-template<bool usePixelUnpackBuffer>
+template <bool usePixelUnpackBuffer>
 
 BlitData SetupBlit(DeviceGLES& device_, const BufferImageCopy& bufferImageCopy, GpuBufferGLES& srcGpuBuffer,
     const GpuImageGLES& dstGpuImage)
@@ -620,7 +620,7 @@ BlitData SetupBlit(DeviceGLES& device_, const BufferImageCopy& bufferImageCopy, 
     return {iPlat, dstGpuImage.GetDesc(), bufferImageCopy, data, size, sizeOfData, compinfo.compressed};
 }
 
-template<bool usePixelUnpackBuffer>
+template <bool usePixelUnpackBuffer>
 void FinishBlit(DeviceGLES& device_, const GpuBufferGLES& srcGpuBuffer)
 {
     if constexpr (usePixelUnpackBuffer) {
@@ -630,7 +630,7 @@ void FinishBlit(DeviceGLES& device_, const GpuBufferGLES& srcGpuBuffer)
     }
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 constexpr size_t Compare(const T (&a)[N], const T (&b)[N])
 {
     for (size_t i = 0; i < N; i++) {
@@ -640,7 +640,7 @@ constexpr size_t Compare(const T (&a)[N], const T (&b)[N])
     return true;
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 
 constexpr size_t Set(T (&a)[N], const T (&b)[N])
 {

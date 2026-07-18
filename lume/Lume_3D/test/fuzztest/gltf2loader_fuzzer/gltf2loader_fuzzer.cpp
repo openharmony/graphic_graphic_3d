@@ -466,7 +466,7 @@ bool BuildGLB(const uint8_t* data, size_t size, vector<uint8_t>& outGlb)
     uint32_t binChunkLen = static_cast<uint32_t>(binChunkLen16) % MAX_BIN_CHUNK_LEN;
 
     const uint8_t* fuzzPayload = data + GLB_HEADER_PAYLOAD_OFFSET;
-    size_t fuzzRemaining = fc.Remaining();
+    size_t fuzzRemaining = (size > GLB_HEADER_PAYLOAD_OFFSET) ? (size - GLB_HEADER_PAYLOAD_OFFSET) : 0;
 
     string jsonContent = BuildGltfJson(fuzzPayload, fuzzRemaining, jsonChunkLen, (flags & FUZZ_RAW_MODE_BIT) != 0);
 

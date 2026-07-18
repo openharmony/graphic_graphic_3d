@@ -18,11 +18,13 @@
 
 #include <limits>
 
+#include <base/containers/vector.h>
+
 #include "config.h"
 
 SCENE_IMP_BEGIN_NAMESPACE()
 
-template<typename RangeType, typename Type>
+template <typename RangeType, typename Type>
 bool IsValueInRange(const Type& v)
 {
     if constexpr (std::numeric_limits<Type>::is_signed) {
@@ -35,6 +37,26 @@ bool IsValueInRange(const Type& v)
         }
     }
     return v <= std::numeric_limits<RangeType>::max();
+}
+
+template <typename T>
+bool VectorEquals(const BASE_NS::vector<T>& l, const BASE_NS::vector<T>& r)
+{
+    if (l.size() != r.size()) {
+        return false;
+    }
+    auto it1 = l.begin();
+    auto it2 = r.begin();
+    for (; it1 != l.end(); ++it1, ++it2) {
+        if constexpr (META_NS::HasEqualOperator_v<T>) {
+            if (!(*it1 == *it2)) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
 
 SCENE_IMP_END_NAMESPACE()

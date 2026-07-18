@@ -33,8 +33,8 @@ struct ShaderModuleCreateInfo;
 struct ShaderModulePlatformDataMln : ShaderModulePlatformData {
     // New API: no MlnShader handle. SPIR-V pointer for inline MlnShaderDescriptor at PSO creation.
     // Points into ShaderModuleMln::spvData_ (owned copy), guaranteed valid for module lifetime.
-    const uint32_t* spvSource{nullptr};
-    size_t spvSourceSize{0};
+    const uint32_t* spvSource { nullptr };
+    size_t spvSourceSize { 0 };
 };
 
 class ShaderModuleMln final : public ShaderModule {
@@ -53,7 +53,7 @@ public:
 
 private:
     Device& device_;
-    ShaderStageFlags shaderStageFlags_{0};
+    ShaderStageFlags shaderStageFlags_ { 0 };
     ShaderModulePlatformDataMln plat_;
     BASE_NS::vector<uint8_t> spvData_;  // Owned copy of SPIR-V bytecode (4-byte aligned by vector allocator)
     PipelineLayout pipelineLayout_;
@@ -62,9 +62,9 @@ private:
     BASE_NS::vector<VertexInputDeclaration::VertexInputBindingDescription> vertexInputBindingDescriptions_;
     BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> vertexInputAttributeDescriptions_;
     VertexInputDeclarationView vidv_;
-    ShaderThreadGroup stg_{0, 0, 0};
+    ShaderThreadGroup stg_ { 0, 0, 0 };
 };
 
 RENDER_END_NAMESPACE()
 
-#endif  // MALEOON_SHADER_MODULE_MLN_H
+#endif // MALEOON_SHADER_MODULE_MLN_H

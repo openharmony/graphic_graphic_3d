@@ -645,7 +645,7 @@ static bool Contains(const BASE_NS::vector<BASE_NS::Uid>& vec, const BASE_NS::Ui
     return false;
 }
 
-template<typename Type>
+template <typename Type>
 static bool ContainsName(const BASE_NS::vector<Type>& vec, const BASE_NS::string& name)
 {
     for (size_t i = 0; i != vec.size(); ++i) {

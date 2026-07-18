@@ -33,7 +33,7 @@ namespace Internal {
 
 using IntPair = BASE_NS::pair<BASE_NS::string_view, int64_t>;
 
-template<typename Type>
+template <typename Type>
 static auto ExportIntPair(const BASE_NS::string& name, const IntPair& i1, const IntPair& i2)
 {
     auto obj = META_NS::CreateObjectNode(META_NS::UidFromType<Type>(), name);

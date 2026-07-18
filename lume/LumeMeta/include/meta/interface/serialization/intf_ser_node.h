@@ -95,7 +95,7 @@ public:
 };
 
 /// Serialisation intermediate form built-in value node
-template<typename Type>
+template <typename Type>
 class IBuiltinValueNode : public ISerNode {
     META_INTERFACE(ISerNode, IBuiltinValueNode, MakeUid<Type>("SerNodes"))
 public:

@@ -25,14 +25,14 @@
 #include <core/property/intf_property_handle.h>
 
 BASE_BEGIN_NAMESPACE()
-template<typename CharT>
+template <typename CharT>
 class basic_string_view;
 using string_view = basic_string_view<char>;
 BASE_END_NAMESPACE()
 
 CORE_BEGIN_NAMESPACE()
 struct PropertyTypeDecl;
-template<typename Type, bool readOnly_ = BASE_NS::is_const_v<Type>>
+template <typename Type, bool readOnly_ = BASE_NS::is_const_v<Type>>
 class ScopedHandle {
 public:
     ScopedHandle() = default;
@@ -125,14 +125,14 @@ public:
     }
 
 private:
-    template<typename T, typename PropertyHandle>
+    template <typename T, typename PropertyHandle>
     friend ScopedHandle<T> MakeScopedHandle(
         PropertyHandle& handle, BASE_NS::string_view propertyName, const PropertyTypeDecl& propertyType);
 
-    template<typename T, typename PropertyHandle>
+    template <typename T, typename PropertyHandle>
     friend ScopedHandle<T> MakeScopedHandle(PropertyHandle& handle, uintptr_t offset);
 
-    template<typename T, typename PropertyHandle>
+    template <typename T, typename PropertyHandle>
     friend ScopedHandle<T> MakeScopedHandle(PropertyHandle* handle, uintptr_t offset);
 
     BASE_NS::conditional_t<readOnly_, const IPropertyHandle*, IPropertyHandle*> handle_{nullptr};

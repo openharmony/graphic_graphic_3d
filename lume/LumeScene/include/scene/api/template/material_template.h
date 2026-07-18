@@ -39,7 +39,7 @@ public:
         return !!obj_;
     }
 
-    template<typename T>
+    template <typename T>
     auto GetProperty(BASE_NS::string_view name) const
     {
         return META_NS::Metadata(obj_).GetProperty<T>(name);
@@ -86,7 +86,7 @@ public:
         return !!obj_;
     }
 
-    template<typename T>
+    template <typename T>
     auto GetProperty(BASE_NS::string_view name) const
     {
         return META_NS::Metadata(obj_).GetProperty<T>(name);
@@ -118,7 +118,7 @@ public:
         return !!obj_;
     }
 
-    template<typename T>
+    template <typename T>
     auto GetProperty(BASE_NS::string_view name) const
     {
         return META_NS::Metadata(obj_).GetProperty<T>(name);
@@ -128,12 +128,9 @@ public:
     {
         return GetProperty<BASE_NS::string>("Name");
     }
-    /// Texture slot's image is stored on the template as a CORE_NS::ResourceId. The
-    /// apply path resolves it against the scene's resource manager when the template
-    /// is applied to a live ITexture slot.
     auto Image() const
     {
-        return GetProperty<CORE_NS::ResourceId>("Image");
+        return GetProperty<IImage::Ptr>("Image");
     }
     auto Factor() const
     {
@@ -202,17 +199,13 @@ public:
         return false;
     }
 
-    template<typename Type>
+    template <typename Type>
     auto GetProperty(BASE_NS::string_view name) const
     {
         auto meta = META_NS::Metadata(*this);
         return meta.GetProperty<Type>(name);
     }
 
-    auto Name() const
-    {
-        return GetProperty<BASE_NS::string>("Name");
-    }
     auto Type() const
     {
         return GetProperty<MaterialType>("Type");
@@ -225,16 +218,13 @@ public:
     {
         return GetProperty<::SCENE_NS::LightingFlags>("LightingFlags");
     }
-    /// Shader refs are stored on the template as CORE_NS::ResourceId. The apply path
-    /// resolves them against the scene's resource manager and binds the resolved
-    /// IShader::Ptr onto the live IMaterial.
     auto MaterialShader() const
     {
-        return GetProperty<CORE_NS::ResourceId>("MaterialShader");
+        return GetProperty<IShader::Ptr>("MaterialShader");
     }
     auto DepthShader() const
     {
-        return GetProperty<CORE_NS::ResourceId>("DepthShader");
+        return GetProperty<IShader::Ptr>("DepthShader");
     }
     auto RenderSort() const
     {

@@ -37,9 +37,9 @@ DIR* opendir(const char* path);
 struct dirent* readdir(DIR* d);
 void closedir(DIR* d);
 #else
-#include <dirent.h>
-#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
+#include <string>
 #endif
 #endif  // LUME_DIR_H

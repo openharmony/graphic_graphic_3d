@@ -28,7 +28,7 @@ META_BEGIN_NAMESPACE()
  * Supports compatibility with the primary type and additional types via conversion traits.
  * Implements the IEnum and IEngineType interfaces to get information about the Core enum type.
  */
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 class CoreEnumAny : public IntroduceInterfaces<MultiTypeAny<Type, Conv, CoreType..., int64_t>, IEnum, IEngineType> {
 public:
     using Super = IntroduceInterfaces<MultiTypeAny<Type, Conv, CoreType..., int64_t>, IEnum, IEngineType>;
@@ -150,7 +150,7 @@ private:
     const META_NS::EnumType type_;
 };
 
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 class ArrayCoreEnumAny : public ArrayMultiTypeAnyBase<Type> {
     using Super = ArrayMultiTypeAnyBase<Type>;
     using typename Super::ArrayType;
@@ -177,7 +177,7 @@ private:
     const CORE_NS::Property prop_;
 };
 
-template<typename Type, typename Conv, typename... CoreType>
+template <typename Type, typename Conv, typename... CoreType>
 IAny::Ptr CoreEnumAny<Type, Conv, CoreType...>::Clone(const AnyCloneOptions& options) const
 {
     if (options.role == TypeIdRole::ARRAY) {

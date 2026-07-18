@@ -243,7 +243,7 @@ protected:
  * @param handle Handle to convert.
  * @return Handle cast to the desired type.
  */
-template<typename OutHandle, typename InHandle>
+template <typename OutHandle, typename InHandle>
 inline OutHandle VulkanHandleCast(InHandle handle)
 {
     // based on current use-cases we could assert that is_pointer_v<OutHandle> != is_pointer_v<InHandle> and not cover

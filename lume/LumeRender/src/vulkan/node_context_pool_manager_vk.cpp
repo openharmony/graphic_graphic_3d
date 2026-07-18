@@ -38,12 +38,12 @@
 
 using namespace BASE_NS;
 
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::ImageLayout& val)
 {
     return static_cast<uint64_t>(val);
 }
-template<>
+template <>
 uint64_t BASE_NS::hash(const RENDER_NS::RenderPassSubpassDesc& subpass)
 {
     uint64_t seed = 0;
