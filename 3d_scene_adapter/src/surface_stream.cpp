@@ -178,6 +178,10 @@ bool SurfaceStream::AttachTo(const META_NS::IAttach::Ptr& target, const META_NS:
 
 bool SurfaceStream::DetachFrom(const META_NS::IAttach::Ptr& target)
 {
+    if (target == nullptr) {
+        CORE_LOG_E("detach target is null");
+        return false;
+    }
     {
         std::lock_guard<std::mutex> lock(renderResourceMutex_);
         if (interface_pointer_cast<IAttach>(renderResource_) != interface_pointer_cast<IAttach>(target)) {
@@ -268,20 +272,22 @@ void SurfaceStream::ProcessBufferAvailable()
         return;
     }
 
+    // RAII guard ensures the acquired buffer is released on any early return
+    // (e.g. native buffer conversion failure) or exception before it is cached.
+    ReleaseGuard guard { localConsumerSurface, acquireSurfaceBuffer };
+
     acquireFence->Wait(WAIT_FENCE_TIME);
 
     OH_NativeBuffer* nativeBuffer = acquireSurfaceBuffer->SurfaceBufferToNativeBuffer();
     if (nativeBuffer == nullptr) {
         CORE_LOG_E("surface buffer to native buffer failed");
-        localConsumerSurface->ReleaseBuffer(acquireSurfaceBuffer, OHOS::SyncFence::INVALID_FENCE);
         return;
     }
-    uint32_t width = acquireSurfaceBuffer->GetSurfaceBufferWidth();
-    uint32_t height = acquireSurfaceBuffer->GetSurfaceBufferHeight();
+    uint32_t width = static_cast<uint32_t>(acquireSurfaceBuffer->GetSurfaceBufferWidth());
+    uint32_t height = static_cast<uint32_t>(acquireSurfaceBuffer->GetSurfaceBufferHeight());
     width_.store(width, std::memory_order_relaxed);
     height_.store(height, std::memory_order_relaxed);
 
-    ReleaseGuard guard { localConsumerSurface, acquireSurfaceBuffer };
     UpdateView(nativeBuffer, width, height, acquireSurfaceBuffer->GetSurfaceBufferColorGamut());
 
     {
@@ -294,10 +300,10 @@ void SurfaceStream::ProcessBufferAvailable()
             }
         }
         surfaceBufferCache_.push(acquireSurfaceBuffer);
+        // Only cancel the release guard after the buffer is safely cached, so
+        // that a push failure still releases the buffer via the guard.
+        guard.shouldRelease = false;
     }
-    // Only cancel the release guard after the buffer is safely cached, so that
-    // a push failure still releases the buffer via the guard.
-    guard.shouldRelease = false;
 }
 
 void SurfaceStream::UpdateView(
@@ -353,6 +359,11 @@ void SurfaceStream::UpdateView(
         return;
     }
 
+    UpdateRenderResourceHandle(handle);
+}
+
+void SurfaceStream::UpdateRenderResourceHandle(const RENDER_NS::RenderHandleReference& handle)
+{
     std::lock_guard<std::mutex> lock(renderResourceMutex_);
     auto bitmap = renderResource_.lock();
     if (bitmap == nullptr) {

@@ -57,6 +57,8 @@ private:
 
     void UpdateView(OH_NativeBuffer* buffer, uint32_t width, uint32_t height, OHOS::GraphicColorGamut colorGamut);
 
+    void UpdateRenderResourceHandle(const RENDER_NS::RenderHandleReference& handle);
+
     void SetHeight(uint32_t height) override
     {
         height_.store(height, std::memory_order_relaxed);
