@@ -39,7 +39,12 @@ namespace OHOS::Render3D {
 class SurfaceStream final : public META_NS::IntroduceInterfaces<META_NS::AttachmentFwd, ISurfaceStream>,
                             public OHOS::IBufferConsumerListenerClazz {
     META_OBJECT(SurfaceStream, ClassId::SurfaceStream, IntroduceInterfaces)
-    ~SurfaceStream();
+
+public:
+    META_NO_COPY_MOVE(SurfaceStream)
+
+    SurfaceStream() = default;
+    ~SurfaceStream() override;
 
 protected:
     void OnBufferAvailable() override;
@@ -103,5 +108,5 @@ private:
     std::queue<OHOS::sptr<OHOS::SurfaceBuffer>> surfaceBufferCache_;
 };
 
-}  // namespace OHOS::Render3D
-#endif  // OHOS_RENDER_3D_SURFACE_STREAM_H
+} // namespace OHOS::Render3D
+#endif // OHOS_RENDER_3D_SURFACE_STREAM_H

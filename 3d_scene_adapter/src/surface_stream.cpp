@@ -102,7 +102,7 @@ OH_NativeBuffer_ColorSpace ConvertColorGamutToColorSpace(OHOS::GraphicColorGamut
             return OH_COLORSPACE_SRGB_FULL;
     }
 }
-}  // namespace
+} // namespace
 
 bool SurfaceStream::Build(const META_NS::IMetadata::Ptr& metadata)
 {
@@ -420,4 +420,4 @@ SurfaceStream::~SurfaceStream()
     engineQueue_ = nullptr;
 }
 
-}  // namespace OHOS::Render3D
+} // namespace OHOS::Render3D
