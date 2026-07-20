@@ -276,7 +276,11 @@ void SurfaceStream::ProcessBufferAvailable()
     // (e.g. native buffer conversion failure) or exception before it is cached.
     ReleaseGuard guard { localConsumerSurface, acquireSurfaceBuffer };
 
-    acquireFence->Wait(WAIT_FENCE_TIME);
+    int32_t fenceStatus = acquireFence->Wait(WAIT_FENCE_TIME);
+    if (fenceStatus != 0) {
+        CORE_LOG_E("acquire fence wait failed or timed out, status: %d", fenceStatus);
+        return;
+    }
 
     OH_NativeBuffer* nativeBuffer = acquireSurfaceBuffer->SurfaceBufferToNativeBuffer();
     if (nativeBuffer == nullptr) {
