@@ -389,7 +389,7 @@ MlnStatus SwapchainMln::Present(uint32_t imageIndex, MlnTimeline waitTimeline, u
     presentDesc.presentTimeline = nullptr;
     presentDesc.presentValue = 0;
 
-    return MlnPresentSwapchain(deviceMln.GetMlnQueue(), &presentDesc);
+    return MlnQueuePresentSwapchain(deviceMln.GetMlnQueue(), &presentDesc);
 }
 
 RENDER_END_NAMESPACE()

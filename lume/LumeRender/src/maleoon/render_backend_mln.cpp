@@ -297,7 +297,7 @@ struct ComputeDispatchGroup {
 
 // Transfer operation
 struct TransferOp {
-    MlnTransferType type{};
+    MlnTransferCommandType type{};
     // Only one of these is valid per TransferOp
     MlnCopyBufferDescriptor copyBuffer{};
     MlnBufferCopyRegion copyBufferRegion{};
@@ -2016,7 +2016,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
         pn.extensions = nullptr;
         pn.flags = static_cast<MlnPassNodeDescriptorFlags>(0);
         pn.passId = passIds[i];
-        pn.workloads = nullptr;
+        pn.workload = nullptr;
 
         // Output resources from Phase 2
         if (i < allDgResources.size() && allDgResources[i].outputCount > 0) {
@@ -2307,11 +2307,22 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
     }  // if (g_mlnLog.frame) — CREATE-SG dump
 
     // Single submit with all DataGraphs
+    vector<MlnDataGraphSubmitDescriptor> dgSubmitDescs(dgCount);
+    for (uint32_t i = 0; i < dgCount; ++i) {
+        dgSubmitDescs[i].extensionCount = 0;
+        dgSubmitDescs[i].extensions = nullptr;
+        dgSubmitDescs[i].flags = static_cast<MlnDataGraphSubmitDescriptorFlags>(0);
+        dgSubmitDescs[i].dataGraph = allDataGraphs[i];
+        dgSubmitDescs[i].passId = passIds[i];
+        dgSubmitDescs[i].inheritance = nullptr;
+        dgSubmitDescs[i].queriesCount = 0;
+        dgSubmitDescs[i].conditionalRenderingRangeCount = 0;
+    }
+
     MlnSchedulingGraphSubmitDescriptor sgSubmitDesc{};
     sgSubmitDesc.schedulingGraph = sg;
     sgSubmitDesc.dataGraphCount = dgCount;
-    sgSubmitDesc.dataGraphs = allDataGraphs.data();
-    sgSubmitDesc.passIds = passIds.data();
+    sgSubmitDesc.dataGraphs = dgSubmitDescs.data();
 
     submitTimelineValue_++;
 
@@ -3383,53 +3394,39 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     const MlnDevice mlnDevice = deviceMln_.GetMlnDevice();
 
     // Fix up internal pointers (regions point to stack data that was moved)
-    for (auto& op : transferOps) {
-        switch (op.type) {
-            case MLN_TRANSFER_TYPE_COPY_BUFFER:
-                op.copyBuffer.regions = &op.copyBufferRegion;
-                break;
-            case MLN_TRANSFER_TYPE_COPY_BUFFER_TO_IMAGE:
-                op.copyBufferToImage.regions = &op.bufferImageRegion;
-                break;
-            case MLN_TRANSFER_TYPE_COPY_IMAGE_TO_BUFFER:
-                op.copyImageToBuffer.regions = &op.bufferImageRegion;
-                break;
-            case MLN_TRANSFER_TYPE_COPY_IMAGE:
-                op.copyImage.regions = &op.imageCopyRegion;
-                break;
-            case MLN_TRANSFER_TYPE_BLIT:
-                op.blitImage.regions = &op.blitRegion;
-                break;
-            case MLN_TRANSFER_TYPE_CLEAR_IMAGE:
-                op.clearImage.regions = &op.clearImageRegion;
-                break;
-            default:
-                break;
-        }
-    }
-
-    vector<MlnTransferType> transferTypes(transferOps.size());
-    vector<MlnTransferDescriptor> transferDescs(transferOps.size());
+    vector<MlnTransferCommandDescriptor> transferCommands(transferOps.size());
     for (size_t i = 0; i < transferOps.size(); ++i) {
-        transferTypes[i] = transferOps[i].type;
+        auto& cmd = transferCommands[i];
         switch (transferOps[i].type) {
-            case MLN_TRANSFER_TYPE_COPY_BUFFER:
-                transferDescs[i].copyBufferDesc = &transferOps[i].copyBuffer;
+            case MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER:
+                transferOps[i].copyBuffer.regions = &transferOps[i].copyBufferRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER;
+                cmd.data.copyBufferDesc = &transferOps[i].copyBuffer;
                 break;
-            case MLN_TRANSFER_TYPE_COPY_BUFFER_TO_IMAGE:
-                transferDescs[i].copyBufferToImageDesc = &transferOps[i].copyBufferToImage;
+            case MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER_TO_IMAGE:
+                transferOps[i].copyBufferToImage.regions = &transferOps[i].bufferImageRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER_TO_IMAGE;
+                cmd.data.copyBufferToImageDesc = &transferOps[i].copyBufferToImage;
                 break;
-            case MLN_TRANSFER_TYPE_COPY_IMAGE_TO_BUFFER:
-                transferDescs[i].copyImageToBufferDesc = &transferOps[i].copyImageToBuffer;
+            case MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE_TO_BUFFER:
+                transferOps[i].copyImageToBuffer.regions = &transferOps[i].bufferImageRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE_TO_BUFFER;
+                cmd.data.copyImageToBufferDesc = &transferOps[i].copyImageToBuffer;
                 break;
-            case MLN_TRANSFER_TYPE_COPY_IMAGE:
-                transferDescs[i].copyImageDesc = &transferOps[i].copyImage;
+            case MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE:
+                transferOps[i].copyImage.regions = &transferOps[i].imageCopyRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE;
+                cmd.data.copyImageDesc = &transferOps[i].copyImage;
                 break;
-            case MLN_TRANSFER_TYPE_BLIT:
-                transferDescs[i].blitImageDesc = &transferOps[i].blitImage;
+            case MLN_TRANSFER_COMMAND_TYPE_BLIT_IMAGE:
+                transferOps[i].blitImage.regions = &transferOps[i].blitRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_BLIT_IMAGE;
+                cmd.data.blitImageDesc = &transferOps[i].blitImage;
                 break;
-            case MLN_TRANSFER_TYPE_CLEAR_IMAGE:
-                transferDescs[i].clearColorImageDesc = &transferOps[i].clearImage;
+            case MLN_TRANSFER_COMMAND_TYPE_CLEAR_IMAGE:
+                transferOps[i].clearImage.regions = &transferOps[i].clearImageRegion;
+                cmd.type = MLN_TRANSFER_COMMAND_TYPE_CLEAR_IMAGE;
+                cmd.data.clearImageDesc = &transferOps[i].clearImage;
                 break;
             default:
                 break;
@@ -3440,9 +3437,8 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
     togDesc.extensionCount = 0;
     togDesc.extensions = nullptr;
     togDesc.flags = 0;
-    togDesc.count = static_cast<uint32_t>(transferOps.size());
-    togDesc.transferType = transferTypes.data();
-    togDesc.transferDescriptor = transferDescs.data();
+    togDesc.commandCount = static_cast<uint32_t>(transferOps.size());
+    togDesc.commands = transferCommands.data();
 
     MlnObjectGroup transferOG = MlnCreateTransferObjectGroup(mlnDevice, &togDesc);
 
@@ -3921,7 +3917,7 @@ MlnRenderTarget RenderBackendMln::BuildRenderTarget(const vector<MlnAttachmentDe
         rtDesc.renderArea.origin = {0, 0};
         rtDesc.renderArea.size = {areaWidth, areaHeight};
         rtDesc.viewMask = 0;
-        rtDesc.layerCount = 0;
+        rtDesc.layerCount = 1;
         rtDesc.colorCount = colorAttachmentCount;
         rtDesc.colors = colorAttachments.empty() ? nullptr : colorAttachments.data();
         rtDesc.depth = depthAttachment;
@@ -4696,7 +4692,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             }
             if (srcBuf && dstBuf && cmd.bufferCopy.size > 0) {
                 TransferOp op{};
-                op.type = MLN_TRANSFER_TYPE_COPY_BUFFER;
+                op.type = MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER;
                 op.copyBufferRegion.extensionCount = 0;
                 op.copyBufferRegion.extensions = nullptr;
                 op.copyBufferRegion.srcOrigin = static_cast<MlnDeviceSize>(cmd.bufferCopy.srcOffset);
@@ -4810,7 +4806,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 op.bufferImageRegion.imageSize = {bic.imageExtent.width, bic.imageExtent.height, bic.imageExtent.depth};
 
                 if (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE) {
-                    op.type = MLN_TRANSFER_TYPE_COPY_BUFFER_TO_IMAGE;
+                    op.type = MLN_TRANSFER_COMMAND_TYPE_COPY_BUFFER_TO_IMAGE;
                     op.copyBufferToImage.extensionCount = 0;
                     op.copyBufferToImage.extensions = nullptr;
                     op.copyBufferToImage.srcBufferResource = gpuBuffer->GetPlatformData().resource;
@@ -4818,7 +4814,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                     op.copyBufferToImage.regionCount = 1;
                     op.copyBufferToImage.regions = &op.bufferImageRegion;
                 } else {
-                    op.type = MLN_TRANSFER_TYPE_COPY_IMAGE_TO_BUFFER;
+                    op.type = MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE_TO_BUFFER;
                     op.copyImageToBuffer.extensionCount = 0;
                     op.copyImageToBuffer.extensions = nullptr;
                     op.copyImageToBuffer.srcImageResource = gpuImage->GetPlatformData().resource;
@@ -4867,7 +4863,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             }
             if (srcImg && dstImg) {
                 TransferOp op{};
-                op.type = MLN_TRANSFER_TYPE_COPY_IMAGE;
+                op.type = MLN_TRANSFER_COMMAND_TYPE_COPY_IMAGE;
 
                 const auto& ic = cmd.imageCopy;
                 op.imageCopyRegion.extensionCount = 0;
@@ -4890,7 +4886,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                         ? dstImg->GetDesc().layerCount
                         : ((ic.dstSubresource.layerCount == 0) ? 1 : ic.dstSubresource.layerCount);
                 op.imageCopyRegion.dstOrigin = {ic.dstOffset.x, ic.dstOffset.y, ic.dstOffset.z};
-                op.imageCopyRegion.imageSize = {ic.extent.width, ic.extent.height, ic.extent.depth};
+                op.imageCopyRegion.size = {ic.extent.width, ic.extent.height, ic.extent.depth};
 
                 op.copyImage.extensionCount = 0;
                 op.copyImage.extensions = nullptr;
@@ -4930,7 +4926,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             }
             if (srcImg && dstImg) {
                 TransferOp op{};
-                op.type = MLN_TRANSFER_TYPE_BLIT;
+                op.type = MLN_TRANSFER_COMMAND_TYPE_BLIT_IMAGE;
 
                 const auto& ib = cmd.imageBlit;
                 op.blitRegion.extensionCount = 0;
@@ -4984,7 +4980,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             break;
         }
         case RenderCommandType::CLEAR_COLOR_IMAGE: {
-            // CLEAR_COLOR_IMAGE: maps to MLN_TRANSFER_TYPE_CLEAR_IMAGE.
+            // CLEAR_COLOR_IMAGE: maps to MLN_TRANSFER_COMMAND_TYPE_CLEAR_IMAGE.
             // Each ImageSubresourceRange becomes one TransferOp (matches the
             // single-region-per-op pattern used by COPY/BLIT above).
             // Without this case, all CLEAR_IMG commands were silently dropped,
@@ -5001,7 +4997,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
             const uint32_t imgLayerCount = dstImg->GetDesc().layerCount;
             for (const auto& range : cmd.ranges) {
                 TransferOp op{};
-                op.type = MLN_TRANSFER_TYPE_CLEAR_IMAGE;
+                op.type = MLN_TRANSFER_COMMAND_TYPE_CLEAR_IMAGE;
 
                 op.clearImageRegion.extensionCount = 0;
                 op.clearImageRegion.extensions = nullptr;

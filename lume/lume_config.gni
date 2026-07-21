@@ -59,6 +59,7 @@ declare_args() {
     RENDER_BUILD_MALEOON = true
   }
   RENDER_BUILD_GLES = true
+  RENDER_BUILD_MALEOON = true
 }
 
 declare_args() {

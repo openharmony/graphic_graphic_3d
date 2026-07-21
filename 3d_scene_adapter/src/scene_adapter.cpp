@@ -76,6 +76,7 @@
 #include <render/intf_render_context.h>
 #include <render/util/intf_render_util.h>
 #include <render/vulkan/intf_device_vk.h>
+#include <render/maleoon/intf_device_mln.h>
 
 #include "3d_widget_adapter_log.h"
 #include "widget_trace.h"
@@ -438,11 +439,20 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
 
         RENDER_NS::RenderCreateInfo renderCreateInfo{};
         RENDER_NS::BackendExtraGLES glExtra{};
+        RENDER_NS::BackendExtraMln mlnExtra{};
         Render::DeviceCreateInfo deviceCreateInfo{};
 
-        std::string backendProp = LumeRenderConfig::GetInstance().renderBackend_ == "force_vulkan" ? "vulkan" : "gles";
+        const auto& configuredBackend = LumeRenderConfig::GetInstance().renderBackend_;
+        std::string backendProp = (configuredBackend == "force_vulkan") ? "vulkan" :
+            ((configuredBackend == "vulkan" || configuredBackend == "maleoon") ? configuredBackend : "gles");
+
         if (backendProp == "vulkan") {
             WIDGET_LOGI("backend vulkan");
+        } else if (backendProp == "maleoon") {
+            WIDGET_LOGI("backend maleoon");
+            deviceCreateInfo.backendConfiguration = &mlnExtra;
+            deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::MALEOON;
+            renderCreateInfo.deviceCreateInfo = deviceCreateInfo; 
         } else {
             WIDGET_LOGI("backend gles");
             glExtra.depthBits = 24;  // 24 : bits size

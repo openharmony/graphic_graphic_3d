@@ -314,7 +314,10 @@ RENDER_NS::IRenderContext::Ptr LumeCommon::CreateRenderContext(EGLContext gfxCon
 
     RENDER_NS::BackendExtraVk vkExtra;
     RENDER_NS::BackendExtraGLES glesExtra;
-    if (backendProp == "vulkan") {
+    if (backendProp == "maleoon") {
+        deviceCreateInfo.backendType = RENDER_NS::DeviceBackendType::MALEOON;
+        deviceCreateInfo.backendConfiguration = nullptr;
+    } else if (backendProp == "vulkan") {
         vkExtra.extensions.extensionNames.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
         vkExtra.extensions.extensionNames.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
         vkExtra.extensions.extensionNames.push_back(VK_KHR_MAINTENANCE2_EXTENSION_NAME);
