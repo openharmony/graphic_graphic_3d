@@ -17,6 +17,7 @@
 #include <string>
 
 #include "lume_render_config.h"
+#include "maleoon_whitelist.h"
 
 #include <parameter.h>
 #include <parameters.h>
@@ -28,10 +29,13 @@ LumeRenderConfig& LumeRenderConfig::GetInstance()
     static LumeRenderConfig renderConfig;
 
     if (!renderConfig.initialized_) {
-        renderConfig.renderBackend_ = OHOS::system::GetParameter("AGP_BACKEND_CONFIG", "vulkan");
+        if (IsSupportMaleoon()) {
+            renderConfig.renderBackend_ = OHOS::system::GetParameter("AGP_BACKEND_CONFIG", "maleoon");
+        } else {
+            renderConfig.renderBackend_ = OHOS::system::GetParameter("AGP_BACKEND_CONFIG", "vulkan");
+        }
 
-        renderConfig.systemGraph_ = OHOS::system::GetParameter("AGP_MOTPHYS_SYSTEM_RNG",
-                    "rofs3D://systemGraph.json");
+        renderConfig.systemGraph_ = OHOS::system::GetParameter("AGP_MOTPHYS_SYSTEM_RNG", "rofs3D://systemGraph.json");
 
         renderConfig.initialized_ = true;
     }
@@ -39,4 +43,4 @@ LumeRenderConfig& LumeRenderConfig::GetInstance()
     return renderConfig;
 }
 
-} // namespace OHOS::Render3D
+}  // namespace OHOS::Render3D

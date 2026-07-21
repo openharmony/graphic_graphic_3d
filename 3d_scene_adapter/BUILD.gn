@@ -73,6 +73,7 @@ config("lume3d_config") {
     "-DRENDER_HAS_GL_BACKEND=0",
     "-DRENDER_HAS_GLES_BACKEND = 1",
     "-DRENDER_HAS_VULKAN_BACKEND = 1",
+    "-DRENDER_HAS_MALEOON_BACKEND = 1",
     "-DVK_USE_PLATFORM_OHOS = 1",
     "-DCORE_LOG_NO_DEBUG=0",
     "-DCORE_LOG_TO_DEBUG_OUTPUT=1",
@@ -119,6 +120,7 @@ ohos_source_set("scene_adapter_source") {
   include_dirs = [
     "include",
     "../3d_widget_adapter/core/include",
+    "../lume/LumeRender/include",
   ]
 
   defines = [

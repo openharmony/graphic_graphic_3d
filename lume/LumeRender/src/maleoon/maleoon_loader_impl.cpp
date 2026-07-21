@@ -89,7 +89,7 @@ typedef void(MLNAPI_PTR* PFN_MlnDestroyDisplaySurface)(MlnDevice, MlnDisplaySurf
 typedef MlnSwapchain(MLNAPI_PTR* PFN_MlnCreateSwapchain)(MlnDevice, const MlnSwapchainDescriptor*);
 typedef MlnStatus(MLNAPI_PTR* PFN_MlnGetSwapchainImages)(MlnDevice, MlnSwapchain, u32*, MlnResource*);
 typedef void(MLNAPI_PTR* PFN_MlnDestroySwapchain)(MlnDevice, MlnSwapchain);
-typedef MlnStatus(MLNAPI_PTR* PFN_MlnPresentSwapchain)(MlnQueue, const MlnPresentDescriptor*);
+typedef MlnStatus(MLNAPI_PTR* PFN_MlnQueuePresentSwapchain)(MlnQueue, const MlnPresentDescriptor*);
 
 // Extension / Helper (optional, may not exist in system loader)
 typedef void (*PFN_MlnSetResourceDebugName)(MlnDevice, MlnResource, const char*);
@@ -266,7 +266,7 @@ static PFN_MlnCreateSwapchain s_MlnCreateSwapchain;
 static PFN_MlnAcquireNextImage s_MlnAcquireNextImage;
 static PFN_MlnGetSwapchainImages s_MlnGetSwapchainImages;
 static PFN_MlnDestroySwapchain s_MlnDestroySwapchain;
-static PFN_MlnPresentSwapchain s_MlnPresentSwapchain;
+static PFN_MlnQueuePresentSwapchain s_MlnQueuePresentSwapchain;
 
 // ============================================================================
 // Platform helpers
@@ -598,7 +598,7 @@ MLN_LOADER_EXPORT void MLNAPI_CALL mlnLoaderDeinit()
     s_MlnAcquireNextImage = nullptr;
     s_MlnGetSwapchainImages = nullptr;
     s_MlnDestroySwapchain = nullptr;
-    s_MlnPresentSwapchain = nullptr;
+    s_MlnQueuePresentSwapchain = nullptr;
 
     // Clear probe state
     s_probeCoreMissing = -1;
@@ -934,7 +934,7 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
                 nLoader++;                                                       \
             }                                                                    \
         } else {                                                                 \
-            /* Split: dlsym_swap → core_proc → swap_proc */                  \
+            /* Split: dlsym_swap → core_proc → swap_proc */                      \
             if (s_swapLib) {                                                     \
                 s_##name = (pfnType)GetSym(s_swapLib, #name);                    \
                 if (s_##name) {                                                  \
@@ -977,7 +977,7 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
     LOAD_SC_P3(PFN_MlnAcquireNextImage, MlnAcquireNextImage);
     LOAD_SC_P3(PFN_MlnGetSwapchainImages, MlnGetSwapchainImages);
     LOAD_SC_P3(PFN_MlnDestroySwapchain, MlnDestroySwapchain);
-    LOAD_SC_P3(PFN_MlnPresentSwapchain, MlnPresentSwapchain);
+    LOAD_SC_P3(PFN_MlnQueuePresentSwapchain, MlnQueuePresentSwapchain);
 
 #undef LOAD_SC_P3
 
@@ -994,9 +994,9 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveSwapchainWithDevice(MlnDevice
         scMissing++;
         LLOG("[MaleoonLoader] P3 CRITICAL: MlnAcquireNextImage");
     }
-    if (!s_MlnPresentSwapchain) {
+    if (!s_MlnQueuePresentSwapchain) {
         scMissing++;
-        LLOG("[MaleoonLoader] P3 CRITICAL: MlnPresentSwapchain");
+        LLOG("[MaleoonLoader] P3 CRITICAL: MlnQueuePresentSwapchain");
     }
     if (!s_MlnGetSwapchainImages) {
         scMissing++;
@@ -1738,11 +1738,11 @@ MLN_LOADER_EXPORT void MLNAPI_CALL MlnDestroySwapchain(MlnDevice device, MlnSwap
         s_MlnDestroySwapchain(device, swapchain);
 }
 
-MLN_LOADER_EXPORT MlnStatus MLNAPI_CALL MlnPresentSwapchain(MlnQueue queue, const MlnPresentDescriptor* descriptor)
+MLN_LOADER_EXPORT MlnStatus MLNAPI_CALL MlnQueuePresentSwapchain(MlnQueue queue, const MlnPresentDescriptor* descriptor)
 {
-    if (!s_MlnPresentSwapchain)
+    if (!s_MlnQueuePresentSwapchain)
         return MLN_STATUS_UNKNOWN;
-    return s_MlnPresentSwapchain(queue, descriptor);
+    return s_MlnQueuePresentSwapchain(queue, descriptor);
 }
 
 // ============================================================================

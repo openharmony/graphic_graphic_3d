@@ -432,7 +432,7 @@ ohos_source_set("lume_render_src") {
 
   if (RENDER_BUILD_MALEOON) {
     include_dirs += [
-      "//foundation/graphic/graphic_3d/maleoon_header/include",
+      "include",
       "src/maleoon",
     ]
     sources += [
