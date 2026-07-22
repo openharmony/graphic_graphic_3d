@@ -346,12 +346,12 @@ public:
     }
     void SetRenderRgbOnly(bool rgbOnly = false) override
     {
-
+        WIDGET_LOGI("MrtDepthAdapter::SetRenderRgbOnly %{public}s", rgbOnly ? "true" : "false");
     }
 
     void DestroyScene() override
     {
-
+        WIDGET_LOGI("MrtDepthAdapter::DestroyScene");
     }
 
     void Deinit(bool deinitEngine = false) override
