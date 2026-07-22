@@ -344,6 +344,15 @@ public:
     {
         return cameraPtr_;
     }
+    void SetRenderRgbOnly(bool rgbOnly = false) override
+    {
+
+    }
+
+    void DestroyScene() override
+    {
+
+    }
 
     void Deinit(bool deinitEngine = false) override
     {
