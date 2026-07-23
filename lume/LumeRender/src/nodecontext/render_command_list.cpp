@@ -1231,48 +1231,51 @@ bool RenderCommandList::ProcessDepthAttachments(const RenderPassDesc& renderPass
     }
     if (subpassRef.depthAttachmentCount == 1) {
         const uint32_t attachmentIndex = subpassRef.depthAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsDepthImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
+        } else {
+            valid =
+                ProcessDepthAttachmentState(renderPassDsc.attachmentHandles[attachmentIndex],
+                    subpassResourceStates.states[attachmentIndex],
+                    subpassResourceStates.layouts[attachmentIndex],
+                    (CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT),
+                    (CORE_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)) &&
+                valid;
         }
-#if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
-#endif
-
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |=
-            (CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-        refState.pipelineStageFlags |=
-            (CORE_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
     if ((subpassRef.depthAttachmentCount == 1) && (subpassRef.depthResolveAttachmentCount == 1)) {
         const uint32_t attachmentIndex = subpassRef.depthResolveAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsDepthImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
+        } else {
+            valid = ProcessDepthAttachmentState(renderPassDsc.attachmentHandles[attachmentIndex],
+                        subpassResourceStates.states[attachmentIndex],
+                        subpassResourceStates.layouts[attachmentIndex],
+                        CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) &&
+                    valid;
         }
+    }
+    return valid;
+}
+
+bool RenderCommandList::ProcessDepthAttachmentState(const RenderHandle handle, GpuResourceState& refState,
+    ImageLayout& layout, const AccessFlags accessFlags, const PipelineStageFlags pipelineStageFlags)
+{
+    const bool valid = RenderHandleUtil::IsDepthImage(handle);
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
+    ValidateImageUsageFlags(nodeName_,
+        gpuResourceMgr_,
+        handle,
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
 #endif
 
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |= CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
+    refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
+    refState.accessFlags |= accessFlags;
+    refState.pipelineStageFlags |= pipelineStageFlags;
+    refState.gpuQueue = gpuQueue_;
+    layout = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     return valid;
 }
 
@@ -1289,24 +1292,28 @@ bool RenderCommandList::ProcessFragmentShadingRateAttachments(const RenderPassDe
     if (subpassRef.fragmentShadingRateAttachmentCount == 1) {
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
         const uint32_t attachmentIndex = subpassRef.fragmentShadingRateAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsGpuImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
-        }
+        } else {
+            const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
+            if (!RenderHandleUtil::IsGpuImage(handle)) {
+                valid = false;
+            }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT");
+            ValidateImageUsageFlags(nodeName_,
+                gpuResourceMgr_,
+                handle,
+                ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
+                "CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT");
 #endif
 
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |= CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT;
-        refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT;
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL;
+            GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
+            refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
+            refState.accessFlags |= CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT;
+            refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT;
+            refState.gpuQueue = gpuQueue_;
+            subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL;
+        }
 #else
         PLUGIN_LOG_ONCE_I("vk_fsr_disabled_flag",
             "RENDER_VALIDATION: Fragment shading rate disabled and all related attachments ignored.");

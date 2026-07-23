@@ -58,6 +58,35 @@ struct DescriptorCounts {
     uint32_t count{0};
     uint32_t arrayCount{0};
 };
+
+constexpr uint32_t MAX_DESCRIPTOR_COUNT_PER_SET{1048576U};  // 2^20
+
+bool AddDescriptorCount(const DescriptorSetLayoutBinding& binding, DescriptorCounts& counts)
+{
+    constexpr uint32_t maxCount{MAX_DESCRIPTOR_COUNT_PER_SET};
+    if (binding.descriptorCount > maxCount) {
+        return false;
+    }
+    const uint32_t arrayCount = (binding.descriptorCount > 1U) ? (binding.descriptorCount - 1U) : 0U;
+    if ((counts.count == maxCount) || (arrayCount > (maxCount - counts.arrayCount))) {
+        return false;
+    }
+
+    const uint32_t newCount = counts.count + 1U;
+    const uint32_t newArrayCount = counts.arrayCount + arrayCount;
+    if (newCount > (maxCount - newArrayCount)) {
+        return false;
+    }
+
+    counts.count = newCount;
+    counts.arrayCount = newArrayCount;
+    return true;
+}
+
+uint32_t GetDescriptorCount(const DescriptorCounts& counts)
+{
+    return counts.count + counts.arrayCount;
+}
 }  // namespace
 
 DescriptorSetBinder::DescriptorSetBinder(
@@ -77,7 +106,6 @@ DescriptorSetBinder::DescriptorSetBinder(const array_view<const DescriptorSetLay
 
 void DescriptorSetBinder::Init(const array_view<const DescriptorSetLayoutBinding> descriptorSetLayoutBindings)
 {
-    bindings_.resize(descriptorSetLayoutBindings.size());
     for (const auto& descriptorSetLayoutBinding : descriptorSetLayoutBindings) {
         maxBindingCount_ = Math::max(maxBindingCount_, descriptorSetLayoutBinding.binding);
     }
@@ -93,16 +121,22 @@ void DescriptorSetBinder::Init(const array_view<const DescriptorSetLayoutBinding
     for (const auto& binding : descriptorSetLayoutBindings) {
         const RenderHandleType type = DescriptorSetBinderUtil::GetRenderHandleType(binding.descriptorType);
         // we don't have duplicates, array descriptor from index 1 can be found directly from arrayOffset
-        const uint32_t arrayCount = (binding.descriptorCount > 1) ? (binding.descriptorCount - 1) : 0;
+        bool validBinding = true;
         if (type == RenderHandleType::GPU_BUFFER) {
-            bufferCounts.count++;
-            bufferCounts.arrayCount += arrayCount;
+            validBinding = AddDescriptorCount(binding, bufferCounts);
         } else if (type == RenderHandleType::GPU_IMAGE) {
-            imageCounts.count++;
-            imageCounts.arrayCount += arrayCount;
+            validBinding = AddDescriptorCount(binding, imageCounts);
         } else if (type == RenderHandleType::GPU_SAMPLER) {
-            samplerCounts.count++;
-            samplerCounts.arrayCount += arrayCount;
+            validBinding = AddDescriptorCount(binding, samplerCounts);
+        }
+        if (!validBinding) {
+            validDescriptorSetLayoutBindings_ = false;
+            PLUGIN_LOG_E("invalid descriptor count in descriptor set binder creation (binding: %u, descriptorType: %u, "
+                         "descriptorCount: %u)",
+                binding.binding,
+                static_cast<uint32_t>(binding.descriptorType),
+                binding.descriptorCount);
+            return;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
         minDescriptorCount = Math::min(minDescriptorCount, binding.descriptorCount);
@@ -114,9 +148,10 @@ void DescriptorSetBinder::Init(const array_view<const DescriptorSetLayoutBinding
                      "arrays in shaders. Resize the descriptor counts before creating descriptor sets and binders.");
     }
 #endif
-    buffers_.resize(bufferCounts.count + bufferCounts.arrayCount);
-    images_.resize(imageCounts.count + imageCounts.arrayCount);
-    samplers_.resize(samplerCounts.count + samplerCounts.arrayCount);
+    bindings_.resize(descriptorSetLayoutBindings.size());
+    buffers_.resize(GetDescriptorCount(bufferCounts));
+    images_.resize(GetDescriptorCount(imageCounts));
+    samplers_.resize(GetDescriptorCount(samplerCounts));
 
     InitFillBindings(descriptorSetLayoutBindings, bufferCounts.count, imageCounts.count, samplerCounts.count);
 }
@@ -241,7 +276,7 @@ void DescriptorSetBinder::PrintDescriptorSetLayoutBindingValidation() const
 
 bool DescriptorSetBinder::GetDescriptorSetLayoutBindingValidity() const
 {
-    return (bindingMask_ == descriptorBindingMask_);
+    return validDescriptorSetLayoutBindings_ && (bindingMask_ == descriptorBindingMask_);
 }
 
 void DescriptorSetBinder::BindBuffer(

@@ -590,16 +590,22 @@ DeviceWrapper CreateFunctionsVk::CreateDevice(VkInstance instance, VkPhysicalDev
         "VK_LAYER_KHRONOS_validation",
 #endif
     };
-    vector<const char*> extensions;
+    // null-terminated copy of every supported extension name.
+    deviceWrapper.extensions.reserve(preferredDeviceExtensions.size());
     for (const string_view& preferredDeviceExtension : preferredDeviceExtensions) {
         if (HasExtension(physicalDeviceExtensions, preferredDeviceExtension)) {
-            extensions.push_back(preferredDeviceExtension.data());
-            deviceWrapper.extensions.push_back(preferredDeviceExtension.data());
+            deviceWrapper.extensions.emplace_back(preferredDeviceExtension);
         } else {
             PLUGIN_LOG_W("preferred device extension not supported: %.*s",
                 static_cast<int>(preferredDeviceExtension.size()),
                 preferredDeviceExtension.data());
         }
+    }
+    // deviceWrapper.extensions is now stable and it's safe to take pointers to the strings.
+    vector<const char*> extensions;
+    extensions.reserve(deviceWrapper.extensions.size());
+    for (const string& extension : deviceWrapper.extensions) {
+        extensions.push_back(extension.c_str());
     }
     if constexpr (CORE_ENABLE_VULKAN_PHYSICAL_DEVICE_PRINT) {
         PLUGIN_LOG_D("enabled extensions:");

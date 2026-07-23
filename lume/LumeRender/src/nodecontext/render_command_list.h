@@ -646,6 +646,8 @@ private:
         RenderPassAttachmentResourceStates& subpassResourceStates);
     bool ProcessDepthAttachments(const RenderPassDesc& renderPassDsc, const RenderPassSubpassDesc& subpassRef,
         RenderPassAttachmentResourceStates& subpassResourceStates);
+    bool ProcessDepthAttachmentState(RenderHandle handle, GpuResourceState& refState, ImageLayout& layout,
+        AccessFlags accessFlags, PipelineStageFlags pipelineStageFlags);
     bool ProcessFragmentShadingRateAttachments(const RenderPassDesc& renderPassDsc,
         const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates);
 
