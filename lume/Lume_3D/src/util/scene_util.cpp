@@ -575,8 +575,10 @@ IAnimationPlayback* SceneUtil::RetargetSkinAnimation(
         return nullptr;
     }
 
-    auto dstJointEntities = array_view(dstJointsComponent->jointEntities, dstJointsComponent->count);
-    auto srcJointEntities = array_view(srcJointsComponent->jointEntities, srcJointsComponent->count);
+    auto dstJointEntities = array_view(dstJointsComponent->jointEntities,
+        Math::min(dstJointsComponent->count, countof(dstJointsComponent->jointEntities)));
+    auto srcJointEntities = array_view(srcJointsComponent->jointEntities,
+        Math::min(srcJointsComponent->count, countof(srcJointsComponent->jointEntities)));
 
     const vector<Entity> srcToDstJointMapping = CreateJointMapping(ecs, dstJointEntities, srcJointEntities);
 
@@ -719,8 +721,10 @@ void SceneUtil::ShareSkin(IEcs& ecs, Entity targetEntity, Entity sourceEntity) c
             return;
         }
 
-        auto dstJointEntities = array_view(dstJointsComponent->jointEntities, dstJointsComponent->count);
-        auto srcJointEntities = array_view(srcJointsComponent->jointEntities, srcJointsComponent->count);
+        auto dstJointEntities = array_view(dstJointsComponent->jointEntities,
+            Math::min(dstJointsComponent->count, countof(dstJointsComponent->jointEntities)));
+        auto srcJointEntities = array_view(srcJointsComponent->jointEntities,
+            Math::min(srcJointsComponent->count, countof(srcJointsComponent->jointEntities)));
 
         dstToSrcJointMapping = CreateJointMapping(ecs, srcJointEntities, dstJointEntities);
         if (dstJointsComponent->count != dstToSrcJointMapping.size()) {

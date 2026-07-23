@@ -1200,6 +1200,9 @@ void MeshBuilder::Allocate()
 
     // Set binding offsets.
     for (auto const& bindingDesc : vertexInputDeclaration_.bindingDescriptions) {
+        if (bindingDesc.binding >= MeshComponent::Submesh::BUFFER_COUNT) {
+            continue;
+        }
         for (auto& submesh : submeshInfos_) {
             submesh.vertexBindingOffset[bindingDesc.binding] = static_cast<uint32_t>(vertexBufferSizeInBytes);
             vertexBufferSizeInBytes += submesh.vertexBindingByteSize[bindingDesc.binding];
@@ -1254,10 +1257,14 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
         GetVertexAttributeByteSize(MeshComponent::Submesh::DM_VB_JOW, vertexInputDeclaration_);
 
     for (auto& submesh : submeshInfos_) {
-        // Calculate vertex binding sizes.
-        submesh.vertexBindingByteSize.resize(vertexInputDeclaration_.bindingDescriptions.size());
-        submesh.vertexBindingOffset.resize(vertexInputDeclaration_.bindingDescriptions.size());
+        // Per-binding vectors are indexed by unvalidated, possibly-sparse binding id. Resize to the fixed
+        // buffer count and skip out-of-range bindings.
+        submesh.vertexBindingByteSize.resize(MeshComponent::Submesh::BUFFER_COUNT);
+        submesh.vertexBindingOffset.resize(MeshComponent::Submesh::BUFFER_COUNT);
         for (auto const& bindingDesc : vertexInputDeclaration_.bindingDescriptions) {
+            if (bindingDesc.binding >= submesh.vertexBindingByteSize.size()) {
+                continue;
+            }
             const size_t bindingSize =
                 Align(static_cast<size_t>(bindingDesc.stride) * submesh.info.vertexCount, BUFFER_ALIGN);
             if (bindingSize > UINT32_MAX) {
@@ -2300,27 +2307,33 @@ void MeshBuilder::CalculateJointBounds(
     const auto* weights = weightData.buffer.data();
     const auto* joints = jointData.buffer.data();
 
-    const size_t jointIndexCount = jointData.buffer.size() / jointData.stride;
+    const size_t jointIndexCount = Math::min(jointData.buffer.size() / jointData.stride,
+        Math::min(weightData.buffer.size() / weightData.stride, positionData.buffer.size() / positionData.stride));
+
+    // Decode the full (possibly multi-byte) joint index; a single-byte read truncates 16-bit indices.
+    const auto decodeJointIndex = [&jointFormat](const uint8_t* jointPtr, size_t w) -> size_t {
+        return static_cast<size_t>(jointFormat.toIntermediate(jointPtr + jointFormat.componentByteSize * w));
+    };
+    // fWeights holds 4 components; don't read past it.
+    constexpr size_t maxWeightComponents = 4U;
+    const size_t weightComponents = Math::min(weightFormat.componentCount, maxWeightComponents);
+    // As wight and joint componentCount may differ take the minimum and use that as the loop limit.
+    const size_t jointComponents = Math::min(jointFormat.componentCount, weightComponents);
 
     // Find the amount of referenced joints
     size_t maxJointIndex = 0;
     for (size_t i = 0; i < jointIndexCount; ++i) {
-        float fWeights[4U];
-        auto j = 0U;
-        for (; j < weightFormat.componentCount; ++j) {
-            fWeights[j] = weightFormat.toIntermediate(weights + j * weightFormat.componentByteSize);
-        }
-        weights += weightData.stride;
-        for (size_t w = 0; w < j; ++w) {
+        for (size_t j = 0; j < jointComponents; ++j) {
             // Ignore joints with weight that is effectively 0.0
-            if (fWeights[w] >= Math::EPSILON) {
-                const uint8_t jointIndex = joints[jointFormat.componentByteSize * w];
-
+            const float fWeight = weightFormat.toIntermediate(weights + j * weightFormat.componentByteSize);
+            if (fWeight >= Math::EPSILON) {
+                const size_t jointIndex = decodeJointIndex(joints, j);
                 if (jointIndex > maxJointIndex) {
                     maxJointIndex = jointIndex;
                 }
             }
         }
+        weights += weightData.stride;
         joints += jointData.stride;
     }
 
@@ -2342,25 +2355,29 @@ void MeshBuilder::CalculateJointBounds(
         // Each vertex can reference 4 joint indices.
         Math::Vec3 pos;
         auto ptr = positions + i * positionData.stride;
-        for (auto j = 0U; j < positionFormat.componentCount; ++j) {
+        // pos has 3 components; clamp so a 4-component POSITION accessor can't write past it.
+        const size_t positionComponents = Math::min<size_t>(positionFormat.componentCount, 3U);
+        for (size_t j = 0; j < positionComponents; ++j) {
             pos[j] = positionFormat.toIntermediate(ptr + j * positionFormat.componentByteSize);
         }
 
-        float fWeights[4U];
-        for (auto j = 0U; j < weightFormat.componentCount; ++j) {
-            fWeights[j] = weightFormat.toIntermediate(weights + j * weightFormat.componentByteSize);
-        }
-        weights += weightData.stride;
-        for (size_t w = 0; w < countof(fWeights); ++w) {
-            if (fWeights[w] < Math::EPSILON) {
+        for (size_t j = 0; j < jointComponents; ++j) {
+            const float fWeight = weightFormat.toIntermediate(weights + j * weightFormat.componentByteSize);
+            if (fWeight < Math::EPSILON) {
                 // Ignore joints with weight that is effectively 0.0
                 continue;
             }
 
-            auto& boundsData = jointBoundsData_[joints[w]];
+            // Decode as in the sizing pass and guard against any residual mismatch.
+            const size_t jointIndex = decodeJointIndex(joints, j);
+            if (jointIndex >= jointBoundsData_.size()) {
+                continue;
+            }
+            auto& boundsData = jointBoundsData_[jointIndex];
             boundsData.min = Math::min(boundsData.min, pos);
             boundsData.max = Math::max(boundsData.max, pos);
         }
+        weights += weightData.stride;
         joints += jointData.stride;
     }
 }
@@ -2380,6 +2397,9 @@ bool MeshBuilder::WriteData(const DataBuffer& srcData, const SubmeshExt& submesh
         if (const VertexInputDeclaration::VertexInputBindingDescription* bindingDesc =
                 GetVertexBindingeDescription(attributeDesc->binding, vertexInputDeclaration_.bindingDescriptions);
             bindingDesc) {
+            if (bindingDesc->binding >= submesh.vertexBindingOffset.size()) {
+                return false;
+            }
             // this offset and size should be aligned
             byteOffset = submesh.vertexBindingOffset[bindingDesc->binding] + attributeDesc->offset;
             const uint64_t byteSizeWide = static_cast<uint64_t>(submesh.info.vertexCount) * bindingDesc->stride;

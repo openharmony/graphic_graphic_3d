@@ -651,6 +651,12 @@ void RenderNodeDefaultMaterialObjects::ProcessGlobalBinders()
     }
 }
 
+uint32_t RenderNodeDefaultMaterialObjects::GetTlasInstanceCount() const
+{
+    constexpr uint32_t maxTlasInstances = UINT32_MAX / PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE;
+    return Math::min(objectCounts_.maxMeshCount, maxTlasInstances);
+}
+
 void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
 {
     PLUGIN_ASSERT(rtEnabled_);
@@ -661,7 +667,8 @@ void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
 
     IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
     {
-        AsGeometryInstancesInfo asInstances{false, 0U, objectCounts_.maxMeshCount};
+        const uint32_t tlasInstanceCount = GetTlasInstanceCount();
+        AsGeometryInstancesInfo asInstances{false, 0U, tlasInstanceCount};
 
         AsBuildGeometryInfo geometryInfo;
         geometryInfo.type = AccelerationStructureType::CORE_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
@@ -682,47 +689,53 @@ void RenderNodeDefaultMaterialObjects::ProcessTlasBuffers()
     // GPU buffer is made during ExecuteFrame
 }
 
+void RenderNodeDefaultMaterialObjects::CreateTlasInstanceAndScratchBuffers(uint32_t tlasInstanceCount)
+{
+    auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
+    const uint32_t byteSize = PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE * tlasInstanceCount;
+    const GpuBufferDesc desc{
+        BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            BufferUsageFlagBits::CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,  // usageFlags
+        MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT,  // memoryPropertyFlags
+        CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                     // engineCreationFlags
+        byteSize,                                                            // byteSize
+        BASE_NS::Format::BASE_FORMAT_UNDEFINED,                              // format
+    };
+    // name not needed, only access here
+    tlas_.asInstanceBuffer = gpuResourceMgr.Create(tlas_.asInstanceBuffer, desc);
+
+    // allocate scratch
+    const GpuBufferDesc scratchDesc{
+        BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
+        CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
+        0U,                                                             // engineCreationFlags
+        tlas_.asBuildSizes.buildScratchSize,                            // byteSize
+        BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
+    };
+    tlas_.scratch = gpuResourceMgr.Create(tlas_.scratch, scratchDesc);
+}
+
 void RenderNodeDefaultMaterialObjects::UpdateTlasBuffers(
     IRenderCommandList& cmdList, const IRenderDataStoreDefaultMaterial& dataStoreMaterial)
 {
     if (rtEnabled_) {
+        const uint32_t tlasInstanceCount = GetTlasInstanceCount();
         if (tlas_.createNewBuffer) {
             tlas_.createNewBuffer = false;
-
-            auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
-            const uint32_t byteSize =
-                PipelineStateConstants::ACCELERATION_STRUCTURE_INSTANCE_SIZE * objectCounts_.maxMeshCount;
-            const GpuBufferDesc desc{
-                BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                    BufferUsageFlagBits::
-                        CORE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT,  // usageFlags
-                MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                    MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT,  // memoryPropertyFlags
-                CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER,                     // engineCreationFlags
-                byteSize,                                                            // byteSize
-                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                              // format
-            };
-            // name not needed, only access here
-            tlas_.asInstanceBuffer = gpuResourceMgr.Create(tlas_.asInstanceBuffer, desc);
-
-            // allocate scratch
-            const GpuBufferDesc scratchDesc{
-                BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                    BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
-                CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
-                0U,                                                             // engineCreationFlags
-                tlas_.asBuildSizes.buildScratchSize,                            // byteSize
-                BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
-            };
-            tlas_.scratch = gpuResourceMgr.Create(tlas_.scratch, scratchDesc);
+            CreateTlasInstanceAndScratchBuffers(tlasInstanceCount);
         }
 
         const RenderDataStoreDefaultMaterial& dsMat = (const RenderDataStoreDefaultMaterial&)dataStoreMaterial;
         const auto blasData = dsMat.GetMeshBlasData();
-        if (!blasData.empty()) {
+        // skip the build if the AS build sizes were rejected (0): the buffers would be under-allocated
+        if ((!blasData.empty()) && (tlas_.asBuildSizes.accelerationStructureSize > 0) &&
+            (tlas_.asBuildSizes.buildScratchSize > 0)) {
             cmdList.CopyAccelerationStructureInstances({tlas_.asInstanceBuffer.GetHandle(), 0U}, blasData);
 
-            const uint32_t blasCount = static_cast<uint32_t>(blasData.size());
+            // clamp to the instance-buffer capacity so the build can't read past it
+            const uint32_t blasCount = Math::min(static_cast<uint32_t>(blasData.size()), tlasInstanceCount);
             AsGeometryInstancesData asInstances;
             asInstances.info = {false, 0U, blasCount};
             asInstances.data = {tlas_.asInstanceBuffer.GetHandle(), 0U};

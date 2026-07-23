@@ -741,6 +741,9 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         }
         const auto activeCameras = index;
 
+        // reserve so push_back below can't reallocate and invalidate the iterated array_view.
+        ids.reserve(ids.size() + static_cast<size_t>(planarCount) * static_cast<size_t>(activeCameras));
+
         for (IComponentManager::ComponentId reflectionId = 0; reflectionId < planarCount; ++reflectionId) {
             const Entity reflectionEntity = planarReflectionManager_.GetEntity(reflectionId);
             if (auto nodeHandle = nodeManager_.Read(reflectionEntity); !nodeHandle || !nodeHandle->effectivelyEnabled) {

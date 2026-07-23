@@ -327,15 +327,22 @@ void LightProbeBakerSystem::CollectLightProbesToBake()
         }
         // Get transformed light probe positions for baking
         if (auto lpgc = lightProbeGroupMgr_->Read(lightProbeGroupEntity)) {
+            uint32_t collected = 0u;
             for (uint32_t probeIdx = 0; probeIdx < lpgc->lightProbes.size(); ++probeIdx) {
+                // Cap probe count so getBufferSizeBytes doesn't overflow and the SH readback buffer stays large enough
+                // (totalProbes * coeffsPerProbe).
+                if (currentBake_.lightProbeBakeInputs.size() >= LightProbeBakeGPUResources::maxLightProbes) {
+                    break;
+                }
                 Math::Vec3 probeWorldPosition =
                     BASE_NS::Math::MultiplyPoint3X4(worldMatrix, lpgc->lightProbes[probeIdx].position);
                 currentBake_.lightProbeBakeInputs.push_back({probeWorldPosition});
+                ++collected;
             }
             currentBake_.bakeGroups.push_back({
                 lightProbeGroupEntity,
                 lightProbeGroupMgr_->GetComponentGeneration(lightProbeGroupMgr_->GetComponentId(lightProbeGroupEntity)),
-                static_cast<uint32_t>(lpgc->lightProbes.size()),
+                collected,
             });
         }
     }

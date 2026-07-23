@@ -113,10 +113,12 @@ void UpdateCustomCameraTargets(const RenderCamera& camera, RenderPass& renderPas
     auto& subpassDesc = renderPass.subpassDesc;
     RenderPassDesc& renderPassDesc = renderPass.renderPassDesc;
     if ((camera.flags & RenderCamera::CAMERA_FLAG_MSAA_BIT) == 0) {
-        if ((subpassDesc.depthAttachmentCount == 1) && camera.depthTarget) {
+        if ((subpassDesc.depthAttachmentCount == 1) && camera.depthTarget &&
+            (subpassDesc.depthAttachmentIndex < PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT)) {
             renderPassDesc.attachmentHandles[subpassDesc.depthAttachmentIndex] = camera.depthTarget.GetHandle();
         }
-        if ((subpassDesc.colorAttachmentCount >= 1) && camera.colorTargets[0u]) {
+        if ((subpassDesc.colorAttachmentCount >= 1) && camera.colorTargets[0u] &&
+            (subpassDesc.colorAttachmentIndices[0] < PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT)) {
             renderPassDesc.attachmentHandles[subpassDesc.colorAttachmentIndices[0]] =
                 camera.colorTargets[0u].GetHandle();
         }

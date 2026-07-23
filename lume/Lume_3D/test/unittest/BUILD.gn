@@ -246,6 +246,7 @@ ohos_unittest("lume_3d_src_test") {
     # ECS - Systems
     "src_unit_test/src/ecs/systems/local_matrix_system_test.cpp",
     "src_unit_test/src/ecs/systems/render_preprocessor_system_test.cpp",
+    "src_unit_test/src/ecs/systems/skinning_system_test.cpp",
 
     # GLTF
     "src_unit_test/src/gltf/gltf_loader_test.cpp",
@@ -267,6 +268,7 @@ ohos_unittest("lume_3d_src_test") {
 
     # Util
     "src_unit_test/src/util/mesh_util_test.cpp",
+    "src_unit_test/src/util/mesh_builder_security_test.cpp",
     "src_unit_test/src/util/property_util_test.cpp",
   ]
 

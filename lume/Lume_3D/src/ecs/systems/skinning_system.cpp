@@ -323,8 +323,9 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
             if (hasPrev && row.IsValidComponentId(JOINT_MATS_INDEX)) {
                 auto prev = previousJointMatricesManager_.Write(row.components[PREV_JOINT_MATS_INDEX]);
                 auto current = jointMatricesManager_.Read(row.components[JOINT_MATS_INDEX]);
-                prev->count = current->count;
-                std::copy(current->jointMatrices, current->jointMatrices + current->count, prev->jointMatrices);
+                const size_t copyCount = std::min(current->count, countof(current->jointMatrices));
+                prev->count = copyCount;
+                std::copy(current->jointMatrices, current->jointMatrices + copyCount, prev->jointMatrices);
             } else if (!hasPrev) {
                 missingPrevJointMatrices = true;
             }
@@ -373,8 +374,9 @@ bool SkinningSystem::Update(bool frameRenderingQueued, uint64_t, uint64_t)
                 previousJointMatricesManager_.Create(row.entity);
                 auto prev = previousJointMatricesManager_.Write(row.entity);
                 auto current = jointMatricesManager_.Read(row.components[JOINT_MATS_INDEX]);
-                prev->count = current->count;
-                std::copy(current->jointMatrices, current->jointMatrices + current->count, prev->jointMatrices);
+                const size_t copyCount = std::min(current->count, countof(current->jointMatrices));
+                prev->count = copyCount;
+                std::copy(current->jointMatrices, current->jointMatrices + copyCount, prev->jointMatrices);
             }
         }
     }

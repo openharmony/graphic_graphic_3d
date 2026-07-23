@@ -117,9 +117,13 @@ private:
         // Currently float4 instead of float3 buffer
         static constexpr uint32_t floatsPerCoeff = 4u;
 
+        static_assert(static_cast<uint64_t>(maxLightProbes) * coeffsPerProbe * floatsPerCoeff * 4u <= 0xFFFFFFFFu);
+
         static constexpr uint32_t getBufferSizeBytes(uint32_t probeCount)
         {
-            return probeCount * coeffsPerProbe * floatsPerCoeff * 4u;
+            // Clamp so that the 32-bit size doesn't wrap and undersize the buffer.
+            const uint32_t cappedProbeCount = (probeCount < maxLightProbes) ? probeCount : maxLightProbes;
+            return cappedProbeCount * coeffsPerProbe * floatsPerCoeff * 4u;
         }
 
         static constexpr uint32_t cubemapAtlasSize{3072u};

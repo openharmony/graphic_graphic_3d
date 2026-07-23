@@ -19,9 +19,12 @@
 #include <3d/ecs/components/transform_component.h>
 #include <3d/ecs/components/world_matrix_component.h>
 #include <3d/gltf/gltf.h>
+#include <3d/intf_graphics_context.h>
 #include <base/containers/array_view.h>
+#include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
 #include <base/containers/string_view.h>
+#include <base/containers/vector.h>
 #include <core/ecs/intf_ecs.h>
 #include <core/io/intf_file_manager.h>
 
@@ -320,7 +323,119 @@ bool LoadsOk(IFileManager& files, string_view json)
     return GLTF2::LoadGLTF(files, array_view<uint8_t const>(reinterpret_cast<uint8_t const*>(json.data()), json.size()))
         .success;
 }
+
+// Appends a little-endian 32-bit value to a byte vector.
+void PushU32(vector<uint8_t>& out, uint32_t value)
+{
+    for (uint32_t shift = 0; shift < 32u; shift += 8u) {
+        out.push_back(static_cast<uint8_t>((value >> shift) & 0xffu));
+    }
+}
+
+// Builds an in-memory GLB (header + JSON chunk + BIN chunk) from a JSON string and a binary blob.
+vector<uint8_t> BuildGlb(string_view json, array_view<const uint8_t> bin)
+{
+    const auto pad4 = [](size_t size) { return (4u - (size & 3u)) & 3u; };
+    const uint32_t jsonChunkLen = static_cast<uint32_t>(json.size() + pad4(json.size()));
+    const uint32_t binChunkLen = static_cast<uint32_t>(bin.size() + pad4(bin.size()));
+    const uint32_t total = 12u + 8u + jsonChunkLen + 8u + binChunkLen;
+
+    vector<uint8_t> glb;
+    glb.reserve(total);
+    const auto put4cc = [&glb](const char fourcc[5]) {
+        for (uint32_t index = 0; index < 4u; ++index) {
+            glb.push_back(static_cast<uint8_t>(fourcc[index]));
+        }
+    };
+    put4cc("glTF");
+    PushU32(glb, 2u);
+    PushU32(glb, total);
+    PushU32(glb, jsonChunkLen);
+    put4cc("JSON");
+    for (const char character : json) {
+        glb.push_back(static_cast<uint8_t>(character));
+    }
+    for (size_t index = 0; index < pad4(json.size()); ++index) {
+        glb.push_back(0x20u);  // pad JSON chunk with spaces
+    }
+    PushU32(glb, binChunkLen);
+    put4cc("BIN\0");
+    for (const uint8_t byte : bin) {
+        glb.push_back(byte);
+    }
+    for (size_t index = 0; index < pad4(bin.size()); ++index) {
+        glb.push_back(0x00u);  // pad BIN chunk with zeros
+    }
+    return glb;
+}
+
+// Imports a single position+index primitive with the given UNSIGNED_BYTE indices and vertex count.
+// Returns whether the importer reports success.
+bool ImportUnsignedByteIndexedMesh(
+    IGraphicsContext& graphicsContext, IEcs& ecs, uint32_t vertexCount, array_view<const uint8_t> indexBytes)
+{
+    vector<uint8_t> bin;
+    const uint32_t positionBytes = vertexCount * 3u * static_cast<uint32_t>(sizeof(float));
+    for (uint32_t index = 0; index < vertexCount * 3u; ++index) {
+        PushU32(bin, 0u);  // positions are all-zero floats; only the element count matters for validation
+    }
+    const uint32_t indexOffset = positionBytes;
+    for (const uint8_t byte : indexBytes) {
+        bin.push_back(byte);
+    }
+
+    const auto indexCount = static_cast<uint32_t>(indexBytes.size());
+    const auto json = string(R"({"asset":{"version":"2.0"},)") + R"("buffers":[{"byteLength":)" +
+                      to_string(static_cast<uint32_t>(bin.size())).data() + R"(}],"bufferViews":[)" +
+                      R"({"buffer":0,"byteOffset":0,"byteLength":)" + to_string(positionBytes).data() + R"(},)" +
+                      R"({"buffer":0,"byteOffset":)" + to_string(indexOffset).data() + R"(,"byteLength":)" +
+                      to_string(indexCount).data() + R"(}],"accessors":[)" +
+                      R"({"bufferView":0,"componentType":5126,"count":)" + to_string(vertexCount).data() +
+                      R"(,"type":"VEC3"},)" + R"({"bufferView":1,"componentType":5121,"count":)" +
+                      to_string(indexCount).data() + R"(,"type":"SCALAR"}],)" +
+                      R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}],)" +
+                      R"("nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}]})";
+
+    const vector<uint8_t> glb = BuildGlb(json, bin);
+    Gltf2 gltf2(graphicsContext);
+    auto loaded = gltf2.LoadGLTF(array_view<const uint8_t>(glb.data(), glb.size()));
+    if (!loaded.success || !loaded.data) {
+        return false;
+    }
+    auto importer = gltf2.CreateGLTF2Importer(ecs);
+    importer->ImportGLTFAsync(*loaded.data, CORE_GLTF_IMPORT_RESOURCE_FLAG_BITS_ALL, nullptr);
+    while (!importer->Execute(0)) {
+    }
+    return importer->GetResult().success;
+}
 }  // namespace
+
+/**
+ * @tc.name: UnsignedByteIndexRestartSentinelBoundsChecked
+ * @tc.desc: UNSIGNED_BYTE indices widen to UINT16, so a byte value 0xFF (255) is not the GPU restart sentinel
+ *           (0xFFFF) and must be bounds-checked. With vertexCount<=255 an index of 255 is out-of-range and the
+ *           import must fail rather than being silently accepted as primitive restart (which would leave a live
+ *           OOB vertex index in the widened buffer). An in-range 255 (vertexCount>255) must still import.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, UnsignedByteIndexRestartSentinelBoundsChecked, testing::ext::TestSize.Level1)
+{
+    auto* testContext = UTest::GetTestContext();
+    auto& graphicsContext = *testContext->graphicsContext;
+    auto& ecs = *testContext->ecs;
+
+    // Out-of-range: vertexCount 3, index 255 -> must be rejected (pre-fix it passed as primitive restart).
+    const uint8_t oobIndices[] = {0u, 1u, 255u};
+    EXPECT_FALSE(ImportUnsignedByteIndexedMesh(graphicsContext, ecs, 3u, oobIndices));
+
+    // In-range control: all indices < vertexCount must import successfully.
+    const uint8_t goodIndices[] = {0u, 1u, 2u};
+    EXPECT_TRUE(ImportUnsignedByteIndexedMesh(graphicsContext, ecs, 3u, goodIndices));
+
+    // In-range 255: with vertexCount 256 the value 255 is a valid vertex and must not be over-rejected.
+    const uint8_t inRange255[] = {0u, 1u, 255u};
+    EXPECT_TRUE(ImportUnsignedByteIndexedMesh(graphicsContext, ecs, 256u, inRange255));
+}
 
 /**
  * @tc.name: IndicesMustBeUnsignedScalar
@@ -407,6 +522,39 @@ UNIT_TEST(SRC_GLTFSecurityTest, AnimationSamplerInputRequired, testing::ext::Tes
                                 R"("channels":[{"sampler":0,"target":{"node":0,"path":"translation"}}]}]})";
     EXPECT_TRUE(LoadsOk(files, good));
     EXPECT_FALSE(LoadsOk(files, bad));
+}
+
+/**
+ * @tc.name: MorphTargetEntriesMustBeObjects
+ * @tc.desc: A mesh primitive's morph "targets" array element that is not a JSON object (number, string or
+ *           nested array) must not be read as an object. PrimitiveTargets iterates target.object_ directly;
+ *           json::value is a union, so reading object_ of a non-object element walks wild iterators (OOB
+ *           read / crash). The loader must skip the malformed element and still load successfully.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_GLTFSecurityTest, MorphTargetEntriesMustBeObjects, testing::ext::TestSize.Level1)
+{
+    auto& files = UTest::GetTestContext()->engine->GetFileManager();
+    constexpr string_view base = R"({"asset":{"version":"2.0"},"buffers":[{"byteLength":1000}],)"
+                                 R"("bufferViews":[{"buffer":0,"byteLength":1000}],)"
+                                 R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],)";
+    // targets element is a number -> object_ union member is the wrong active member.
+    constexpr string_view numberTarget =
+        R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"targets":[123]}]}]})";
+    // targets element is a string.
+    constexpr string_view stringTarget =
+        R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"targets":["oops"]}]}]})";
+    // targets element is a nested array (same pointer layout, wrong iteration stride).
+    constexpr string_view arrayTarget =
+        R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"targets":[[1,2,3]]}]}]})";
+
+    const auto numberJson = string(base) + string(numberTarget);
+    const auto stringJson = string(base) + string(stringTarget);
+    const auto arrayJson = string(base) + string(arrayTarget);
+    // Must not crash / OOB; the malformed morph-target entry is skipped and the load succeeds.
+    EXPECT_TRUE(LoadsOk(files, numberJson));
+    EXPECT_TRUE(LoadsOk(files, stringJson));
+    EXPECT_TRUE(LoadsOk(files, arrayJson));
 }
 
 /**

@@ -113,6 +113,10 @@ private:
     void ProcessGlobalBinders();
     void ProcessTlasBuffers();
     void MapLightProbeSsboBuffer();
+    // Bounds objectCounts_.maxMeshCount so the instance-buffer byte size (count * instance size) can't wrap
+    // uint32_t; shared by ProcessTlasBuffers and UpdateTlasBuffers so both size against the same capacity.
+    uint32_t GetTlasInstanceCount() const;
+    void CreateTlasInstanceAndScratchBuffers(uint32_t tlasInstanceCount);
     RENDER_NS::IRenderNodeContextManager* renderNodeContextMgr_{nullptr};
 
     SceneRenderDataStores stores_;

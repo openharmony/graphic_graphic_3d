@@ -1013,10 +1013,16 @@ RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialData(
 RenderFrameMaterialIndices RenderDataStoreDefaultMaterial::AddFrameMaterialInstanceData(
     uint32_t materialIndex, uint32_t frameOffset, uint32_t instanceIndex)
 {
+    // invalid offset means submesh material was missing. skip it so frameOffset + instanceIndex doesn't wrap to valid
+    // offset.
+    if (frameOffset == RenderSceneDataConstants::INVALID_INDEX) {
+        return {};
+    }
     const uint32_t frameFullOffset = frameOffset + instanceIndex;
     if (frameFullOffset < static_cast<uint32_t>(matData_.frameIndices.size())) {
-        matData_.frameIndices[frameFullOffset] = materialIndex;
-        return {materialIndex, frameFullOffset};
+        const uint32_t certainMaterialIndex = GetCertainMaterialIndex(materialIndex, matData_);
+        matData_.frameIndices[frameFullOffset] = certainMaterialIndex;
+        return {certainMaterialIndex, frameFullOffset};
     }
     return {};
 }
@@ -1155,10 +1161,11 @@ void RenderDataStoreDefaultMaterial::SubmitFrameMeshData()
                         (submeshIdx < static_cast<uint32_t>(materialFrameOffsets_.size()))
                             ? materialFrameOffsets_[submeshIdx]
                             : 0U;
-                    const uint32_t materialIndex =
+                    const uint32_t materialIndex = GetCertainMaterialIndex(
                         (baseMaterialFrameOffset < static_cast<uint32_t>(matData_.frameIndices.size()))
                             ? matData_.frameIndices[baseMaterialFrameOffset]
-                            : 0U;
+                            : 0U,
+                        matData_);
                     rs.indices = {rmd.id,
                         meshDataContainer.md.meshId,
                         submeshFrameIndex,
@@ -1456,14 +1463,23 @@ void RenderDataStoreDefaultMaterial::UpdateMeshBlasData(MeshDataContainer& meshD
             data.info.vertexFormat = BASE_NS::Format::BASE_FORMAT_R32G32B32_SFLOAT;
             data.info.vertexStride = sizeof(float) * 3U;  // NOTE: hard coded
             data.info.indexType = submesh.sd.buffers.indexBuffer.indexType;
-            data.info.maxVertex = submesh.sd.buffers.vertexBuffers[0].byteSize / data.info.vertexStride;
+            // clamp to real buffer size: byteSize defaults to a whole-buffer (0xFFFFFFFF).
+            const auto& vb = submesh.sd.buffers.vertexBuffers[0];
+            const auto& ib = submesh.sd.buffers.indexBuffer;
+            const RenderHandleReference vbRef = gpuResourceMgr_.Get(vb.bufferHandle);
+            const RenderHandleReference ibRef = gpuResourceMgr_.Get(ib.bufferHandle);
+            const uint32_t vbBufferSize = gpuResourceMgr_.GetBufferDescriptor(vbRef).byteSize;
+            const uint32_t ibBufferSize = gpuResourceMgr_.GetBufferDescriptor(ibRef).byteSize;
+            const uint32_t vbRange =
+                (vb.bufferOffset < vbBufferSize) ? Math::min(vb.byteSize, vbBufferSize - vb.bufferOffset) : 0U;
+            const uint32_t ibRange =
+                (ib.bufferOffset < ibBufferSize) ? Math::min(ib.byteSize, ibBufferSize - ib.bufferOffset) : 0U;
+            data.info.maxVertex = vbRange / data.info.vertexStride;
             data.info.indexCount =
-                submesh.sd.buffers.indexBuffer.byteSize /
+                ibRange /
                 ((data.info.indexType == IndexType::CORE_INDEX_TYPE_UINT32) ? sizeof(uint32_t) : sizeof(uint16_t));
-            data.vertexData = {gpuResourceMgr_.Get(submesh.sd.buffers.vertexBuffers[0].bufferHandle),
-                submesh.sd.buffers.vertexBuffers[0].bufferOffset};
-            data.indexData = {gpuResourceMgr_.Get(submesh.sd.buffers.indexBuffer.bufferHandle),
-                submesh.sd.buffers.indexBuffer.bufferOffset};
+            data.vertexData = {vbRef, vb.bufferOffset};
+            data.indexData = {ibRef, ib.bufferOffset};
             trianglesData.push_back(data);
             trianglesInfo.push_back(data.info);
         }
