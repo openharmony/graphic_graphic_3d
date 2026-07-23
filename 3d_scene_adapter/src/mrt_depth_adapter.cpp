@@ -332,17 +332,26 @@ private:
     bool sceneInited_ = false;
 
 public:
-    CORE_NS::IEcs::Ptr GetEcs() override
+    CORE_NS::IEcs::Ptr GetEcs()
     {
         return sceneAdapter_ == nullptr ? nullptr : sceneAdapter_->GetEcs();
     }
-    META_NS::IObject::Ptr GetSceneObj() override
+    META_NS::IObject::Ptr GetSceneObj()
     {
         return sceneAdapter_ == nullptr ? nullptr : sceneAdapter_->GetSceneObj();
     }
-    BASE_NS::shared_ptr<SCENE_NS::ICamera> GetCamera() override
+    BASE_NS::shared_ptr<SCENE_NS::ICamera> GetCamera()
     {
         return cameraPtr_;
+    }
+    void SetRenderRgbOnly(bool rgbOnly = false) override
+    {
+        WIDGET_LOGI("MrtDepthAdapter::SetRenderRgbOnly %{public}s", rgbOnly ? "true" : "false");
+    }
+
+    void DestroyScene() override
+    {
+        WIDGET_LOGI("MrtDepthAdapter::DestroyScene");
     }
 
     void Deinit(bool deinitEngine = false) override

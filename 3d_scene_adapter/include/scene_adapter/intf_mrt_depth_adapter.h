@@ -43,10 +43,8 @@ public:
 
     virtual bool OnWindowChange(const std::vector<WindowChangeInfo>& vWindowChangeInfo);
     virtual bool RenderFrame();
-
-    virtual CORE_NS::IEcs::Ptr GetEcs();
-    virtual META_NS::IObject::Ptr GetSceneObj();
-    virtual BASE_NS::shared_ptr<SCENE_NS::ICamera> GetCamera();
+    virtual void SetRenderRgbOnly(bool rgbOnly = false);
+    virtual void DestroyScene();
     virtual void Deinit(bool deinitEngine = false);
     virtual ~IMrtDepthAdapter() = default;
 };
