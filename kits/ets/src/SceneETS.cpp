@@ -206,7 +206,7 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         }
         uri[t] = '/';
     }
-    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) mutable {
+    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) {
         if (!scene || !scene->RenderConfiguration()->GetValue()) {
             return;
         }
@@ -265,6 +265,9 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
 
 std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
 {
+    if (!scene_) {
+        return {};
+    }
     if (animations_) {
         return animations_.value();
     }
@@ -299,7 +302,7 @@ std::shared_ptr<NodeETS> SceneETS::GetNodeByPath(const std::string& path)
     size_t pos = 0;
     if (realPath[0] != '/') {
         pos = realPath.find('/', 0);
-        std::string_view step = realPath.substr(0, pos);
+        std::string_view step(realPath.data(), pos);
         if (!step.empty() && (step != rootName)) {
             // root not matching
             return nullptr;
@@ -600,6 +603,10 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(
         opts.nodeName = name.c_str();
         opts.shareResources = false;
         auto importedNode = import->ImportChildScene(extScene, opts).GetResult();
+        if (!importedNode) {
+            CORE_LOG_E("ImportChildScene failed");
+            return nullptr;
+        }
         ResetAnimations();
         auto nodeETS = NodeETS::FromNative(importedNode);
         nodeETS->Attached(true);

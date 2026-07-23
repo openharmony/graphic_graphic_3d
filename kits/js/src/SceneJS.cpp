@@ -1004,6 +1004,10 @@ napi_value SceneJS::GetRenderConfiguration(NapiApi::FunctionContext<>& ctx)
         rc->SetFrom(ctx.GetEnv(), BASE_NS::move(ptr));
     }
 
+    if (!rc) {
+        return ctx.GetUndefined();
+    }
+
     NapiApi::Env env(ctx.GetEnv());
     NapiApi::Object obj(env);
     renderConfiguration_ = BASE_NS::move(rc->Wrap(obj));

@@ -530,7 +530,8 @@ void ConvertShaderToJs(Promise& promise, const BASE_NS::string& uri, SCENE_NS::I
     NapiApi::StrongRef& sceneRef, NapiApi::StrongRef& paramRef)
 {
     if (!shader) {
-        CORE_LOG_E("Fail to load shader but do not return %s", uri.c_str());
+        promise.Reject(BASE_NS::string{"Failed to load shader from URI "}.append(uri));
+        return;
     } else {
         CORE_LOG_I("success to load shader %s", uri.c_str());
     }
