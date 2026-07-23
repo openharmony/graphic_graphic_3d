@@ -321,6 +321,12 @@ void ValidateDataTest(const TestData& td)
     }
 }
 
+bool LinearFilterSupported(UTest::EngineResources& er, Format format)
+{
+    const FormatProperties properties = er.device->GetGpuResourceManager().GetFormatProperties(format);
+    return (properties.optimalTilingFeatures & CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0U;
+}
+
 void TestMultiRenderNode(DeviceBackendType backend)
 {
     TestData testData;
@@ -330,6 +336,15 @@ void TestMultiRenderNode(DeviceBackendType backend)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
+        // The post-process passes sample the 32F input with linear filtering; skip where the device
+        // cannot (e.g. GLES without GL_OES_texture_float_linear).
+        if (!LinearFilterSupported(testData.engine, BASE_FORMAT_R32G32B32A32_SFLOAT)) {
+            DestroyEngine(testData.engine);
+            GTEST_SKIP() << "R32G32B32A32_SFLOAT linear filtering unsupported (no GL_OES_texture_float_linear)";
+        }
         testData.resources = CreateTestResources(testData.engine);
     }
     TickTest(testData, 3);

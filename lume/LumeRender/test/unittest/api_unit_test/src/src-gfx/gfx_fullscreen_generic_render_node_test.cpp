@@ -368,6 +368,9 @@ void TestFullscreenGenericRenderNode(DeviceBackendType backend, uint32_t constVa
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, constValue);
     }
     TickTest(testData, 3);
