@@ -363,7 +363,8 @@ public:
                 }
                 memcpy_s(&sorted3dBytes[destOffset],
                     copyInfo.sizeOfPixelInBytes,
-                    &orgimageBytes[((y * copyInfo.oldImageWidth) + x) * copyInfo.sizeOfPixelInBytes],
+                    &orgimageBytes[((static_cast<size_t>(y) * copyInfo.oldImageWidth) + x) *
+                                   copyInfo.sizeOfPixelInBytes],
                     copyInfo.sizeOfPixelInBytes);
             }
         }
@@ -669,8 +670,14 @@ public:
         const uint32_t bytesPerComponent = decoded.is16bpc ? bytesPerComponent16bpc : 1u;
         const uint32_t rowSizeInBytes = decoded.width * decoded.channels * bytesPerComponent;
         decoded.image = BASE_NS::make_unique<uint8_t[]>(imageSize);
+        if (!decoded.image) {
+            return "Memeory allocation failed";
+        }
         // clang-format off
         rows = BASE_NS::make_unique<png_byte* []>(decoded.height);
+        if (!rows) {
+            return "Memeory allocation failed";
+        }
         // clang-format on
         InitializeRowPointers(rows.get(),
             decoded.image.get(),

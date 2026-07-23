@@ -139,6 +139,10 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
             flags = flags & (~GL_CLIENT_STORAGE_BIT_EXT);  // not valid for map buffer..
             data_ = reinterpret_cast<uint8_t*>(
                 glMapBufferRange(INIT_TARGET, 0, static_cast<GLsizeiptr>(plat_.alignedByteSize), flags));
+            if (data_ == nullptr) {
+                PLUGIN_LOG_E("glMapBufferRange failed for persistent mapping");
+                isPersistantlyMapped_ = false;
+            }
         }
     } else {
         // glBufferStorageEXT not found, so persistant mapping is not possible.
@@ -305,7 +309,6 @@ void* GpuBufferGLES::MapMemory()
         PLUGIN_LOG_E("gpu buffer already mapped");
         Unmap();
     }
-    isMapped_ = true;
 
     void* ret = nullptr;
     if (isPersistantlyMapped_) {
@@ -327,6 +330,12 @@ void* GpuBufferGLES::MapMemory()
                 GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
         }
         device_.BindBuffer(GL_COPY_WRITE_BUFFER, oldBind);
+    }
+
+    if (ret != nullptr) {
+        isMapped_ = true;
+    } else {
+        PLUGIN_LOG_E("glMapBufferRange returned null");
     }
     return ret;
 }

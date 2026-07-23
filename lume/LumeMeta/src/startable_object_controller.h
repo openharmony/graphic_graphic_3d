@@ -107,6 +107,7 @@ private:  // Task queue handling
 
         Operation operation_;
         IObject::WeakPtr root_;
+        ControlBehavior behavior_{ControlBehavior::CONTROL_AUTOMATIC};
     };
 
     mutable META_NS::ITaskQueue::WeakPtr startQueue_;

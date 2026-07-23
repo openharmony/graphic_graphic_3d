@@ -627,7 +627,11 @@ RenderHandleReference GpuResourceManager::GetOrCreate(const string_view name, co
         }
 
         const auto lock = std::lock_guard(bufferStore_.clientMutex);
-        handle = CreateBuffer(name, {}, validDesc).handle;
+        // Double-check after acquiring exclusive lock
+        handle = GetHandleNoLock(bufferStore_, name);
+        if (!handle) {
+            handle = CreateBuffer(name, {}, validDesc).handle;
+        }
 
         if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE) {
             device_.Deactivate();
