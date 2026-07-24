@@ -653,17 +653,16 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     GLTF2::GLTFLoadDataResult& loadDataResult, GLTF2::GLTFLoadDataResult& finalDataResult)
 {
 #if !defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
-    // Spec says POSITION,NORMAL and TANGENT must be FLOAT & VEC3
-    // NOTE: ASSERT for now, if the types don't match, they need to be converted. (or we should fail
-    // since out-of-spec)
+    // Spec says POSITION,NORMAL and TANGENT must be FLOAT & VEC3. FLOAT is only required without
+    // quantization (KHR_mesh_quantization allows BYTE/SHORT); VEC3 is always required.
     PLUGIN_ASSERT(loadDataResult.componentType == GLTF2::ComponentType::FLOAT);
-    PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
-    PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
-#endif
     if (loadDataResult.componentType != GLTF2::ComponentType::FLOAT) {
         PLUGIN_LOG_E("Morph target component type mismatch");
         return;
     }
+#endif
+    PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
+    PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
     if (loadDataResult.componentCount != 3U) {
         PLUGIN_LOG_E("Morph target component count mismatch");
         return;

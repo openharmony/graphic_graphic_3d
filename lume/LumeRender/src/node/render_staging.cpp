@@ -648,7 +648,7 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
             if (ref.invalidOperation) {
                 continue;
             }
-            if (static_cast<size_t>(ref.beginIndex) + ref.count > bufferCopies.size()) {
+            if (static_cast<uint64_t>(ref.beginIndex) + ref.count > bufferCopies.size()) {
                 continue;
             }
             const auto copies = array_view(bufferCopies.data() + ref.beginIndex, ref.count);

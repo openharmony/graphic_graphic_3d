@@ -402,6 +402,9 @@ BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> ShaderR
     }
     inputs.reserve(size);
     for (auto i = 0U; i < size; ++i) {
+        if (inputs.size() >= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT) {
+            break;
+        }
         const auto location = static_cast<uint32_t>(Read16U(ptr));
         const auto formatRaw = Read16U(ptr);
         if (GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(formatRaw)) == 0u) {

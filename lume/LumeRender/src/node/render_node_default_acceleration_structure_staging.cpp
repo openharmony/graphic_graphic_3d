@@ -134,7 +134,8 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
 
         const uint32_t startIndex = geomRef.startIndex;
         const uint32_t count = geomRef.count;
-        if (frameScratchOffsetIndex_ >= static_cast<uint32_t>(scratchOffsetHelper_.size())) {
+        if (frameScratchOffsetIndex_ >= static_cast<uint32_t>(scratchOffsetHelper_.size()) ||
+            !RenderHandleUtil::IsValid(rawScratchBuffer_)) {
             return;
         }
         const BufferOffset bufferOffset{rawScratchBuffer_, scratchOffsetHelper_[frameScratchOffsetIndex_]};
