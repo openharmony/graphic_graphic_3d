@@ -1590,13 +1590,13 @@ template void to_string(BASE_NS::string& out, const value& value);
 namespace {
 [[nodiscard]] int codepoint(BASE_NS::string_view str)
 {
-    int code = 0;
+    uint32_t code = 0;
     for (size_t u = 0U; u < 4U; ++u) {
         const char chr = str[u];
         code <<= 4;  // Shift by the size of a single hex character
         code += BASE_NS::HexToDec(chr);
     }
-    return code;
+    return static_cast<int>(code);
 }
 }  // namespace
 
