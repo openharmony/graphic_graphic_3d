@@ -134,7 +134,9 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
 
         const uint32_t startIndex = geomRef.startIndex;
         const uint32_t count = geomRef.count;
-        PLUGIN_ASSERT(frameScratchOffsetIndex_ < static_cast<uint32_t>(scratchOffsetHelper_.size()));
+        if (frameScratchOffsetIndex_ >= static_cast<uint32_t>(scratchOffsetHelper_.size())) {
+            return;
+        }
         const BufferOffset bufferOffset{rawScratchBuffer_, scratchOffsetHelper_[frameScratchOffsetIndex_]};
         frameScratchOffsetIndex_++;  // advance
         AsBuildGeometryData geometry{{geomRef.data.info},
@@ -240,6 +242,11 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, {}, instanceInfos);
         }
 
+        if (frameScratchSize > UINT32_MAX) {
+            PLUGIN_LOG_E("AS frame scratch size exceeds uint32_t; skipping remaining acceleration structure builds");
+            frameScratchSize = 0U;
+            break;
+        }
         scratchOffsetHelper_.push_back(static_cast<uint32_t>(frameScratchSize));
         frameScratchSize += Align(asbs.buildScratchSize, scratchAlignment);
     }

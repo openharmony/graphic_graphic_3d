@@ -401,16 +401,14 @@ BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> ShaderR
         return inputs;
     }
     inputs.reserve(size);
-    constexpr uint32_t maxVertexInputAttributes{16u};
     for (auto i = 0U; i < size; ++i) {
         const auto location = static_cast<uint32_t>(Read16U(ptr));
         const auto formatRaw = Read16U(ptr);
-        if (location >= maxVertexInputAttributes ||
-            GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(formatRaw)) == 0u) {
-            PLUGIN_LOG_ONCE_W("lsb_invalid_vertex_input",
-                "RENDER_VALIDATION: invalid vertex input (location %u, format %u), skipped",
-                location,
-                formatRaw);
+        if (GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(formatRaw)) == 0u) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_ONCE_W(
+                "lsb_invalid_vertex_input", "RENDER_VALIDATION: invalid vertex input format %u, skipped", formatRaw);
+#endif
             continue;
         }
         VertexInputDeclaration::VertexInputAttributeDescription& desc = inputs.emplace_back();
