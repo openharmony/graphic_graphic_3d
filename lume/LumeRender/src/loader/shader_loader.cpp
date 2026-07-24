@@ -112,7 +112,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (shaderStatesPath) {
             LoadShaderStates(desc.shaderStatePath, *shaderStatesPath);
         } else {
-            PLUGIN_LOG_W("graphics state path (%s) not found.", desc.shaderStatePath.data());
+            PLUGIN_LOG_W("graphics state path (%.*s) not found.",
+                static_cast<int>(desc.shaderStatePath.size()),
+                desc.shaderStatePath.data());
         }
     }
     if (!desc.vertexInputDeclarationPath.empty()) {
@@ -120,7 +122,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (vidsPath) {
             LoadVids(desc.vertexInputDeclarationPath, *vidsPath);
         } else {
-            PLUGIN_LOG_W("vertex input declaration path (%s) not found.", desc.vertexInputDeclarationPath.data());
+            PLUGIN_LOG_W("vertex input declaration path (%.*s) not found.",
+                static_cast<int>(desc.vertexInputDeclarationPath.size()),
+                desc.vertexInputDeclarationPath.data());
         }
     }
     if (!desc.pipelineLayoutPath.empty()) {
@@ -128,7 +132,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (pipelineLayoutsPath) {
             LoadPipelineLayouts(desc.pipelineLayoutPath, *pipelineLayoutsPath);
         } else {
-            PLUGIN_LOG_W("pipeline layout path (%s) not found.", desc.pipelineLayoutPath.data());
+            PLUGIN_LOG_W("pipeline layout path (%.*s) not found.",
+                static_cast<int>(desc.pipelineLayoutPath.size()),
+                desc.pipelineLayoutPath.data());
         }
     }
     if (!desc.shaderPath.empty()) {
@@ -136,7 +142,8 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (shadersPath) {
             RecurseDirectory(desc.shaderPath, *shadersPath);
         } else {
-            PLUGIN_LOG_W("shader path (%s) not found.", desc.shaderPath.data());
+            PLUGIN_LOG_W(
+                "shader path (%.*s) not found.", static_cast<int>(desc.shaderPath.size()), desc.shaderPath.data());
         }
     }
 }

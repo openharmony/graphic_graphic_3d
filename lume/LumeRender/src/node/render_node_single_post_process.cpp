@@ -405,8 +405,10 @@ void RenderNodeSinglePostProcess::ProcessPostProcessConfiguration()
                 ppLocalConfig_ = dataStore->Get(jsonInputs_.renderDataStore.configurationName, jsonInputs_.ppName);
             }
         }
-        if (const auto* ds =
-                static_cast<const IRenderDataStorePod*>(dsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD_NAME));
+        const IRenderDataStore* podDs = dsMgr.GetRenderDataStore(RENDER_DATA_STORE_POD_NAME);
+        if (const auto* ds = (podDs && (podDs->GetUid() == IRenderDataStorePod::UID))
+                                 ? static_cast<const IRenderDataStorePod*>(podDs)
+                                 : nullptr;
             ds) {
             auto const dataView = ds->Get(jsonInputs_.renderDataStore.configurationName);
             if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {

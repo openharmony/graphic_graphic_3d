@@ -55,7 +55,7 @@ public:
     BASE_NS::vector<ShaderSpecialization::Constant> GetSpecializationConstants() const;
     BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> GetInputDescriptions() const;
     BASE_NS::Math::UVec3 GetLocalSize() const;
-    const uint8_t* GetPushConstants() const;
+    BASE_NS::array_view<const uint8_t> GetPushConstants() const;
 
 private:
     BASE_NS::array_view<const uint8_t> reflectionData_;

@@ -210,6 +210,9 @@ ShaderDataLoader::LoadResult ShaderDataLoader::Load(IFileManager& fileManager, c
 
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        return LoadResult("Failed to allocate file buffer.");
+    }
 
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_D("Error loading '%s'", string(uri).c_str());

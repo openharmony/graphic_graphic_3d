@@ -63,7 +63,7 @@ constexpr const BASE_NS::string_view INVALID_DATATYPE = "Failed to read value, i
 template<typename T>
 inline T Convert(const CORE_NS::json::value& value)
 {
-    T result;
+    T result{};
     FromJson(value, result);
     return result;
 }

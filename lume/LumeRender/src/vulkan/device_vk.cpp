@@ -354,6 +354,11 @@ AsBuildSizes GetAsBuildGeometryCombine(const VkDevice device, const DeviceVk::Ex
             &buildSizesInfo);                                         // pSizeInfo
     }
 
+    if ((buildSizesInfo.accelerationStructureSize > UINT32_MAX) || (buildSizesInfo.updateScratchSize > UINT32_MAX) ||
+        (buildSizesInfo.buildScratchSize > UINT32_MAX)) {
+        PLUGIN_LOG_E("acceleration structure build size exceeds uint32_t; skipping build");
+        return AsBuildSizes{0U, 0U, 0U};
+    }
     return AsBuildSizes{
         static_cast<uint32_t>(buildSizesInfo.accelerationStructureSize),
         static_cast<uint32_t>(buildSizesInfo.updateScratchSize),

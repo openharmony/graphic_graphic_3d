@@ -1542,7 +1542,7 @@ void RenderBackendVk::RenderCommand(const RenderCommandDrawIndirect& renderCmd, 
             } else {
                 vkCmdDrawIndirect(cmdBuf.commandBuffer,  // commandBuffer
                     buffer,                              // buffer
-                    (VkDeviceSize)renderCmd.offset,      // offset
+                    offset,                              // offset
                     renderCmd.drawCount,                 // drawCount
                     renderCmd.stride);                   // stride
             }
@@ -2793,9 +2793,15 @@ void RenderBackendVk::RenderCommand(const RenderCommandCopyAccelerationStructure
             return;
         }
         dstDataBegin += size_t(renderCmd.destination.offset);
+        // Clamp to instances that fit; otherwise dstData runs past dstDataEnd and the negative diff defeats
+        // CloneData's size check.
+        const size_t availableBytes = dstBufferDesc.byteSize - size_t(renderCmd.destination.offset);
+        const size_t maxInstances = availableBytes / sizeof(VkAccelerationStructureInstanceKHR);
+        const uint32_t instanceCount =
+            static_cast<uint32_t>(Math::min(static_cast<size_t>(renderCmd.instancesView.size()), maxInstances));
         // loop and copy all instances
         bool validAddresses = true;
-        for (uint32_t idx = 0; idx < renderCmd.instancesView.size(); ++idx) {
+        for (uint32_t idx = 0; idx < instanceCount; ++idx) {
             const auto& ref = renderCmd.instancesView[idx];
             uint64_t accelDeviceAddress = 0;
             if (const GpuBufferVk* ptr = gpuResourceMgr_.GetBuffer<GpuBufferVk>(ref.accelerationStructure); ptr) {

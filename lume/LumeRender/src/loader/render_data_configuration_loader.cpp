@@ -216,8 +216,18 @@ IRenderDataConfigurationLoader::LoadedPostProcess RenderDataConfigurationLoader:
 
     const uint64_t byteLength = file->GetLength();
 
+    constexpr uint64_t MAX_RENDER_DATA_CONFIGURATION_SIZE = 1U * 1024U * 1024U;
+    if (byteLength > MAX_RENDER_DATA_CONFIGURATION_SIZE) {
+        result.loadResult = IRenderDataConfigurationLoader::LoadResult("Render data configuration file too large.");
+        return result;
+    }
+
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        result.loadResult = IRenderDataConfigurationLoader::LoadResult("Failed to allocate file buffer.");
+        return result;
+    }
 
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_E("Error loading '%s'", string(uri).c_str());

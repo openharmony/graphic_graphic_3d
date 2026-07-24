@@ -984,6 +984,10 @@ RenderHandleReference GpuResourceManager::Create(
                 PLUGIN_LOG_E("Staging buffer data exceeds uint32_t limit");
                 return {};
             }
+            if ((image->GetData().data() == nullptr) && (image->GetData().size_bytes() > 0)) {
+                PLUGIN_LOG_E("Image container has no data but reports non-zero size");
+                return {};
+            }
             const uint32_t stagingBufferByteSize = static_cast<uint32_t>(image->GetData().size_bytes());
             ReserveSpaceForStaging(stagingBufferByteSize);
             uint32_t& stagingBufferSize = stagingOperations_.stagingByteSizes.back();

@@ -130,7 +130,8 @@ void RenderNodeBloom::ProcessPostProcessConfiguration(const IRenderNodeRenderDat
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
         if (const IRenderDataStore* ds = dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
             ds) {
-            if (jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) {
+            if ((jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) &&
+                (ds->GetUid() == IRenderDataStorePod::UID)) {
                 auto const dataStore = static_cast<const IRenderDataStorePod*>(ds);
                 auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
                 if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {

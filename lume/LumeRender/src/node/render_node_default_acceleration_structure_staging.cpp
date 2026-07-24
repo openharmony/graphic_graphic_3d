@@ -211,7 +211,7 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
     const auto& triangles = fullData.geomTriangles;
     const auto& aabbs = fullData.geomAabbs;
     const auto& instances = fullData.geomInstances;
-    uint32_t frameScratchSize = 0U;
+    uint64_t frameScratchSize = 0U;  // accumulate in 64-bit; the buffer byteSize is uint32_t
 
     vector<AsGeometryTrianglesInfo> triInfos;
     vector<AsGeometryAabbsInfo> aabbInfos;
@@ -237,9 +237,13 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, {}, instanceInfos);
         }
 
-        scratchOffsetHelper_.push_back(frameScratchSize);
+        scratchOffsetHelper_.push_back(static_cast<uint32_t>(frameScratchSize));
         frameScratchSize +=
             Align(asbs.buildScratchSize, PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
+    }
+    if (frameScratchSize + scratchAlignment > UINT32_MAX) {
+        PLUGIN_LOG_E("AS frame scratch size exceeds uint32_t; skipping acceleration structure builds this frame");
+        frameScratchSize = 0U;
     }
     if (frameScratchSize > 0) {
         // allocate scratch
@@ -248,7 +252,7 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
                 BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
             CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
             0U,                                                             // engineCreationFlags
-            frameScratchSize,                                               // byteSize
+            static_cast<uint32_t>(frameScratchSize),                        // byteSize
             BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
         };
 #if (RENDER_VALIDATION_ENABLED == 1)

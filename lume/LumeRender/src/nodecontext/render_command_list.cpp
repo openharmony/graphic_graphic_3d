@@ -835,9 +835,11 @@ void RenderCommandList::PushConstantData(
 {
     ValidatePipeline();
 
-    // push constant is not used/allocated if byte size is bigger than supported max
+    // push constant is not used/allocated if byte size is bigger than supported max, or if the caller
+    // supplies fewer bytes than declared (the unfilled tail would leak stale command-arena memory).
     if ((pushConstant.byteSize > 0) &&
-        (pushConstant.byteSize <= PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) && (!data.empty())) {
+        (pushConstant.byteSize <= PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) &&
+        (data.size_bytes() >= pushConstant.byteSize)) {
         auto* rc = AllocateRenderCommand<RenderCommandPushConstant>(allocator_);
         // use aligment of uint32 as currently the push constants are uint32s
         // the data is allocated by shader/pipeline needs
@@ -1117,9 +1119,15 @@ void RenderCommandList::BeginRenderPass(
 bool RenderCommandList::ProcessInputAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.inputAttachmentCount; ++idx) {
+    bool valid = subpassRef.inputAttachmentCount <= PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.inputAttachmentCount, PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.inputAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;
@@ -1154,9 +1162,15 @@ bool RenderCommandList::ProcessInputAttachments(const RenderPassDesc& renderPass
 bool RenderCommandList::ProcessColorAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.colorAttachmentCount; ++idx) {
+    bool valid = subpassRef.colorAttachmentCount <= PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.colorAttachmentCount, PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.colorAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;
@@ -1187,9 +1201,15 @@ bool RenderCommandList::ProcessColorAttachments(const RenderPassDesc& renderPass
 bool RenderCommandList::ProcessResolveAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.resolveAttachmentCount; ++idx) {
+    bool valid = subpassRef.resolveAttachmentCount <= PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.resolveAttachmentCount, PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.resolveAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;

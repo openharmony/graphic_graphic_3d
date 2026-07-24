@@ -199,6 +199,9 @@ void RenderNodeCreateGpuImages::InitNode(IRenderNodeContextManager& renderNodeCo
         desc.height =
             static_cast<uint32_t>(Math::ceil(float(desc.height) / float(shadingRateTexelSizes_.back().height)));
         resourceHandles_.push_back(gpuResourceMgr.Create(ref.name, desc));
+        if (ref.clearWhenCreated) {
+            clearImages_.push_back({resourceHandles_.back().GetHandle(), ref.clearValue.color});
+        }
     }
 
     // broadcast the resources

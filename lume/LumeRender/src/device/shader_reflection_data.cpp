@@ -440,21 +440,23 @@ BASE_NS::Math::UVec3 ShaderReflectionData::GetLocalSize() const
     return sizes;
 }
 
-const uint8_t* ShaderReflectionData::GetPushConstants() const
+BASE_NS::array_view<const uint8_t> ShaderReflectionData::GetPushConstants() const
 {
-    const uint8_t* ptr = nullptr;
     if (reflectionData_.size() < sizeof(ReflectionHeader)) {
-        return ptr;
+        return {};
     }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     // constants on/off is uint8 and byte size of constants is uint16
-    if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= sizeof(uint8_t) + sizeof(uint16_t)) &&
+    constexpr size_t headerBytes = sizeof(uint8_t) + sizeof(uint16_t);
+    if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= headerBytes) &&
         (header.offsetPushConstants + size_t(size_[INDEX_PUSH_CONSTANTS])) <= reflectionData_.size()) {
         const auto constants = *(reflectionData_.data() + header.offsetPushConstants);
         if (constants) {
-            ptr = reflectionData_.data() + header.offsetPushConstants + sizeof(uint8_t) + sizeof(uint16_t);
+            // view spans only the bytes after the 3-byte header, bounding any reader walk to the section
+            return {reflectionData_.data() + header.offsetPushConstants + headerBytes,
+                size_t(size_[INDEX_PUSH_CONSTANTS]) - headerBytes};
         }
     }
-    return ptr;
+    return {};
 }
 RENDER_END_NAMESPACE()

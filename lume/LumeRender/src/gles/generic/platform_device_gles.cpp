@@ -57,4 +57,9 @@ BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecific
 {
     return {};
 }
+
+void DeviceGLES::DestroyExternalBuffer(uintptr_t /* eglClientBuffer */)
+{
+    // No backend-specific external buffers on the generic platform.
+}
 RENDER_END_NAMESPACE()
