@@ -360,6 +360,9 @@ void TestResourceManager2(DeviceBackendType backend)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources2(testData);
         testData.renderNodeGraph =
             CreateRenderNodeGraph(*testData.engine.context, "test://renderNodeGraphGfxGpuResourceManagerTest2.rng");
@@ -404,6 +407,9 @@ void TestResourceManager3(DeviceBackendType backend)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources3(testData);
         testData.renderNodeGraph =
             CreateRenderNodeGraph(*testData.engine.context, "test://renderNodeGraphGfxGpuResourceManagerTest2.rng");

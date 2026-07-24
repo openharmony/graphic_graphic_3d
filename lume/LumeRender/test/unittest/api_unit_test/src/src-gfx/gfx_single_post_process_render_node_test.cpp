@@ -507,6 +507,9 @@ void TestBloom(DeviceBackendType backend, bool useCompute)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, useCompute, "Bloom");
     }
     TickTest(testData, 3);
@@ -526,6 +529,9 @@ void TestBlur(DeviceBackendType backend, string type)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, false, type + "_blur");
     }
     TickTest(testData, 3);
@@ -545,6 +551,9 @@ void TestCustomShader(DeviceBackendType backend)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, false, "CustomShader");
     }
     TickTest(testData, 3);
@@ -564,6 +573,9 @@ void TestPbrTonemapperShader(DeviceBackendType backend)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, false, "PbrTonemapper");
     }
     TickTest(testData, 3);

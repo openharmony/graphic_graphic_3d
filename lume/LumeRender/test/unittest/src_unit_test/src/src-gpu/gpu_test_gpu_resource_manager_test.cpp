@@ -358,7 +358,7 @@ UNIT_TEST(SRC_GpuResourceManager, ImageCreationTest, testing::ext::TestSize.Leve
 UNIT_TEST(SRC_GpuResourceManager, LargeStagingSize, testing::ext::TestSize.Level1)
 {
     UTest::EngineResources er;
-    er.backend = DeviceBackendType::VULKAN;
+    // er.backend = DeviceBackendType::VULKAN;
     UTest::CreateEngineSetup(er);
     ASSERT_TRUE(er.device != nullptr);
 
