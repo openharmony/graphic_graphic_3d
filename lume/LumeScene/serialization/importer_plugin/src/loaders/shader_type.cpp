@@ -68,7 +68,12 @@ bool ShaderResourceType::ReloadResource(const StorageInfo& s, const CORE_NS::IRe
     }
     if (auto dyn = interface_cast<META_NS::IDynamicResource>(res)) {
         context->RunDirectlyOrInTask([&context, &s] {
-            auto& man = context->GetRenderer()->GetDevice().GetShaderManager();
+            auto renderer = context->GetRenderer();
+            if (!renderer) {
+                CORE_LOG_E("Renderer is null when reloading shader resource: %s", s.id.ToString().c_str());
+                return;
+            }
+            auto& man = renderer->GetDevice().GetShaderManager();
             man.ReloadShaderFile(s.path);
         });
         META_NS::Invoke<META_NS::IOnChanged>(dyn->OnResourceChanged());
