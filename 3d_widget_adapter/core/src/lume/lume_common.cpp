@@ -1299,10 +1299,9 @@ void LumeCommon::UpdateSingleGLTFAnimation(int index, const std::shared_ptr<GLTF
             break;
     }
 
-    if (index >= animations_.size()) {
+    if (static_cast<size_t>(index) >= animations_.size()) {
         return;
     }
-
     animations_[index]->SetPlaybackState(state);
 
     if (gltfAnimation->GetRepeatCount() == -1) {

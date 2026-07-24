@@ -31,8 +31,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     // Oracle unescape(escape(x)) == x holds only for ASCII: escape re-encodes bytes >= 0x80 as
     // \uXXXX and is lossy on invalid UTF-8, so guard to 0x00-0x7F where the round-trip is exact.
     bool ascii = true;
-    for (size_t i = 0; i < size; ++i) {
-        if (data[i] >= 0x80) {
+    for (auto c : input) {
+        if (static_cast<uint8_t>(c)= 0x80) {
             ascii = false;
             break;
         }

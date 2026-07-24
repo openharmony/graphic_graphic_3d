@@ -97,6 +97,9 @@ InvokeReturn<std::shared_ptr<ShaderETS>> RenderContextETS::CreateShader(const st
         return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "Invalid shader uri given");
     }
     SCENE_NS::IShader::Ptr shader = renderResourceManager->LoadShader(uri.c_str()).GetResult();
+    if (!shader) {
+        return InvokeReturn<std::shared_ptr<ShaderETS>>(nullptr, "Failed to load shader");
+    }
     return InvokeReturn<std::shared_ptr<ShaderETS>>(std::make_shared<ShaderETS>(shader, name, uri));
 }
 

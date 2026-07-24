@@ -285,6 +285,11 @@ std::optional<BASE_NS::vector<SCENE_NS::IImage::Ptr>> BuildImageArray(
             return std::nullopt;
         }
         std::shared_ptr<ImageETS> imgETS = static_cast<ImageImpl*>(srImpl)->getInternalImage();
+        if (!imgETS) {
+            WIDGET_LOGE("invalid image at index %{public}zu", i);
+            arr.push_back(nullptr);
+            continue;
+        }
         arr.push_back(imgETS->GetNativeImage());
     }
     return arr;

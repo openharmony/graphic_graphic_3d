@@ -434,6 +434,10 @@ bool BoidsSimWorldImpl::getIsPlaying()
 void BoidsSimWorldImpl::addBoidsSimComponent(
     ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimParameters params)
 {
+    if (!scene_) {
+        WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimComponent: invalid scene");
+        return;
+    }
     auto iNode = GetINodeFromTaiheNode(node);
     if (!iNode) {
         WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimComponent: invalid node");
@@ -538,6 +542,10 @@ void BoidsSimWorldImpl::removeBoidsSimComponent(::SceneNodes::weak::Node node)
 void BoidsSimWorldImpl::addBoidsSimGravityComponent(
     ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimGravityParameters params)
 {
+    if (!scene_) {
+        WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimGravityComponent: invalid scene");
+        return;
+    }
     auto iNode = GetINodeFromTaiheNode(node);
     if (!iNode) {
         WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimGravityComponent: invalid node");
@@ -615,6 +623,10 @@ void BoidsSimWorldImpl::removeBoidsSimGravityComponent(::SceneNodes::weak::Node 
 void BoidsSimWorldImpl::addBoidsSimRepulsionComponent(
     ::SceneNodes::weak::Node node, ::SceneBoidsSwarm::BoidsSimRepulsionParameters params)
 {
+    if (!scene_) {
+        WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimRepulsionComponent: invalid scene");
+        return;
+    }
     auto iNode = GetINodeFromTaiheNode(node);
     if (!iNode) {
         WIDGET_LOGE("BoidsSimWorldImpl::addBoidsSimRepulsionComponent: invalid node");
