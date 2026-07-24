@@ -80,6 +80,7 @@ private:
         uint32_t byteSize{0u};
         uint32_t byteOffset{0u};
     };
+    bool rtEnabled_{false};
     AddionalCopyBuffer additionalCopyBuffer_;
 };
 RENDER_END_NAMESPACE()

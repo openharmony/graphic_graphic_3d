@@ -99,6 +99,8 @@ struct PhysicalDeviceRayTracingStructsVk {
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR physicalDeviceRayTracingPipelineFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR physicalDeviceAccelerationStructureFeatures;
     VkPhysicalDeviceRayQueryFeaturesKHR physicalDeviceRayQueryFeatures;
+
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR physicalDeviceAccelerationStructureProperties;
 };
 #endif
 
@@ -450,6 +452,14 @@ void GetPhysicalDeviceRayTracingStructs(ChainObjects& co, ChainWrapper& cw)
 
     *cw.ppNextFeatures = &rt->physicalDeviceRayQueryFeatures;
     cw.ppNextFeatures = &rt->physicalDeviceRayTracingPipelineFeatures.pNext;
+
+    rt->physicalDeviceAccelerationStructureProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,  // sType
+        nullptr,                                                                  // pNext
+    };
+
+    *cw.ppNextProperties = &rt->physicalDeviceAccelerationStructureProperties;
+    cw.ppNextProperties = &rt->physicalDeviceAccelerationStructureProperties.pNext;
 }
 #endif
 
@@ -717,6 +727,14 @@ CommonDeviceProperties GetCommonDevicePropertiesFunc(const ChainObjects& co)
             fsrVk.maxFragmentShadingRateAttachmentTexelSize.width,
             fsrVk.maxFragmentShadingRateAttachmentTexelSize.height};
         cdp.fragmentShadingRateProperties.maxFragmentSize = {fsrVk.maxFragmentSize.width, fsrVk.maxFragmentSize.height};
+    }
+#endif
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    if (co.rt) {
+        const uint32_t scratchAlign =
+            co.rt->physicalDeviceAccelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
+        // Clamp 0 to 1 so the backend's alignment stays a no-op.
+        cdp.accelerationStructureProperties.minScratchOffsetAlignment = (scratchAlign > 0U) ? scratchAlign : 1U;
     }
 #endif
     return cdp;

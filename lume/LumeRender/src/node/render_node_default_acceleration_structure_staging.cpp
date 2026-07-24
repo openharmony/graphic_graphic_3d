@@ -208,6 +208,9 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
     };
 
     IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
+    // Backend aligns each scratch address to this; keep the offsets aligned to match.
+    const uint32_t scratchAlignment =
+        device.GetCommonDeviceProperties().accelerationStructureProperties.minScratchOffsetAlignment;
     const auto& triangles = fullData.geomTriangles;
     const auto& aabbs = fullData.geomAabbs;
     const auto& instances = fullData.geomInstances;
@@ -238,14 +241,15 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
         }
 
         scratchOffsetHelper_.push_back(static_cast<uint32_t>(frameScratchSize));
-        frameScratchSize +=
-            Align(asbs.buildScratchSize, PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
+        frameScratchSize += Align(asbs.buildScratchSize, scratchAlignment);
     }
     if (frameScratchSize + scratchAlignment > UINT32_MAX) {
         PLUGIN_LOG_E("AS frame scratch size exceeds uint32_t; skipping acceleration structure builds this frame");
         frameScratchSize = 0U;
     }
     if (frameScratchSize > 0) {
+        // Pad one alignment so the backend's address alignment can't overrun the last build.
+        frameScratchSize += scratchAlignment;
         // allocate scratch
         const GpuBufferDesc scratchDesc{
             BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |

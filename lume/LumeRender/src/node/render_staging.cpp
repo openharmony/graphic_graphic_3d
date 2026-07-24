@@ -19,6 +19,7 @@
 
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 #include <render/nodecontext/intf_render_command_list.h>
@@ -291,6 +292,10 @@ void CopyImagesToImagesImpl(
 void RenderStaging::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    const auto renderCreateInfo = renderNodeContextMgr.GetRenderContext().GetCreateInfo();
+
+    rtEnabled_ =
+        (renderCreateInfo.createFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) != 0;
 }
 
 void RenderStaging::PreExecuteFrame(const uint32_t clearByteSize)
@@ -832,6 +837,10 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
         dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if (rtEnabled_) {
+            dstBarrier.pipelineStageFlags |=
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT;
+        }
         dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_UNIFORM_READ_BIT;
     }
     if (desc.usageFlags & (BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
@@ -839,6 +848,10 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
         dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if (rtEnabled_) {
+            dstBarrier.pipelineStageFlags |=
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT;
+        }
         dstBarrier.accessFlags |=
             AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT;
     }
