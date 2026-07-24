@@ -281,6 +281,12 @@ void ValidateDataTest(const TestData& td, bool onlyBlit, bool useAa)
     }
 }
 
+bool LinearFilterSupported(UTest::EngineResources& er, Format format)
+{
+    const FormatProperties properties = er.device->GetGpuResourceManager().GetFormatProperties(format);
+    return (properties.optimalTilingFeatures & CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0U;
+}
+
 void TestCombinedPostProcessRenderNode(DeviceBackendType backend, bool onlyBlit, bool useAa, bool useMipmaps)
 {
     TestData testData;
@@ -290,6 +296,15 @@ void TestCombinedPostProcessRenderNode(DeviceBackendType backend, bool onlyBlit,
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
+        // The blur passes sample the 32F input with linear filtering; skip where the device cannot
+        // (e.g. GLES without GL_OES_texture_float_linear). Blit/AA do not need it and still run.
+        if (!onlyBlit && !useAa && !LinearFilterSupported(testData.engine, BASE_FORMAT_R32G32B32A32_SFLOAT)) {
+            DestroyEngine(testData.engine);
+            GTEST_SKIP() << "R32G32B32A32_SFLOAT linear filtering unsupported (no GL_OES_texture_float_linear)";
+        }
         testData.resources = CreateTestResources(testData.engine, false, onlyBlit, useAa, useMipmaps);
     }
     TickTest(testData, 3);

@@ -97,7 +97,9 @@ array_view<const uint8_t> CreateImageDataView()
     return array_view<const uint8_t>{reinterpret_cast<const uint8_t*>(imageData), sizeof(imageData)};
 }
 
-TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute)
+TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute,
+    BloomConfiguration::BloomQualityType quality = BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL,
+    string_view rngName = "test://renderNodeGraphGfxBloomRenderNodeTest.rng")
 {
     TestResources res;
     // Input image
@@ -132,7 +134,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute)
             er.context->GetRenderDataStoreManager().Create(IRenderDataStorePod::UID, "BloomDataStore").get()));
         PostProcessConfiguration ppConf;
         ppConf.enableFlags = PostProcessConfiguration::ENABLE_BLOOM_BIT;
-        ppConf.bloomConfiguration.bloomQualityType = BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL;
+        ppConf.bloomConfiguration.bloomQualityType = quality;
         ppConf.bloomConfiguration.useCompute = useCompute;
         const array_view<const uint8_t> dataView = {reinterpret_cast<const uint8_t*>(&ppConf), sizeof(ppConf)};
         res.dataStorePod->CreatePod("PostProcessConfiguration", "BloomConfiguration", dataView);
@@ -140,8 +142,7 @@ TestResources CreateTestResources(UTest::EngineResources& er, bool useCompute)
     // Render node graph
     {
         res.renderNodeGraph = er.context->GetRenderNodeGraphManager().LoadAndCreate(
-            IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC,
-            "test://renderNodeGraphGfxBloomRenderNodeTest.rng");
+            IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, rngName);
     }
     res.byteArray = make_unique<ByteArray>(NUM_BYTES);
     return res;
@@ -282,10 +283,57 @@ void TestBloomRenderNode(DeviceBackendType backend, bool useCompute)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, useCompute);
     }
     TickTest(testData, 3);
     ValidateDataTest(testData, useCompute);
+    {
+        DestroyTestResources(*testData.engine.device, testData.resources);
+        DestroyEngine(testData.engine);
+    }
+}
+
+// An out-of-range (untrusted) bloomQualityType must be clamped, not index past the fixed
+// downscale-handle array. Reaching the end of the frame without an abort/OOB is the pass.
+void TestBloomOutOfRangeQuality(DeviceBackendType backend)
+{
+    TestData testData;
+    testData.engine.backend = backend;
+    {
+        CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
+        const auto badQuality = static_cast<BloomConfiguration::BloomQualityType>(0xffffu);
+        testData.resources = CreateTestResources(testData.engine, false, badQuality);
+    }
+    TickTest(testData, 3);
+    {
+        DestroyTestResources(*testData.engine.device, testData.resources);
+        DestroyEngine(testData.engine);
+    }
+}
+
+// A render node graph that omits the bloom custom input/output images must not index an empty
+// vector. With the guard the node degenerates to a no-op; reaching frame end is the pass.
+void TestBloomNoResources(DeviceBackendType backend)
+{
+    TestData testData;
+    testData.engine.backend = backend;
+    {
+        CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
+        testData.resources = CreateTestResources(testData.engine,
+            false,
+            BloomConfiguration::BloomQualityType::QUALITY_TYPE_NORMAL,
+            "test://renderNodeGraphGfxBloomNoResourcesTest.rng");
+    }
+    TickTest(testData, 3);
     {
         DestroyTestResources(*testData.engine.device, testData.resources);
         DestroyEngine(testData.engine);
@@ -311,6 +359,24 @@ UNIT_TEST(API_GfxBloomRenderNodeTest, GfxBloomRenderNodeTestVulkan, testing::ext
 UNIT_TEST(API_GfxBloomRenderNodeTest, ComputeBloomRenderNodeTestVulkan, testing::ext::TestSize.Level1)
 {
     TestBloomRenderNode(DeviceBackendType::VULKAN, true);
+}
+/**
+ * @tc.name: BloomOutOfRangeQualityVulkan
+ * @tc.desc: An out-of-range bloomQualityType from the (untrusted) configuration must be clamped.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_GfxBloomRenderNodeTest, BloomOutOfRangeQualityVulkan, testing::ext::TestSize.Level1)
+{
+    TestBloomOutOfRangeQuality(DeviceBackendType::VULKAN);
+}
+/**
+ * @tc.name: BloomNoResourcesVulkan
+ * @tc.desc: A render node graph that omits the bloom input/output images must not index an empty vector.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_GfxBloomRenderNodeTest, BloomNoResourcesVulkan, testing::ext::TestSize.Level1)
+{
+    TestBloomNoResources(DeviceBackendType::VULKAN);
 }
 #endif  // RENDER_HAS_VULKAN_BACKEND
 

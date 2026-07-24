@@ -217,6 +217,9 @@ void TestMultiQueue()
 
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine);
     }
     TickTest(testData, 3);

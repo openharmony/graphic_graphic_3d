@@ -325,6 +325,9 @@ void TestGpuResourceCopyLayers(DeviceBackendType backend, bool compressed)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, compressed);
     }
     TickTest(testData, 5, compressed);

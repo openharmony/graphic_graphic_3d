@@ -602,6 +602,9 @@ void TestGpuResourceCopy(DeviceBackendType backend, bool useMipmap)
     }
     {
         CreateEngineSetup(testData.engine);
+        if (::testing::Test::HasFatalFailure()) {
+            return;
+        }
         testData.resources = CreateTestResources(testData.engine, useMipmap);
     }
     TickTest(testData, 7, useMipmap);

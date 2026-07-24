@@ -188,6 +188,9 @@ void TestComputeGenericRenderNode(DeviceBackendType backend, uint32_t constValue
         testData.engine.createWindow = true;
     }
     CreateEngineSetup(testData.engine);
+    if (::testing::Test::HasFatalFailure()) {
+        return;
+    }
     testData.resources = CreateTestResources(testData.engine, constValue);
 
     TickTest(testData, 3);
