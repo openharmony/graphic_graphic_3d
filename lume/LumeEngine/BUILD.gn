@@ -22,9 +22,11 @@ config("lume_base_api") {
   include_dirs = [
     "${LUME_BASE_PATH}/api",
   ]
-  configs = [
-    "//third_party/bounds_checking_function:libsec_public_config",
-  ]
+  # securec (memcpy_s etc.) is pulled transitively from c_utils:utils -- do NOT add
+  # //third_party/bounds_checking_function configs here (deps_guard rejects the direct InnerApi).
+  # external_deps = [
+  #   "c_utils:utils",
+  # ]
   defines = [
     "BASE_TESTS_ENABLED=0",
     "BASE_WARNINGS_AS_ERRORS=0"
