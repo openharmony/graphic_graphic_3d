@@ -1456,7 +1456,12 @@ GLTFLoadDataResult LoadData(Accessor const& accessor)
             result.success = false;
             return result;
         }
-        result.data.resize(result.elementSize * result.elementCount);
+        const size_t byteSize = result.elementSize * result.elementCount;
+        if (byteSize > MAX_BUFFER_SIZE) {
+            result.success = false;
+            return result;
+        }
+        result.data.resize(byteSize);
     }
     if (accessor.sparse.count) {
         LoadSparseAccessor(accessor, result);

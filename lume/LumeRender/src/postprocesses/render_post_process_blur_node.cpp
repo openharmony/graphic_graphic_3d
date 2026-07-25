@@ -320,7 +320,9 @@ void BlurPass(const ConstDrawInput& di, IDescriptorSetBinder& binder, const Rend
     di.cmdList.UpdateDescriptorSet(binder.GetDescriptorSetHandle(), binder.GetDescriptorSetLayoutBindingResources());
     di.cmdList.BindDescriptorSet(0, binder.GetDescriptorSetHandle());
 
-    di.cmdList.PushConstant(di.pushConstant, reinterpret_cast<const uint8_t*>(&di.pc));
+    if (di.pushConstant.byteSize <= sizeof(LocalPostProcessPushConstantStruct)) {
+        di.cmdList.PushConstant(di.pushConstant, reinterpret_cast<const uint8_t*>(&di.pc));
+    }
     di.cmdList.Draw(3u, 1u, 0u, 0u);
     di.cmdList.EndRenderPass();
 }

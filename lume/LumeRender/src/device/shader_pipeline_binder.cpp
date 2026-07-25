@@ -372,9 +372,8 @@ void ShaderPipelineBinder::SetUniformData(
 
 void ShaderPipelineBinder::SetPushConstantData(const array_view<const uint8_t> data)
 {
-    if ((pipelineLayout_.pushConstant.byteSize > 0) && (!data.empty())) {
-        const size_t maxByteSize = Math::min(pushData_.size_in_bytes(), data.size_bytes());
-        CloneData(pushData_.data(), pushData_.size_in_bytes(), data.data(), maxByteSize);
+    if ((pipelineLayout_.pushConstant.byteSize > 0) && (data.size_bytes() >= pushData_.size_in_bytes())) {
+        CloneData(pushData_.data(), pushData_.size_in_bytes(), data.data(), pushData_.size_in_bytes());
     }
 }
 

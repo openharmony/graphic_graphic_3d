@@ -110,6 +110,63 @@ void TestPipelineDescriptorSetBinder(const UTest::EngineResources& engine)
         descSetBinder.BindSamplers(0u, {&sampler.handle, 1});
     }
     {
+        DescriptorSetLayoutBinding bindings[2]{};
+        bindings[0].binding = 0u;
+        bindings[0].descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bindings[0].descriptorCount = ~0U;
+        bindings[1].binding = 1u;
+        bindings[1].descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bindings[1].descriptorCount = 1u;
+
+        DescriptorSetBinder descSetBinder{
+            RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, 0u), {bindings, 2}};
+        const auto resources = descSetBinder.GetDescriptorSetLayoutBindingResources();
+        ASSERT_FALSE(descSetBinder.GetDescriptorSetLayoutBindingValidity());
+        ASSERT_EQ(0u, resources.bindings.size());
+        ASSERT_EQ(0u, resources.buffers.size());
+    }
+    {
+        // a single binding with a huge descriptor count must be rejected as well (no overflowing sum needed)
+        DescriptorSetLayoutBinding binding{};
+        binding.binding = 0u;
+        binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        binding.descriptorCount = ~0U;
+
+        DescriptorSetBinder descSetBinder{
+            RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, 0u), {&binding, 1}};
+        const auto resources = descSetBinder.GetDescriptorSetLayoutBindingResources();
+        ASSERT_FALSE(descSetBinder.GetDescriptorSetLayoutBindingValidity());
+        ASSERT_EQ(0u, resources.bindings.size());
+        ASSERT_EQ(0u, resources.buffers.size());
+    }
+    {
+        // just above the per-set sanity cap (2^20) -> rejected
+        DescriptorSetLayoutBinding binding{};
+        binding.binding = 0u;
+        binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        binding.descriptorCount = 1048577U;
+
+        DescriptorSetBinder descSetBinder{
+            RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, 0u), {&binding, 1}};
+        const auto resources = descSetBinder.GetDescriptorSetLayoutBindingResources();
+        ASSERT_FALSE(descSetBinder.GetDescriptorSetLayoutBindingValidity());
+        ASSERT_EQ(0u, resources.bindings.size());
+        ASSERT_EQ(0u, resources.images.size());
+    }
+    {
+        // a large but reasonable descriptor array stays valid
+        DescriptorSetLayoutBinding binding{};
+        binding.binding = 0u;
+        binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        binding.descriptorCount = 1024U;
+
+        DescriptorSetBinder descSetBinder{
+            RenderHandleUtil::CreateHandle(RenderHandleType::DESCRIPTOR_SET, 0u), {&binding, 1}};
+        const auto resources = descSetBinder.GetDescriptorSetLayoutBindingResources();
+        ASSERT_TRUE(resources.bindings.size() == 1u);
+        ASSERT_EQ(1024u, resources.images.size());
+    }
+    {
         DescriptorSetLayoutBinding binding;
         binding.binding = 0u;
         binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM;

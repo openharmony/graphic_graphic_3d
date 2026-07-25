@@ -131,6 +131,10 @@ void RenderDataStoreDefaultLight::AddLight(const RenderLight& light)
             }
             renderLight.shadowIndex = shadowCount;  // shadow index in atlas
             lightCounts_.shadowCount = lightCounts_.spotShadow + lightCounts_.dirShadow;
+        } else {
+            // Shadow atlas full -> disable shadow to prevent overflow.
+            renderLight.lightUsageFlags &= ~RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT;
+            renderLight.shadowCameraIndex = ~0u;
         }
     }
     lights_.push_back(move(renderLight));

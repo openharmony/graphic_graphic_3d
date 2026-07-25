@@ -235,7 +235,15 @@ RenderNodeGraphLoader::LoadResult RenderNodeGraphLoader::Load(const string_view 
 
     const uint64_t byteLength = file->GetLength();
 
+    constexpr uint64_t MAX_RENDER_NODE_GRAPH_SIZE = 1U * 1024U * 1024U;
+    if (byteLength > MAX_RENDER_NODE_GRAPH_SIZE) {
+        return LoadResult("Render node graph file too large.");
+    }
+
     string raw(static_cast<size_t>(byteLength), string::value_type());
+    if (raw.size() != byteLength) {
+        return LoadResult("Failed to allocate file buffer.");
+    }
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_D("Error loading '%s'", string(uri).c_str());
         return LoadResult("Failed to read file.");

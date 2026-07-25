@@ -197,8 +197,8 @@ void ProcessShaderModule(ShaderBase& me, const ShaderModuleCreateInfo& createInf
         me.stg_.y = tgs.y;
         me.stg_.z = tgs.z;
     }
-    if (auto* ptr = createInfo.reflectionData.GetPushConstants(); ptr) {
-        Reader read{ptr};
+    if (const auto pushConstants = createInfo.reflectionData.GetPushConstants(); !pushConstants.empty()) {
+        Reader read{pushConstants.data(), pushConstants.size()};
         const auto constants = read.GetUint8();
         for (uint8_t i = 0U; i < constants; ++i) {
             Gles::PushConstantReflection refl;

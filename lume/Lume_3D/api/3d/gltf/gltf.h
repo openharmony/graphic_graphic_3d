@@ -291,7 +291,7 @@ public:
     virtual void ImportGLTF(const IGLTFData& data, GltfResourceImportFlags flags) = 0;
 
     /** Import GLTF2 data asynchronously, user is required to call Execute() from main thread until it returns true.
-     * The previous imported data will be discarded. */
+     * The previous imported data will be discarded. Caller must keep 'data' alive until import completes/cancels. */
     virtual void ImportGLTFAsync(const IGLTFData& data, GltfResourceImportFlags flags, Listener* listener) = 0;
 
     /** Advances the import process, needs to be called from the main thread when performing asynchronous import.

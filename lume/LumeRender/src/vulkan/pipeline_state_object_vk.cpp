@@ -109,8 +109,14 @@ void GetDescriptorSetFillData(const DeviceVk& deviceVk, const PipelineLayout& pi
             ds.descriptorSetLayoutOwnership[setIdx] = false;  // not owned, cannot be destroyed
         } else {
             constexpr VkDescriptorSetLayoutCreateFlags descriptorSetLayoutCreateFlags{0};
-            const auto bindingCount = static_cast<uint32_t>(descRef.bindings.size());
-            PLUGIN_ASSERT(bindingCount <= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+            auto bindingCount = static_cast<uint32_t>(descRef.bindings.size());
+            if (bindingCount > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+                // Clamp instead of overflowing the fixed temp array (the assert above is a release no-op).
+                PLUGIN_LOG_E("Descriptor set binding count %u exceeds maximum %u, clamping",
+                    bindingCount,
+                    PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+                bindingCount = PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT;
+            }
             for (uint32_t bindingOpIdx = 0; bindingOpIdx < bindingCount; ++bindingOpIdx) {
                 const auto& bindingRef = descRef.bindings[bindingOpIdx];
                 const auto shaderStageFlags = (VkShaderStageFlags)bindingRef.shaderStageFlags;

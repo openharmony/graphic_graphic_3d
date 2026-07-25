@@ -671,8 +671,11 @@ void GpuShaderProgramGLES::FilterInputs(GpuShaderProgramGLES& ret)
     }
 
     const auto& list = ret.reflection_.vertexInputDeclarationView.attributeDescriptions;
-    PLUGIN_ASSERT(list.size() < Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES);
     for (size_t i = 0; i < list.size(); i++) {
+        if (i >= Gles::ResourceLimits::MAX_VERTEXINPUT_ATTRIBUTES) {
+            PLUGIN_ASSERT_MSG(false, "More vertex input attributes than MAX_VERTEXINPUT_ATTRIBUTES");
+            break;
+        }
         for (uint32_t j = 0; j < inputsInUse; j++) {
             if (list[i].location == inputLocations[j]) {
                 ret.plat_.inputs[i] = static_cast<int32_t>(i);

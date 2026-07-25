@@ -19,6 +19,7 @@
 
 #include <render/datastore/intf_render_data_store_manager.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/intf_render_context.h>
 #include <render/namespace.h>
 #include <render/nodecontext/intf_node_context_pso_manager.h>
 #include <render/nodecontext/intf_render_command_list.h>
@@ -202,8 +203,8 @@ void CopyBuffersToImages(const IRenderNodeGpuResourceManager& gpuResourceMgr, IR
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), bufferImageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), bufferImageCopies.size() - beginIndex);
         const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             // barriers are only done for dynamic resources automatically (e.g. when copying to same image multiple
@@ -262,8 +263,8 @@ void CopyImagesToBuffersImpl(IRenderCommandList& cmdList, const vector<StagingCo
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(bufferImageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(bufferImageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), bufferImageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), bufferImageCopies.size() - beginIndex);
         const auto copies = array_view(bufferImageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             cmdList.CopyImageToBuffer(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
@@ -278,8 +279,8 @@ void CopyImagesToImagesImpl(
         if (ref.invalidOperation) {
             continue;
         }
-        const uint32_t beginIndex = Math::min(ref.beginIndex, static_cast<uint32_t>(imageCopies.size()));
-        const uint32_t count = Math::min(ref.count, static_cast<uint32_t>(imageCopies.size() - beginIndex));
+        const size_t beginIndex = Math::min(static_cast<size_t>(ref.beginIndex), imageCopies.size());
+        const size_t count = Math::min(static_cast<size_t>(ref.count), imageCopies.size() - beginIndex);
         const auto copies = array_view(imageCopies.data() + beginIndex, count);
         for (const auto& copyRef : copies) {
             cmdList.CopyImageToImage(ref.srcHandle.GetHandle(), ref.dstHandle.GetHandle(), copyRef);
@@ -291,6 +292,10 @@ void CopyImagesToImagesImpl(
 void RenderStaging::Init(IRenderNodeContextManager& renderNodeContextMgr)
 {
     renderNodeContextMgr_ = &renderNodeContextMgr;
+    const auto renderCreateInfo = renderNodeContextMgr.GetRenderContext().GetCreateInfo();
+
+    rtEnabled_ =
+        (renderCreateInfo.createFlags & RenderCreateInfo::CreateInfoFlagBits::CREATE_INFO_RAY_TRACING_BIT) != 0;
 }
 
 void RenderStaging::PreExecuteFrame(const uint32_t clearByteSize)
@@ -643,7 +648,7 @@ void RenderStaging::CopyBuffersToBuffers(IRenderCommandList& cmdList, const Stag
             if (ref.invalidOperation) {
                 continue;
             }
-            if (ref.beginIndex + ref.count > bufferCopies.size()) {
+            if (static_cast<uint64_t>(ref.beginIndex) + ref.count > bufferCopies.size()) {
                 continue;
             }
             const auto copies = array_view(bufferCopies.data() + ref.beginIndex, ref.count);
@@ -747,7 +752,7 @@ void RenderStaging::ClearImagesGles(IRenderCommandList& cmdList, const IRenderNo
             continue;
         }
         const uint32_t imgByteSize = static_cast<uint32_t>(imgByteSize64);
-        if ((additionalCopyBuffer_.byteOffset + imgByteSize) > additionalCopyBuffer_.byteSize) {
+        if ((static_cast<uint64_t>(additionalCopyBuffer_.byteOffset) + imgByteSize) > additionalCopyBuffer_.byteSize) {
             continue;
         }
 #if (RENDER_VALIDATION_ENABLED == 1)
@@ -832,6 +837,10 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
         dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if (rtEnabled_) {
+            dstBarrier.pipelineStageFlags |=
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT;
+        }
         dstBarrier.accessFlags |= AccessFlagBits::CORE_ACCESS_UNIFORM_READ_BIT;
     }
     if (desc.usageFlags & (BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT |
@@ -839,6 +848,10 @@ pair<BufferResourceBarrier, BufferResourceBarrier> RenderStaging::GetBufferPostT
         dstBarrier.pipelineStageFlags |= PipelineStageFlagBits::CORE_PIPELINE_STAGE_VERTEX_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                          PipelineStageFlagBits::CORE_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        if (rtEnabled_) {
+            dstBarrier.pipelineStageFlags |=
+                PipelineStageFlagBits::CORE_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT;
+        }
         dstBarrier.accessFlags |=
             AccessFlagBits::CORE_ACCESS_SHADER_READ_BIT | AccessFlagBits::CORE_ACCESS_SHADER_WRITE_BIT;
     }

@@ -976,6 +976,12 @@ vector<Entity> ExportGltfMeshes(const IMeshComponentManager& meshManager, const 
         if (const auto [originalGltf, meshIndex] = ResolveGltfAndResourceIndex(uri, fileManager, originalGltfs);
             originalGltf && meshIndex < originalGltf->meshes.size()) {
             const auto meshHandle = meshManager.Read(meshEntity);
+            if (!meshHandle) {
+                // URI resolves to a valid original glTF mesh, but the entity has no MeshComponent.
+                ResetInvalidMeshes(result.data->nodes, exportMesh.get());
+                exportMesh.reset();
+                continue;
+            }
 
             const auto& submeshes = meshHandle->submeshes;
             const auto& originalPrimitives = originalGltf->meshes[meshIndex]->primitives;
@@ -1307,9 +1313,9 @@ void ExportImageData(IFileManager& fileManager, ExportResult& result, BufferHelp
         if (!image->uri.empty()) {
             // First check if the URI is from ResourceManager in the form of <file URI/resource type/resource
             // index>. If that fails, try to open the URI as a file.
-            if (const auto [originalGltf, imageIndex] =
-                    ResolveGltfAndResourceIndex(image->uri, fileManager, originalGltfs);
-                originalGltf && imageIndex < originalGltf->images.size()) {
+            const auto [originalGltf, imageIndex] = ResolveGltfAndResourceIndex(image->uri, fileManager, originalGltfs);
+            const bool resolvedImage = originalGltf && (imageIndex < originalGltf->images.size());
+            if (resolvedImage && originalGltf->images[imageIndex]->bufferView) {
                 // We can store data from the loaded bufferView.
                 auto& originalImage = originalGltf->images[imageIndex];
                 image->bufferView = bufferHelper.StoreBufferView(
@@ -1317,6 +1323,9 @@ void ExportImageData(IFileManager& fileManager, ExportResult& result, BufferHelp
                 image->bufferView->target = BufferTarget::NOT_DEFINED;
                 image->type = originalImage->type;
                 image->uri.clear();
+            } else if (resolvedImage && IsDataURI(originalGltf->images[imageIndex]->uri)) {
+                // Data-URI images have no bufferView. Just copy the URI.
+                image->uri = originalGltf->images[imageIndex]->uri;
             } else if (auto imageFile = fileManager.OpenFile(image->uri); imageFile) {
                 auto uri = string_view(image->uri);
                 // Leave only the file extension.

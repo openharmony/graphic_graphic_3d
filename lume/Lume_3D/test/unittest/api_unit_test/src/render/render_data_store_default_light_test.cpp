@@ -143,6 +143,53 @@ UNIT_TEST(API_RenderDataStoreDefaultLight, GetAddLightTest, testing::ext::TestSi
 }
 
 /**
+ * @tc.name: ShadowAtlasOverflowClearsShadowBit
+ * @tc.desc: When more shadow-casting lights are added than the shadow atlas can hold (MAX_SHADOW_COUNT),
+ *           the over-capacity lights must be kept but have their shadow usage bit cleared. Leaving the
+ *           shadow bit set with the default shadowIndex (~0u) overflows xOffset = shadowIndex * res.x and
+ *           indexes set0[shadowPassIdx] past MAX_SHADOW_COUNT in the shadow render slot.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_RenderDataStoreDefaultLight, ShadowAtlasOverflowClearsShadowBit, testing::ext::TestSize.Level1)
+{
+    UTest::TestContext* testContext = UTest::GetTestContext();
+    auto renderContext = testContext->renderContext;
+
+    auto& dsManager = renderContext->GetRenderDataStoreManager();
+    constexpr BASE_NS::string_view dataStoreName = "DataStoreDefaultLight0";
+    auto dataStore = dsManager.Create(IRenderDataStoreDefaultLight::UID, dataStoreName.data());
+    ASSERT_TRUE(dataStore);
+    auto dataStoreDefaultLight = static_cast<IRenderDataStoreDefaultLight*>(dataStore.get());
+
+    constexpr uint32_t shadowLightCount = DefaultMaterialLightingConstants::MAX_SHADOW_COUNT + 4u;
+    for (uint32_t i = 0; i < shadowLightCount; ++i) {
+        RenderLight light;
+        light.color = {1.0f, 1.0f, 1.0f, 1.0f};
+        light.lightUsageFlags =
+            RenderLight::LIGHT_USAGE_DIRECTIONAL_LIGHT_BIT | RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT;
+        light.id = i;
+        dataStoreDefaultLight->AddLight(light);
+    }
+
+    auto lights = dataStoreDefaultLight->GetLights();
+    ASSERT_EQ(shadowLightCount, lights.size());  // lights are kept, only their shadow is dropped
+    uint32_t shadowLights = 0u;
+    for (const auto& light : lights) {
+        if (light.lightUsageFlags & RenderLight::LIGHT_USAGE_SHADOW_LIGHT_BIT) {
+            ++shadowLights;
+            // every retained shadow light must have a valid atlas slot, never the default ~0u sentinel
+            EXPECT_LT(light.shadowIndex, DefaultMaterialLightingConstants::MAX_SHADOW_COUNT);
+        }
+    }
+    EXPECT_EQ(DefaultMaterialLightingConstants::MAX_SHADOW_COUNT, shadowLights);
+
+    // Destruction is deferred
+    dataStore.reset();
+    renderContext->GetRenderer().RenderFrame({});
+    EXPECT_FALSE(dsManager.GetRenderDataStore(dataStoreName));
+}
+
+/**
  * @tc.name: ShadowQuaityResolutionTest
  * @tc.desc: Tests for Shadow Quaity Resolution Test. [AUTO-GENERATED]
  * @tc.type: FUNC

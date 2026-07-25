@@ -358,7 +358,8 @@ void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cm
             cmdList.BindDescriptorSet(0u, binder.GetDescriptorSetHandle());
         }
 
-        if (renderData.pipelineLayout.pushConstant.byteSize > 0) {
+        if ((renderData.pipelineLayout.pushConstant.byteSize > 0) &&
+            (renderData.pipelineLayout.pushConstant.byteSize <= sizeof(LocalPostProcessPushConstantStruct))) {
             cmdList.PushConstant(renderData.pipelineLayout.pushConstant, arrayviewU8(pc).data());
         }
 
@@ -390,7 +391,8 @@ void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cm
                 cmdList.BindDescriptorSet(0u, binder.GetDescriptorSetHandle());
             }
 
-            if (renderData.pipelineLayout.pushConstant.byteSize > 0) {
+            if ((renderData.pipelineLayout.pushConstant.byteSize > 0) &&
+                (renderData.pipelineLayout.pushConstant.byteSize <= sizeof(LocalPostProcessPushConstantStruct))) {
                 cmdList.PushConstant(renderData.pipelineLayout.pushConstant, arrayviewU8(pc).data());
             }
 
@@ -418,7 +420,8 @@ void RenderPostProcessMotionBlurNode::ExecuteTileVelocity(IRenderCommandList& cm
                 cmdList.BindDescriptorSet(0u, binder.GetDescriptorSetHandle());
             }
 
-            if (renderData.pipelineLayout.pushConstant.byteSize > 0) {
+            if ((renderData.pipelineLayout.pushConstant.byteSize > 0) &&
+                (renderData.pipelineLayout.pushConstant.byteSize <= sizeof(LocalPostProcessPushConstantStruct))) {
                 cmdList.PushConstant(renderData.pipelineLayout.pushConstant, arrayviewU8(pc).data());
             }
 

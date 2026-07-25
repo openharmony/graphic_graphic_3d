@@ -14,12 +14,15 @@
  */
 
 #include "device/shader_reflection_data.h"
+#include "device/gpu_program_util.h"
 
 #include <algorithm>
 #include <array>
 #include <limits>
 
 #include <base/util/algorithm.h>
+
+#include "util/log.h"
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
@@ -176,6 +179,15 @@ bool ReadDescriptorSetsV0(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
                 (binding.descriptorType == (DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE & 0xffff))) {
                 binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE;
             }
+            if (binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT &&
+                binding.descriptorType != DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+                PLUGIN_LOG_ONCE_W("lsb_invalid_descriptor_type",
+                    "RENDER_VALIDATION: invalid descriptor type %u, set to MAX_ENUM",
+                    static_cast<uint32_t>(binding.descriptorType));
+#endif
+                binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM;
+            }
             binding.descriptorCount = static_cast<uint32_t>(Read16U(ptr));
             binding.shaderStageFlags = flags;
         }
@@ -214,6 +226,15 @@ bool ReadDescriptorSetsV1(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
             if ((binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) &&
                 (binding.descriptorType == (DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE & 0xffff))) {
                 binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE;
+            }
+            if (binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT &&
+                binding.descriptorType != DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+                PLUGIN_LOG_ONCE_W("lsb_invalid_descriptor_type",
+                    "RENDER_VALIDATION: invalid descriptor type %u, set to MAX_ENUM",
+                    static_cast<uint32_t>(binding.descriptorType));
+#endif
+                binding.descriptorType = DescriptorType::CORE_DESCRIPTOR_TYPE_MAX_ENUM;
             }
             binding.descriptorCount = static_cast<uint32_t>(Read16U(ptr));
             const auto imageDimension = Read8U(ptr);
@@ -282,7 +303,16 @@ PipelineLayout ShaderReflectionData::GetPipelineLayout() const
         const auto constants = Read8U(ptr);
         if (constants && (size_[INDEX_PUSH_CONSTANTS] >= (sizeof(uint8_t) + sizeof(uint16_t)))) {
             pipelineLayout.pushConstant.shaderStageFlags = header.type;
-            pipelineLayout.pushConstant.byteSize = static_cast<uint32_t>(Read16U(ptr));
+            const auto rawByteSize = static_cast<uint32_t>(Read16U(ptr));
+            pipelineLayout.pushConstant.byteSize =
+                std::min(rawByteSize, static_cast<uint32_t>(PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE));
+#if (RENDER_VALIDATION_ENABLED == 1)
+            if (rawByteSize != pipelineLayout.pushConstant.byteSize) {
+                PLUGIN_LOG_W("RENDER_VALIDATION: push constant byte size %u exceeds maximum %u, clamped",
+                    rawByteSize,
+                    PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE);
+            }
+#endif
         }
     }
     if (!header.offsetDescriptorSets || (size_[INDEX_DESCRIPTOR_SETS] < sizeof(uint16_t)) ||
@@ -337,6 +367,15 @@ BASE_NS::vector<ShaderSpecialization::Constant> ShaderReflectionData::GetSpecial
         constant.shaderStage = header.type;
         constant.id = Read32U(ptr);
         constant.type = static_cast<ShaderSpecialization::Constant::Type>(Read32U(ptr));
+        if (constant.type > ShaderSpecialization::Constant::Type::FLOAT) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_ONCE_W("lsb_invalid_spec_type",
+                "RENDER_VALIDATION: invalid specialization constant type %u, skipped",
+                static_cast<uint32_t>(constant.type));
+#endif
+            constants.pop_back();
+            continue;
+        }
         constant.offset = 0;
     }
 
@@ -363,10 +402,22 @@ BASE_NS::vector<VertexInputDeclaration::VertexInputAttributeDescription> ShaderR
     }
     inputs.reserve(size);
     for (auto i = 0U; i < size; ++i) {
+        if (inputs.size() >= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT) {
+            break;
+        }
+        const auto location = static_cast<uint32_t>(Read16U(ptr));
+        const auto formatRaw = Read16U(ptr);
+        if (GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(formatRaw)) == 0u) {
+#if (RENDER_VALIDATION_ENABLED == 1)
+            PLUGIN_LOG_ONCE_W(
+                "lsb_invalid_vertex_input", "RENDER_VALIDATION: invalid vertex input format %u, skipped", formatRaw);
+#endif
+            continue;
+        }
         VertexInputDeclaration::VertexInputAttributeDescription& desc = inputs.emplace_back();
-        desc.location = static_cast<uint32_t>(Read16U(ptr));
-        desc.binding = desc.location;
-        desc.format = static_cast<BASE_NS::Format>(Read16U(ptr));
+        desc.location = location;
+        desc.binding = location;
+        desc.format = static_cast<BASE_NS::Format>(formatRaw);
         desc.offset = 0;
     }
 
@@ -390,21 +441,23 @@ BASE_NS::Math::UVec3 ShaderReflectionData::GetLocalSize() const
     return sizes;
 }
 
-const uint8_t* ShaderReflectionData::GetPushConstants() const
+BASE_NS::array_view<const uint8_t> ShaderReflectionData::GetPushConstants() const
 {
-    const uint8_t* ptr = nullptr;
     if (reflectionData_.size() < sizeof(ReflectionHeader)) {
-        return ptr;
+        return {};
     }
     const ReflectionHeader& header = *reinterpret_cast<const ReflectionHeader*>(reflectionData_.data());
     // constants on/off is uint8 and byte size of constants is uint16
-    if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= sizeof(uint8_t) + sizeof(uint16_t)) &&
+    constexpr size_t headerBytes = sizeof(uint8_t) + sizeof(uint16_t);
+    if (header.offsetPushConstants && (size_[INDEX_PUSH_CONSTANTS] >= headerBytes) &&
         (header.offsetPushConstants + size_t(size_[INDEX_PUSH_CONSTANTS])) <= reflectionData_.size()) {
         const auto constants = *(reflectionData_.data() + header.offsetPushConstants);
         if (constants) {
-            ptr = reflectionData_.data() + header.offsetPushConstants + sizeof(uint8_t) + sizeof(uint16_t);
+            // view spans only the bytes after the 3-byte header, bounding any reader walk to the section
+            return {reflectionData_.data() + header.offsetPushConstants + headerBytes,
+                size_t(size_[INDEX_PUSH_CONSTANTS]) - headerBytes};
         }
     }
-    return ptr;
+    return {};
 }
 RENDER_END_NAMESPACE()

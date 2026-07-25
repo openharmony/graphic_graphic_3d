@@ -122,10 +122,18 @@ struct DeviceCreateInfo {
     const BackendExtra* backendConfiguration{nullptr};
 };
 
+/** Acceleration structure properties */
+struct AccelerationStructureProperties {
+    /** Minimum scratch buffer offset alignment for acceleration structure builds. Defaults to 1 (no alignment). */
+    uint32_t minScratchOffsetAlignment{1U};
+};
+
 /** Common device properties for various features */
 struct CommonDeviceProperties {
     /** Fragment shading rate properties */
     FragmentShadingRateProperties fragmentShadingRateProperties;
+    /** Acceleration structure properties */
+    AccelerationStructureProperties accelerationStructureProperties;
 };
 
 /** @ingroup group_gfx_ilowleveldevice */

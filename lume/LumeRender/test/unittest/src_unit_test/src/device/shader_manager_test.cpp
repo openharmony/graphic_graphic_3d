@@ -866,7 +866,7 @@ UNIT_TEST(SRC_ShaderManager, ShaderReflectionDataTest, testing::ext::TestSize.Le
         };
         ShaderReflectionData srd{{data, countof(data)}};
         EXPECT_TRUE(srd.IsValid());
-        EXPECT_FALSE(srd.GetPushConstants());
+        EXPECT_TRUE(srd.GetPushConstants().empty());
         EXPECT_TRUE(srd.GetSpecializationConstants().empty());
         for (const auto& layout : srd.GetPipelineLayout().descriptorSetLayouts) {
             EXPECT_EQ(layout.set, PipelineLayoutConstants::INVALID_INDEX);
@@ -895,20 +895,21 @@ UNIT_TEST(SRC_ShaderManager, ShaderReflectionDataTest, testing::ext::TestSize.Le
             0,  // offsetLocalSize
             1,  // push constants available
             4,
-            0  // size in bytes
+            0,  // size in bytes
+            1   // push constant record byte(s) after the 3-byte header
         };
         {
-            // available but not enough data
+            // header present but no record bytes after it: GetPushConstants view is empty
             ShaderReflectionData srd{{data, countof(data) - 1U}};
             EXPECT_TRUE(srd.IsValid());
             EXPECT_EQ(CORE_SHADER_STAGE_FRAGMENT_BIT, srd.GetStageFlags());
-            EXPECT_FALSE(srd.GetPushConstants());
+            EXPECT_TRUE(srd.GetPushConstants().empty());
         }
         {
             ShaderReflectionData srd{{data, countof(data)}};
             EXPECT_TRUE(srd.IsValid());
             EXPECT_EQ(CORE_SHADER_STAGE_FRAGMENT_BIT, srd.GetStageFlags());
-            EXPECT_TRUE(srd.GetPushConstants());
+            EXPECT_FALSE(srd.GetPushConstants().empty());
             EXPECT_EQ(srd.GetPipelineLayout().pushConstant.byteSize, 4U);
         }
     }
@@ -1248,7 +1249,7 @@ UNIT_TEST(SRC_ShaderManager, ShaderReflectionDataV0Test, testing::ext::TestSize.
         EXPECT_EQ(inputs[0].location, 0U);
         EXPECT_EQ(inputs[0].format, Format::BASE_FORMAT_R32G32_SFLOAT);  // == 103
         BASE_NS::Math::UVec3 localSize = srd.GetLocalSize();
-        const uint8_t* push = srd.GetPushConstants();
+        const auto push = srd.GetPushConstants();
         EXPECT_EQ(srd.GetLocalSize(), Math::UVec3());
     }
 }

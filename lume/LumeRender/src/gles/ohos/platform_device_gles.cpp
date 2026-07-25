@@ -169,9 +169,8 @@ BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecific
         platformData.alignedByteSize = finalDesc.byteSize;
         platformData.bindMemoryByteSize = finalDesc.byteSize;
         platformData.eglClientBuffer = reinterpret_cast<uintptr_t>(nativeWindowBufferPtr);
-        auto buffer = BASE_NS::make_unique<GpuBufferGLES>(*this, finalDesc, platformData);
-        OH_NativeWindow_DestroyNativeWindowBuffer(nativeWindowBufferPtr);
-        return buffer;
+        // nativeWindowBufferPtr ownership transfers to the GpuBufferGLES.
+        return BASE_NS::make_unique<GpuBufferGLES>(*this, finalDesc, platformData);
     }
 #endif
 #if RENDER_HAS_GL_BACKEND
@@ -179,5 +178,14 @@ BASE_NS::unique_ptr<GpuBuffer> DeviceGLES::CreateGpuBuffer(const BackendSpecific
     }
 #endif
     return {};
+}
+
+void DeviceGLES::DestroyExternalBuffer(uintptr_t eglClientBuffer)
+{
+#if RENDER_HAS_GLES_BACKEND
+    if (eglClientBuffer) {
+        OH_NativeWindow_DestroyNativeWindowBuffer(reinterpret_cast<OHNativeWindowBuffer*>(eglClientBuffer));
+    }
+#endif
 }
 RENDER_END_NAMESPACE()

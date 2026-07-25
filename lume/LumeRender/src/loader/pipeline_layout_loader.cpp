@@ -159,7 +159,11 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
         for (uint32_t idx = 0; idx < inputDescriptorSetCount; ++idx) {
             const uint32_t setIndex = descriptorSetLayouts[idx].set;
             if (setIndex < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-                pl.descriptorSetLayouts[setIndex] = move(descriptorSetLayouts[idx]);
+                auto& dsl = descriptorSetLayouts[idx];
+                if (dsl.bindings.size() > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+                    dsl.bindings.resize(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
+                }
+                pl.descriptorSetLayouts[setIndex] = move(dsl);
             }
         }
     } else {
@@ -214,8 +218,16 @@ PipelineLayoutLoader::LoadResult PipelineLayoutLoader::Load(IFileManager& fileMa
 
     const uint64_t byteLength = file->GetLength();
 
+    constexpr uint64_t MAX_PIPELINE_LAYOUT_SIZE = 1U * 1024U * 1024U;
+    if (byteLength > MAX_PIPELINE_LAYOUT_SIZE) {
+        return LoadResult("Pipeline layout file too large.");
+    }
+
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        return LoadResult("Failed to allocate file buffer.");
+    }
 
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_E("Error loading '%s'", string(uri).c_str());

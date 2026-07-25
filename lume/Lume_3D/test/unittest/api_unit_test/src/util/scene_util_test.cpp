@@ -321,6 +321,95 @@ UNIT_TEST(API_SceneUtil, RetargetSkinAnimationTest, testing::ext::TestSize.Level
 }
 
 /**
+ * @tc.name: ShareSkinJointCountClamped
+ * @tc.desc: A SkinJointsComponent.count larger than the fixed jointEntities array capacity must not cause an
+ *           out-of-bounds read when ShareSkin builds array_views over the joint entities.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_SceneUtil, ShareSkinJointCountClamped, testing::ext::TestSize.Level1)
+{
+    UTest::TestContext* testContext = UTest::GetTestContext();
+    auto graphicsContext = testContext->graphicsContext;
+    auto ecs = testContext->ecs;
+
+    auto& sceneUtil = graphicsContext->GetSceneUtil();
+    auto skinJointsManager = GetManager<ISkinJointsComponentManager>(*ecs);
+    ASSERT_NE(nullptr, skinJointsManager);
+
+    Entity joint0 = CreateJoint(*ecs, "joint0");
+
+    // Public, unbounded count far past the fixed array capacity; large enough that the over-read hits an ASan redzone.
+    constexpr size_t oversizedCount = 1U << 20U;
+
+    Entity sourceEntity = ecs->GetEntityManager().Create();
+    skinJointsManager->Create(sourceEntity);
+    if (auto scopedHandle = skinJointsManager->Write(sourceEntity); scopedHandle) {
+        scopedHandle->count = oversizedCount;
+        scopedHandle->jointEntities[0] = joint0;
+    }
+
+    Entity targetEntity = ecs->GetEntityManager().Create();
+    skinJointsManager->Create(targetEntity);
+    if (auto scopedHandle = skinJointsManager->Write(targetEntity); scopedHandle) {
+        scopedHandle->count = oversizedCount;
+        scopedHandle->jointEntities[0] = joint0;
+    }
+
+    // Without the clamp this over-reads the joint entities array.
+    sceneUtil.ShareSkin(*ecs, targetEntity, sourceEntity);
+
+    // The call completes with the count within the array capacity.
+    if (auto scopedHandle = skinJointsManager->Read(targetEntity); scopedHandle) {
+        EXPECT_GE(scopedHandle->count, 1U);
+    }
+}
+
+/**
+ * @tc.name: RetargetSkinAnimationJointCountClamped
+ * @tc.desc: A SkinJointsComponent.count larger than the fixed jointEntities array capacity must not cause an
+ *           out-of-bounds read when RetargetSkinAnimation builds array_views over the joint entities.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_SceneUtil, RetargetSkinAnimationJointCountClamped, testing::ext::TestSize.Level1)
+{
+    UTest::TestContext* testContext = UTest::GetTestContext();
+    auto graphicsContext = testContext->graphicsContext;
+    auto ecs = testContext->ecs;
+
+    auto& sceneUtil = graphicsContext->GetSceneUtil();
+    auto skinJointsManager = GetManager<ISkinJointsComponentManager>(*ecs);
+    ASSERT_NE(nullptr, skinJointsManager);
+    auto animationManager = GetManager<IAnimationComponentManager>(*ecs);
+    ASSERT_NE(nullptr, animationManager);
+
+    Entity joint0 = CreateJoint(*ecs, "joint0");
+    // Public, unbounded count far past the fixed array capacity; large enough that the over-read hits an ASan redzone.
+    constexpr size_t oversizedCount = 1U << 20U;
+
+    Entity sourceEntity = ecs->GetEntityManager().Create();
+    skinJointsManager->Create(sourceEntity);
+    if (auto scopedHandle = skinJointsManager->Write(sourceEntity); scopedHandle) {
+        scopedHandle->count = oversizedCount;
+        scopedHandle->jointEntities[0] = joint0;
+    }
+
+    Entity targetEntity = ecs->GetEntityManager().Create();
+    skinJointsManager->Create(targetEntity);
+    if (auto scopedHandle = skinJointsManager->Write(targetEntity); scopedHandle) {
+        scopedHandle->count = oversizedCount;
+        scopedHandle->jointEntities[0] = joint0;
+    }
+
+    // A bare animation component passes the HasComponent gate and reaches the array_view construction.
+    Entity animationEntity = ecs->GetEntityManager().Create();
+    animationManager->Create(animationEntity);
+    ecs->ProcessEvents();
+
+    // Without the clamp this over-reads the joint entities array.
+    sceneUtil.RetargetSkinAnimation(*ecs, targetEntity, sourceEntity, animationEntity);
+}
+
+/**
  * @tc.name: CameraLookAt
  * @tc.desc: Tests for Camera Look At. [AUTO-GENERATED]
  * @tc.type: FUNC

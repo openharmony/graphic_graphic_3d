@@ -126,6 +126,9 @@ public:
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const GpuAccelerationStructureDesc& desc) override;
     BASE_NS::unique_ptr<GpuBuffer> CreateGpuBuffer(const BackendSpecificBufferDesc& desc) override;
 
+    // Release the external client buffer backing a GpuBufferGLES; called from ~GpuBufferGLES, no-op where unowned.
+    void DestroyExternalBuffer(uintptr_t eglClientBuffer);
+
     // Create gpu image resources
     BASE_NS::unique_ptr<GpuImage> CreateGpuImage(const GpuImageDesc& desc) override;
     BASE_NS::unique_ptr<GpuImage> CreateGpuImageView(

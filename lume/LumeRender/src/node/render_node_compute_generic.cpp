@@ -157,11 +157,13 @@ void RenderNodeComputeGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     // push constants
     if (useDataStorePushConstant_) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-        const auto dataStore = static_cast<const IRenderDataStorePod*>(
-            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName.c_str()));
+        const IRenderDataStore* ds =
+            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName.c_str());
+        const auto dataStore =
+            (ds && (ds->GetUid() == IRenderDataStorePod::UID)) ? static_cast<const IRenderDataStorePod*>(ds) : nullptr;
         if (dataStore) {
             const auto dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-            if (!dataView.empty()) {
+            if (dataView.size_bytes() >= pipelineData_.sd.pipelineLayoutData.pushConstant.byteSize) {
                 cmdList.PushConstant(pipelineData_.sd.pipelineLayoutData.pushConstant, dataView.data());
             }
         }
@@ -185,8 +187,10 @@ RenderHandle RenderNodeComputeGeneric::GetPsoHandle(IRenderNodeContextManager& r
         return pipelineData_.pso;  // early out
     }
     const auto& renderDataStoreMgr = renderNodeContextMgr.GetRenderDataStoreManager();
-    const auto dataStore = static_cast<const IRenderDataStorePod*>(
-        renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName.c_str()));
+    const IRenderDataStore* ds =
+        renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName.c_str());
+    const auto dataStore =
+        (ds && (ds->GetUid() == IRenderDataStorePod::UID)) ? static_cast<const IRenderDataStorePod*>(ds) : nullptr;
     if (!dataStore) {
         return pipelineData_.pso;  // early out
     }

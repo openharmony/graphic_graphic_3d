@@ -84,10 +84,16 @@ VertexInputDeclarationLoader::LoadResult LoadState(const json::value& jsonData, 
         }
         for (uint32_t idx = 0; idx < vertexInputDeclarationData_.attributeDescriptionCount; ++idx) {
             vertexInputDeclarationData_.attributeDescriptions[idx] = attributes[idx];
-            if (vertexInputDeclarationData_.attributeDescriptions[idx].format == Format::BASE_FORMAT_UNDEFINED) {
+            const auto& attribRef = vertexInputDeclarationData_.attributeDescriptions[idx];
+            if (attribRef.format == Format::BASE_FORMAT_UNDEFINED) {
                 result.success = false;
                 result.error += "undefined format for vertex input attribute\n";
                 PLUGIN_LOG_E("undefined format in vertex input attribute (%u), in %s", idx, uri.data());
+            }
+            if ((attribRef.binding != ~0u) && (attribRef.binding >= PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT)) {
+                result.success = false;
+                result.error += "vertex input attribute binding out of range\n";
+                PLUGIN_LOG_E("vertex input attribute binding (%u) out of range, in %s", attribRef.binding, uri.data());
             }
         }
     }
@@ -164,8 +170,16 @@ VertexInputDeclarationLoader::LoadResult VertexInputDeclarationLoader::Load(
 
     const uint64_t byteLength = file->GetLength();
 
+    constexpr uint64_t MAX_VERTEX_INPUT_DECLARATION_SIZE = 1U * 1024U * 1024U;
+    if (byteLength > MAX_VERTEX_INPUT_DECLARATION_SIZE) {
+        return LoadResult("Vertex input declaration file too large.");
+    }
+
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        return LoadResult("Failed to allocate file buffer.");
+    }
 
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_E("Error loading '%s'", string(uri).c_str());

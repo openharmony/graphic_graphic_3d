@@ -124,7 +124,8 @@ void RenderNodeBackBuffer::ExecuteFrame(IRenderCommandList& cmdList)
     const auto& gpuResourceMgr = renderNodeContextMgr_->GetGpuResourceManager();
     const GpuImageDesc dstImageDesc = gpuResourceMgr.GetImageDescriptor(dstImageHandle);
 
-    if (pipelineLayout_.pushConstant.byteSize > 0) {
+    if ((pipelineLayout_.pushConstant.byteSize > 0) &&
+        (pipelineLayout_.pushConstant.byteSize <= sizeof(PostProcessTonemapStruct))) {
         const PostProcessTonemapStruct pushData =
             FillPushConstant(dstImageDesc, currentRenderPostProcessConfiguration_);
         cmdList.PushConstant(pipelineLayout_.pushConstant, reinterpret_cast<const uint8_t*>(&pushData));
@@ -154,13 +155,14 @@ PostProcessConfiguration RenderNodeBackBuffer::GetPostProcessConfiguration(
     const IRenderNodeRenderDataStoreManager& dataStoreMgr) const
 {
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
-        auto const dataStore = static_cast<const IRenderDataStorePod*>(
-            dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
+        const IRenderDataStore* ds = dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
+        // validate real type before downcasting
+        auto const dataStore =
+            (ds && (ds->GetUid() == IRenderDataStorePod::UID)) ? static_cast<const IRenderDataStorePod*>(ds) : nullptr;
         if (dataStore) {
             auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-            const auto* data = (const PostProcessConfiguration*)dataView.data();
-            if (data) {
-                return *data;
+            if (dataView.size_bytes() == sizeof(PostProcessConfiguration)) {
+                return *reinterpret_cast<const PostProcessConfiguration*>(dataView.data());
             }
         }
     }

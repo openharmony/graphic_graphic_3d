@@ -23,6 +23,7 @@
 
 #include "gles/device_gles.h"
 #include "gles/gl_functions.h"
+#include "util/align_util.h"
 #include "util/log.h"
 
 #define IS_BIT(value, bit) ((((value) & (bit)) == (bit)) ? (GLboolean)GL_TRUE : (GLboolean)GL_FALSE)
@@ -114,7 +115,8 @@ GpuBufferGLES::GpuBufferGLES(Device& device, const GpuBufferDesc& desc)
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &minAlignment);
 
     minAlignment = minAlignment > 0 ? minAlignment : 1;
-    plat_.alignedBindByteSize = ((plat_.bindMemoryByteSize + (minAlignment - 1)) / minAlignment) * minAlignment;
+    const uint32_t align = static_cast<uint32_t>(minAlignment);
+    plat_.alignedBindByteSize = Align(plat_.bindMemoryByteSize, align);
     plat_.alignedByteSize = plat_.alignedBindByteSize;
 
     if (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER) {
@@ -205,6 +207,9 @@ GpuBufferGLES::~GpuBufferGLES()
         }
         device_.DeleteBuffer(plat_.buffer);
     }
+
+    // Release the external buffer backing the GL buffer, only after the GL buffer is deleted above.
+    device_.DestroyExternalBuffer(plat_.eglClientBuffer);
 
 #if (RENDER_PERF_ENABLED == 1)
     RecordAllocation(-static_cast<int64_t>(plat_.alignedByteSize));

@@ -400,6 +400,11 @@ void ConvertDataToBool(GLTF2::GLTFLoadDataResult const& result, bool* destinatio
 {
     uint8_t const* source = reinterpret_cast<const uint8_t*>(result.data.data());
 
+    if (result.componentCount != 1U) {
+        PLUGIN_LOG_E("Bool output component overflow: componentCount=%zu", result.componentCount);
+        return;
+    }
+
     for (size_t i = 0; i < result.elementCount; ++i) {
         for (size_t j = 0; j < result.componentCount; ++j) {
             switch (result.componentType) {
@@ -515,7 +520,15 @@ struct GatherMeshDataResult {
 void ConvertLoadResultToFloat(GLTF2::GLTFLoadDataResult& data, float scale = 0.f)
 {
     vector<uint8_t> converted;
+    if (data.componentCount != 0 && data.elementCount > std::numeric_limits<size_t>::max() / data.componentCount) {
+        PLUGIN_LOG_E("Morph/animation output element count overflow, skipping conversion");
+        return;
+    }
     auto const componentCount = data.elementCount * data.componentCount;
+    if (componentCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
+        PLUGIN_LOG_E("Morph/animation output float buffer size overflow, skipping conversion");
+        return;
+    }
     converted.resize(componentCount * sizeof(float));
     if (data.normalized) {
         ConvertNormalizedDataToFloat(data, reinterpret_cast<float*>(converted.data()), 0u, 0.f, scale);
@@ -537,10 +550,13 @@ void Validate(GLTF2::GLTFLoadDataResult& indices, uint32_t vertexCount, bool& pr
     primitiveRestart = false;
     if (std::any_of(source.begin(), source.end(), [vertexCount, &primitiveRestart](const auto& value) {
             // spec prohibits "maximum possible value for component type", but still some models use it for primitive
-            // restart.
-            if (value == std::numeric_limits<T>::max()) {
-                primitiveRestart = true;
-                return false;
+            // restart. UNSIGNED_BYTE indices widen to UINT16 (GetPrimitiveIndexType), so a byte 0xFF is zero-extended
+            // to 0x00FF, NOT the 0xFFFF, and doesn't work as a primitive restart index.
+            if constexpr (sizeof(T) > sizeof(uint8_t)) {
+                if (value == std::numeric_limits<T>::max()) {
+                    primitiveRestart = true;
+                    return false;
+                }
             }
             return (value >= vertexCount);
         })) {
@@ -637,13 +653,20 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
     GLTF2::GLTFLoadDataResult& loadDataResult, GLTF2::GLTFLoadDataResult& finalDataResult)
 {
 #if !defined(GLTF2_EXTENSION_KHR_MESH_QUANTIZATION)
-    // Spec says POSITION,NORMAL and TANGENT must be FLOAT & VEC3
-    // NOTE: ASSERT for now, if the types don't match, they need to be converted. (or we should fail
-    // since out-of-spec)
+    // Spec says POSITION,NORMAL and TANGENT must be FLOAT & VEC3. FLOAT is only required without
+    // quantization (KHR_mesh_quantization allows BYTE/SHORT); VEC3 is always required.
     PLUGIN_ASSERT(loadDataResult.componentType == GLTF2::ComponentType::FLOAT);
+    if (loadDataResult.componentType != GLTF2::ComponentType::FLOAT) {
+        PLUGIN_LOG_E("Morph target component type mismatch");
+        return;
+    }
+#endif
     PLUGIN_ASSERT(loadDataResult.componentCount == 3U);
     PLUGIN_ASSERT(loadDataResult.elementCount == importInfo.vertexCount);
-#endif
+    if (loadDataResult.componentCount != 3U) {
+        PLUGIN_LOG_E("Morph target component count mismatch");
+        return;
+    }
     if (loadDataResult.elementCount != importInfo.vertexCount) {
         PLUGIN_LOG_E("Morph target element count mismatch");
         return;
@@ -658,7 +681,12 @@ void ProcessMorphTargetData(const IMeshBuilder::Submesh& importInfo, size_t targ
         }
     } else {
         finalDataResult = move(loadDataResult);
-        finalDataResult.data.reserve(finalDataResult.data.size() * targets);
+        // Guard against size_t overflow in the reserve size before multiplying (the product is only
+        // a reservation hint; on overflow we skip reserving and let later appends reallocate).
+        const size_t oneTargetSize = finalDataResult.data.size();
+        if (targets == 0U || oneTargetSize <= std::numeric_limits<size_t>::max() / targets) {
+            finalDataResult.data.reserve(oneTargetSize * targets);
+        }
     }
 }
 
@@ -1433,11 +1461,15 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
             PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
     } else {
-        // Convert data.
+        // Pass the destination width so a wider source accessor is rejected instead of overflowing.
+        static_assert(sizeof(T) % sizeof(float) == 0);
+        constexpr size_t dstComponentCount = sizeof(T) / sizeof(float);
         if (animationFrameDataResult.normalized) {
-            ConvertNormalizedDataToFloat(animationFrameDataResult, reinterpret_cast<float*>(destination.data()));
+            ConvertNormalizedDataToFloat(
+                animationFrameDataResult, reinterpret_cast<float*>(destination.data()), dstComponentCount);
         } else {
-            ConvertDataToFloat(animationFrameDataResult, reinterpret_cast<float*>(destination.data()));
+            ConvertDataToFloat(
+                animationFrameDataResult, reinterpret_cast<float*>(destination.data()), dstComponentCount);
         }
     }
 }
@@ -1458,7 +1490,6 @@ void CopyFrames(GLTF2::GLTFLoadDataResult const& animationFrameDataResult, vecto
             PLUGIN_LOG_E("Copying of raw framedata failed.");
         }
     } else {
-        // Convert data.
         ConvertDataToBool(animationFrameDataResult, destination.data());
     }
 }
@@ -2512,10 +2543,49 @@ ImageData PrepareImageData(const ImageLoadResultVector& imageLoadResults, const 
     return data;
 }
 
+// EXT_lights_image_based requires every face to be square with mip m sized base >> m, so enforce that:
+// each face for mip m must be expectedDim x expectedDim and share the base format.
+bool ValidateCubemapFaceConsistency(const ImageLoadResultVector& imageLoadResults, uint32_t imageSize)
+{
+    constexpr uint32_t cubemapFaceCount = 6U;
+    const auto baseFormat = imageLoadResults[0].image->GetImageDesc().format;
+    const size_t mipCount = imageLoadResults.size() / cubemapFaceCount;
+    for (size_t mipIndex = 0; mipIndex < mipCount; ++mipIndex) {
+        const uint32_t expectedDim = (mipIndex >= 32U) ? 1U : Math::max(1U, imageSize >> mipIndex);
+        for (uint32_t face = 0U; face < cubemapFaceCount; ++face) {
+            const auto& faceResult = imageLoadResults[(mipIndex * cubemapFaceCount) + face];
+            if (!faceResult.image) {
+                PLUGIN_LOG_E("Cubemap face %u of mip %u failed to load; rejecting cubemap",
+                    face,
+                    static_cast<uint32_t>(mipIndex));
+                return false;
+            }
+            const auto& faceDesc = faceResult.image->GetImageDesc();
+            if ((faceDesc.width != expectedDim) || (faceDesc.height != expectedDim) || (faceDesc.depth != 1U) ||
+                (faceDesc.format != baseFormat)) {
+                PLUGIN_LOG_E("Cubemap face %u of mip %u is %ux%u (expected %ux%u square, matching base format); "
+                             "rejecting cubemap",
+                    face,
+                    static_cast<uint32_t>(mipIndex),
+                    faceDesc.width,
+                    faceDesc.height,
+                    expectedDim,
+                    expectedDim);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 RenderHandleReference CreateCubemapFromImages(uint32_t imageSize, const ImageLoadResultVector& imageLoadResults,
     IGpuResourceManager& gpuResourceManager, uint32_t maxTextureMipLevels)
 {
     if (!imageLoadResults[0].image) {
+        return {};
+    }
+
+    if (!ValidateCubemapFaceConsistency(imageLoadResults, imageSize)) {
         return {};
     }
 
@@ -3194,6 +3264,7 @@ void GLTF2Importer::LaunchGatherTasks(size_t firstTask, ImportPhase phase)
             task.state = ImporterTask::State::Gather;
             auto threadTask = IThreadPool::ITask::Ptr{new GatherThreadTask(*this, task)};
             tasks.push_back(threadTask.get());
+            ++pendingGatherTasks_[static_cast<uint32_t>(phase)];
             threadPool_->PushNoWait(BASE_NS::move(threadTask), BASE_NS::array_view(&bufferTask_, 1U));
         }
         ++first;
@@ -3493,6 +3564,10 @@ void GLTF2Importer::StartPhase(ImportPhase phase)
         if (listener_) {
             listener_->OnImportFinished();
         }
+        // Drop submitted dispatcher tasks before freeing tasks_; they hold ImporterTask& and would dangle.
+        if (mainThreadQueue_) {
+            mainThreadQueue_->Clear();
+        }
         tasks_.clear();
         return;
     }
@@ -3558,9 +3633,13 @@ bool GLTF2Importer::Execute(uint32_t timeBudget)
         }
     }
 
-    // All tasks done for this phase?
+    // All tasks done for this phase? A gather worker can finish (making the barrier IsDone) and only afterwards push
+    // its result into finishedGatherTasks_ for HandleGatherTasks() to process. Checking IsDone() can then advance the
+    // phase while a gather result is still unprocessed, silently dropping its outcome. pendingGatherTasks_ is only
+    // decremented once a result is actually processed, so it reaches zero only when every launched gather task for this
+    // phase has been handled.
     if ((!gatherResults_[static_cast<uint32_t>(phase_)] || gatherResults_[static_cast<uint32_t>(phase_)]->IsDone()) &&
-        pendingImportTasks_ == 0) {
+        pendingGatherTasks_[static_cast<uint32_t>(phase_)] == 0 && pendingImportTasks_ == 0) {
         // Proceed to next phase.
         StartPhase((ImportPhase)(phase_ + 1));
     }
@@ -3605,6 +3684,7 @@ void GLTF2Importer::HandleGatherTasks()
     }
 
     if (finishedGatherTasks.size() > 0) {
+        pendingGatherTasks_[static_cast<uint32_t>(phase_)] -= finishedGatherTasks.size();
         for (auto& finishedId : finishedGatherTasks) {
             ImporterTask* task = FindTaskById(finishedId);
             if (task) {

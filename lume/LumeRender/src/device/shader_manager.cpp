@@ -596,10 +596,13 @@ void ShaderManager::CreateBaseShaderPathsAndHashes(const uint32_t renderSlotId,
 #if (RENDER_VALIDATION_ENABLED == 1)
     if (baseShaderCreateInfo.ownBaseShaderUri.empty() && (!baseShaderCreateInfo.addBaseShaderUri.empty())) {
         PLUGIN_LOG_W(
-            "RENDER_VALIDATION: Shader variant (%s) cannot add additional base shader (%s) when it does not have "
-            "own base shader (%s)",
+            "RENDER_VALIDATION: Shader variant (%.*s) cannot add additional base shader (%.*s) when it does not have "
+            "own base shader (%.*s)",
+            static_cast<int>(pathCreateInfo.variantName.size()),
             pathCreateInfo.variantName.data(),
+            static_cast<int>(baseShaderCreateInfo.addBaseShaderUri.size()),
             baseShaderCreateInfo.addBaseShaderUri.data(),
+            static_cast<int>(baseShaderCreateInfo.ownBaseShaderUri.size()),
             baseShaderCreateInfo.ownBaseShaderUri.data());
     }
 #endif
@@ -610,9 +613,12 @@ void ShaderManager::CreateBaseShaderPathsAndHashes(const uint32_t renderSlotId,
             RenderHandle baseShaderHandle = bsIter->second;
             const uint64_t hash = HashHandleAndSlot(baseShaderHandle, renderSlotId);
             if (hashToShaderVariant_.contains(hash)) {
-                PLUGIN_LOG_W("RENDER_VALIDATION: Shader variant (%s) has already variant for the slot (%u), uri: %s",
-                    string(pathCreateInfo.variantName.data()).c_str(),
+                PLUGIN_LOG_W(
+                    "RENDER_VALIDATION: Shader variant (%.*s) has already variant for the slot (%u), uri: %.*s",
+                    static_cast<int>(pathCreateInfo.variantName.size()),
+                    pathCreateInfo.variantName.data(),
                     renderSlotId,
+                    static_cast<int>(baseShaderCreateInfo.ownBaseShaderUri.size()),
                     baseShaderCreateInfo.ownBaseShaderUri.data());
             }
         }
@@ -625,7 +631,11 @@ void ShaderManager::CreateBaseShaderPathsAndHashes(const uint32_t renderSlotId,
                 const uint64_t hash = HashHandleAndSlot(bsHandle, renderSlotId);
                 hashToShaderVariant_[hash] = handle;
             } else {
-                PLUGIN_LOG_W("base shader (%s) NDF (%s)", bsUri.data(), string(pathCreateInfo.variantName).c_str());
+                PLUGIN_LOG_W("base shader (%.*s) NDF (%.*s)",
+                    static_cast<int>(bsUri.size()),
+                    bsUri.data(),
+                    static_cast<int>(pathCreateInfo.variantName.size()),
+                    pathCreateInfo.variantName.data());
             }
             return bsHandle;
         };

@@ -135,11 +135,12 @@ void RenderNodeFullscreenGeneric::ExecuteFrame(IRenderCommandList& cmdList)
     // push constants
     if (useDataStorePushConstant_) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-        const auto dataStore = static_cast<const IRenderDataStorePod*>(
-            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
+        const IRenderDataStore* ds = renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
+        const auto dataStore =
+            (ds && (ds->GetUid() == IRenderDataStorePod::UID)) ? static_cast<const IRenderDataStorePod*>(ds) : nullptr;
         if (dataStore) {
             const auto dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
-            if (!dataView.empty()) {
+            if (dataView.size_bytes() >= pipelineData_.gsd.pipelineLayoutData.pushConstant.byteSize) {
                 cmdList.PushConstant(pipelineData_.gsd.pipelineLayoutData.pushConstant, dataView.data());
             }
         }
@@ -157,8 +158,10 @@ RenderHandle RenderNodeFullscreenGeneric::GetPsoHandle()
         CORE_DYNAMIC_STATE_ENUM_FRAGMENT_SHADING_RATE};
     if (useDataStoreShaderSpecialization_) {
         const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-        const auto dataStore = static_cast<const IRenderDataStorePod*>(
-            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName));
+        const IRenderDataStore* ds =
+            renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStoreSpecialization.dataStoreName);
+        const auto dataStore =
+            (ds && (ds->GetUid() == IRenderDataStorePod::UID)) ? static_cast<const IRenderDataStorePod*>(ds) : nullptr;
         if (!dataStore) {
             return pipelineData_.pso;
         }

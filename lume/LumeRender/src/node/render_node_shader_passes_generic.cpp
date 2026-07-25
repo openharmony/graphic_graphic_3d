@@ -89,9 +89,14 @@ void RenderNodeShaderPassesGeneric::InitNode(IRenderNodeContextManager& renderNo
 
 void RenderNodeShaderPassesGeneric::PreExecuteFrame()
 {
+    if (!valid_) {
+        return;
+    }
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-    dsShaderPasses_ = static_cast<RenderDataStoreShaderPasses*>(
-        renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
+    IRenderDataStore* ds = renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
+    dsShaderPasses_ = (ds && (ds->GetUid() == IRenderDataStoreShaderPasses::UID))
+                          ? static_cast<RenderDataStoreShaderPasses*>(ds)
+                          : nullptr;
     if (!dsShaderPasses_) {
         return;
     }
@@ -120,8 +125,10 @@ void RenderNodeShaderPassesGeneric::ExecuteFrame(IRenderCommandList& cmdList)
         return;
     }
     const auto& renderDataStoreMgr = renderNodeContextMgr_->GetRenderDataStoreManager();
-    dsShaderPasses_ = static_cast<RenderDataStoreShaderPasses*>(
-        renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName));
+    IRenderDataStore* ds = renderDataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
+    dsShaderPasses_ = (ds && (ds->GetUid() == IRenderDataStoreShaderPasses::UID))
+                          ? static_cast<RenderDataStoreShaderPasses*>(ds)
+                          : nullptr;
     if (!dsShaderPasses_) {
         return;
     }

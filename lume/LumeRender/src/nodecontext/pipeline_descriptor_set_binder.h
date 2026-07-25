@@ -147,6 +147,7 @@ private:
 
     uint32_t descriptorBindingMask_{0};
     uint32_t bindingMask_{0};
+    bool validDescriptorSetLayoutBindings_{true};
 };
 
 /** PipelineDescriptorSetBinder.

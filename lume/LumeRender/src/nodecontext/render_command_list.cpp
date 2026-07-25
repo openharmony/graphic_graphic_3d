@@ -835,9 +835,11 @@ void RenderCommandList::PushConstantData(
 {
     ValidatePipeline();
 
-    // push constant is not used/allocated if byte size is bigger than supported max
+    // push constant is not used/allocated if byte size is bigger than supported max, or if the caller
+    // supplies fewer bytes than declared (the unfilled tail would leak stale command-arena memory).
     if ((pushConstant.byteSize > 0) &&
-        (pushConstant.byteSize <= PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) && (!data.empty())) {
+        (pushConstant.byteSize <= PipelineLayoutConstants::MAX_PUSH_CONSTANT_BYTE_SIZE) &&
+        (data.size_bytes() >= pushConstant.byteSize)) {
         auto* rc = AllocateRenderCommand<RenderCommandPushConstant>(allocator_);
         // use aligment of uint32 as currently the push constants are uint32s
         // the data is allocated by shader/pipeline needs
@@ -1117,9 +1119,15 @@ void RenderCommandList::BeginRenderPass(
 bool RenderCommandList::ProcessInputAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.inputAttachmentCount; ++idx) {
+    bool valid = subpassRef.inputAttachmentCount <= PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.inputAttachmentCount, PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.inputAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;
@@ -1154,9 +1162,15 @@ bool RenderCommandList::ProcessInputAttachments(const RenderPassDesc& renderPass
 bool RenderCommandList::ProcessColorAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.colorAttachmentCount; ++idx) {
+    bool valid = subpassRef.colorAttachmentCount <= PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.colorAttachmentCount, PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.colorAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;
@@ -1187,9 +1201,15 @@ bool RenderCommandList::ProcessColorAttachments(const RenderPassDesc& renderPass
 bool RenderCommandList::ProcessResolveAttachments(const RenderPassDesc& renderPassDsc,
     const RenderPassSubpassDesc& subpassRef, RenderPassAttachmentResourceStates& subpassResourceStates)
 {
-    bool valid = true;
-    for (uint32_t idx = 0; idx < subpassRef.resolveAttachmentCount; ++idx) {
+    bool valid = subpassRef.resolveAttachmentCount <= PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT;
+    const uint32_t count =
+        Math::min(subpassRef.resolveAttachmentCount, PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < count; ++idx) {
         const uint32_t attachmentIndex = subpassRef.resolveAttachmentIndices[idx];
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+            valid = false;
+            continue;
+        }
         const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
         if (!RenderHandleUtil::IsGpuImage(handle)) {
             valid = false;
@@ -1231,48 +1251,51 @@ bool RenderCommandList::ProcessDepthAttachments(const RenderPassDesc& renderPass
     }
     if (subpassRef.depthAttachmentCount == 1) {
         const uint32_t attachmentIndex = subpassRef.depthAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsDepthImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
+        } else {
+            valid =
+                ProcessDepthAttachmentState(renderPassDsc.attachmentHandles[attachmentIndex],
+                    subpassResourceStates.states[attachmentIndex],
+                    subpassResourceStates.layouts[attachmentIndex],
+                    (CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT),
+                    (CORE_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)) &&
+                valid;
         }
-#if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
-#endif
-
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |=
-            (CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-        refState.pipelineStageFlags |=
-            (CORE_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
     if ((subpassRef.depthAttachmentCount == 1) && (subpassRef.depthResolveAttachmentCount == 1)) {
         const uint32_t attachmentIndex = subpassRef.depthResolveAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsDepthImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
+        } else {
+            valid = ProcessDepthAttachmentState(renderPassDsc.attachmentHandles[attachmentIndex],
+                        subpassResourceStates.states[attachmentIndex],
+                        subpassResourceStates.layouts[attachmentIndex],
+                        CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) &&
+                    valid;
         }
+    }
+    return valid;
+}
+
+bool RenderCommandList::ProcessDepthAttachmentState(const RenderHandle handle, GpuResourceState& refState,
+    ImageLayout& layout, const AccessFlags accessFlags, const PipelineStageFlags pipelineStageFlags)
+{
+    const bool valid = RenderHandleUtil::IsDepthImage(handle);
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
+    ValidateImageUsageFlags(nodeName_,
+        gpuResourceMgr_,
+        handle,
+        ImageUsageFlagBits::CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        "CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
 #endif
 
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |= CORE_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
+    refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
+    refState.accessFlags |= accessFlags;
+    refState.pipelineStageFlags |= pipelineStageFlags;
+    refState.gpuQueue = gpuQueue_;
+    layout = CORE_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     return valid;
 }
 
@@ -1289,24 +1312,28 @@ bool RenderCommandList::ProcessFragmentShadingRateAttachments(const RenderPassDe
     if (subpassRef.fragmentShadingRateAttachmentCount == 1) {
 #if (RENDER_VULKAN_FSR_ENABLED == 1)
         const uint32_t attachmentIndex = subpassRef.fragmentShadingRateAttachmentIndex;
-        const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
-        if (!RenderHandleUtil::IsGpuImage(handle)) {
+        if (attachmentIndex >= PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
             valid = false;
-        }
+        } else {
+            const RenderHandle handle = renderPassDsc.attachmentHandles[attachmentIndex];
+            if (!RenderHandleUtil::IsGpuImage(handle)) {
+                valid = false;
+            }
 #if (RENDER_VALIDATION_ENABLED == 1)
-        ValidateImageUsageFlags(nodeName_,
-            gpuResourceMgr_,
-            handle,
-            ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
-            "CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT");
+            ValidateImageUsageFlags(nodeName_,
+                gpuResourceMgr_,
+                handle,
+                ImageUsageFlagBits::CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT,
+                "CORE_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT");
 #endif
 
-        GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
-        refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
-        refState.accessFlags |= CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT;
-        refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT;
-        refState.gpuQueue = gpuQueue_;
-        subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL;
+            GpuResourceState& refState = subpassResourceStates.states[attachmentIndex];
+            refState.shaderStageFlags |= CORE_SHADER_STAGE_FRAGMENT_BIT;
+            refState.accessFlags |= CORE_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT;
+            refState.pipelineStageFlags |= CORE_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT;
+            refState.gpuQueue = gpuQueue_;
+            subpassResourceStates.layouts[attachmentIndex] = CORE_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL;
+        }
 #else
         PLUGIN_LOG_ONCE_I("vk_fsr_disabled_flag",
             "RENDER_VALIDATION: Fragment shading rate disabled and all related attachments ignored.");
@@ -2158,8 +2185,13 @@ void RenderCommandList::ValidateRenderPass(const RenderPassDesc& renderPassDesc)
 #endif
         stateData_.validCommandList = false;
     }
-    // validate render pass attachments
-    for (uint32_t idx = 0; idx < renderPassDesc.attachmentCount; ++idx) {
+    // validate render pass attachments (attachmentHandles is a fixed MAX_RENDER_PASS_ATTACHMENT_COUNT array)
+    if (renderPassDesc.attachmentCount > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        stateData_.validCommandList = false;
+    }
+    const uint32_t attachmentCount =
+        Math::min(renderPassDesc.attachmentCount, PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT);
+    for (uint32_t idx = 0; idx < attachmentCount; ++idx) {
         if (!RenderHandleUtil::IsValid(renderPassDesc.attachmentHandles[idx])) {
 #if (RENDER_VALIDATION_ENABLED == 1)
             PLUGIN_LOG_ONCE_E(nodeName_ + "_RCL_ValidateRenderPass_attachments_",

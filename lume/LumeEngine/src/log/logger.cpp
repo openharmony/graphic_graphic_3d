@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdarg>
+#include <limits>
 #include <mutex>
 #include <securec.h>
 
@@ -64,6 +65,7 @@ constexpr const char* LOG_LEVEL_NAMES_SHORT[LOG_LEVEL_COUNT] = {
     "N",
 };
 constexpr const size_t MAX_BUFFER_SIZE = 1024;
+constexpr const size_t MAX_PRINTF_STRING_PRECISION = static_cast<size_t>((std::numeric_limits<int>::max)());
 }  // namespace
 
 string_view Logger::GetLogLevelName(LogLevel logLevel, bool shortName)
@@ -108,9 +110,10 @@ void Logger::VLog(
     // we need to make a copy of the args, since the va_list can be in an undefined state after use.
     std::va_list tmp;
     va_copy(tmp, args);
+    const string formatString(format);
 
     // use vsnprintf to calculate the required size (not supported by the _s variant)
-    const int sizeNeeded = vsnprintf(nullptr, 0, format.data(), args) + 1;
+    const int sizeNeeded = vsnprintf(nullptr, 0, formatString.c_str(), args) + 1;
 
     std::lock_guard guard(loggerMutex_);
 
@@ -118,7 +121,7 @@ void Logger::VLog(
         buffer_.resize(static_cast<size_t>(sizeNeeded));
     }
 
-    const int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, format.data(), tmp);
+    const int ret = vsnprintf_s(buffer_.data(), buffer_.size(), buffer_.size() - 1, formatString.c_str(), tmp);
     va_end(tmp);
     if (ret < 0) {
         return;
@@ -145,14 +148,24 @@ bool Logger::VLogAssert(const string_view filename, int lineNumber, bool express
 {
     if (!expression) {
         char buffer[MAX_BUFFER_SIZE];
-        const int numWritten = vsnprintf_s(buffer, MAX_BUFFER_SIZE, MAX_BUFFER_SIZE - 1, format.data(), args);
+        const string formatString(format);
+        const int numWritten = vsnprintf_s(buffer, MAX_BUFFER_SIZE, MAX_BUFFER_SIZE - 1, formatString.c_str(), args);
         if (numWritten >= 0) {
             buffer[numWritten] = '\0';
         } else {
             buffer[0] = '\0';
         }
 
-        Log(LogLevel::LOG_FATAL, filename, lineNumber, "Assert failed (%s). %s", expressionString.data(), buffer);
+        const int expressionStringSize =
+            expressionString.data() ? static_cast<int>(std::min(expressionString.size(), MAX_PRINTF_STRING_PRECISION))
+                                    : 0;
+        Log(LogLevel::LOG_FATAL,
+            filename,
+            lineNumber,
+            "Assert failed (%.*s). %s",
+            expressionStringSize,
+            expressionString.data() ? expressionString.data() : "",
+            buffer);
 
 #ifdef PLATFORM_HAS_JAVA
         // Print also a java trace if available

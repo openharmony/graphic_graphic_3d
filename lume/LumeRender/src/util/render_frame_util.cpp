@@ -178,7 +178,7 @@ void RenderFrameUtil::ProcessFrameInputCopyData(const RenderFrameUtil::CopyData&
             const uint32_t bytesPerPixel = gpuResourceMgr.GetFormatProperties(dataToBeCopied.handle).bytesPerPixel;
             const uint64_t byteSize64 =
                 static_cast<uint64_t>(desc.width) * static_cast<uint64_t>(desc.height) * bytesPerPixel;
-            if (byteSize64 > std::numeric_limits<uint32_t>::max()) {
+            if ((byteSize64 == 0) || (byteSize64 > std::numeric_limits<uint32_t>::max())) {
                 continue;
             }
             const uint32_t byteSize = static_cast<uint32_t>(byteSize64);

@@ -23,6 +23,7 @@
 #include <optional>
 #include <securec.h>
 
+#include <3d/render/render_data_defines_3d.h>
 #include <base/containers/atomics.h>
 #include <base/containers/fixed_string.h>
 #include <base/containers/string.h>
@@ -1727,6 +1728,12 @@ bool PrimitiveTargets(
         jsonData,
         "targets",
         [&meshPrimitive, compressed](LoadResult& loadResult, const json::value& target) -> bool {
+            if (!target.is_object()) {
+                return true;
+            }
+            if (meshPrimitive.targets.size() >= RenderSceneDataConstants::MAX_MORPH_TARGET_COUNT) {
+                RETURN_WITH_ERROR(loadResult, "Too many morph targets.");
+            }
             MorphTarget mTarget;
 #ifdef GLTF2_EXTENSION_IGFX_COMPRESSED
             mTarget.iGfxCompressed = compressed;
@@ -3206,8 +3213,13 @@ void LoadGLTF(LoadResult& loadResult, IFile& file)
 
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        SetError(loadResult, "Parsing GLTF failed: file too large to allocate");
+        return;
+    }
 
     if (file.Read(raw.data(), byteLength) != byteLength) {
+        SetError(loadResult, "Parsing GLTF failed: could not read the full file");
         return;
     }
     CORE_CPU_PERF_BEGIN(jkson, "CORE3D", "LoadGLTF", "json::parse", CORE3D_PROFILER_DEFAULT_COLOR);

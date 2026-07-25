@@ -50,8 +50,16 @@ ShaderStateLoader::LoadResult ShaderStateLoader::Load(IFileManager& fileManager,
 
     const uint64_t byteLength = file->GetLength();
 
+    constexpr uint64_t MAX_SHADER_STATE_SIZE = 1U * 1024U * 1024U;
+    if (byteLength > MAX_SHADER_STATE_SIZE) {
+        return LoadResult("Shader state file too large.");
+    }
+
     string raw;
     raw.resize(static_cast<size_t>(byteLength));
+    if (raw.size() != byteLength) {
+        return LoadResult("Failed to allocate file buffer.");
+    }
 
     if (file->Read(raw.data(), byteLength) != byteLength) {
         PLUGIN_LOG_D("Error loading '%s'", uri_.c_str());

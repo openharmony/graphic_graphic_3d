@@ -1289,7 +1289,7 @@ void RenderBackendGLES::RenderCommandDrawIndirect(const RenderCommandWithType& r
         const auto& plat = gpuBuffer->GetPlatformData();
         device_.BindBuffer(GL_DRAW_INDIRECT_BUFFER, plat.buffer);
         const auto type = GetPrimFromTopology(topology_);
-        auto offset = static_cast<GLintptr>(renderCmd.offset);
+        auto offset = static_cast<GLintptr>(renderCmd.offset + plat.currentByteOffset);
         if (renderCmd.drawType == DrawType::DRAW_INDEXED_INDIRECT) {
             GLenum indexType = GL_UNSIGNED_SHORT;
             switch (boundIndexBuffer_.type) {
@@ -1346,7 +1346,7 @@ void RenderBackendGLES::RenderCommandDispatchIndirect(const RenderCommandWithTyp
     if (const GpuBufferGLES* gpuBuffer = gpuResourceMgr_.GetBuffer<GpuBufferGLES>(renderCmd.argsHandle); gpuBuffer) {
         const auto& plat = gpuBuffer->GetPlatformData();
         device_.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, plat.buffer);
-        glDispatchComputeIndirect(static_cast<GLintptr>(renderCmd.offset));
+        glDispatchComputeIndirect(static_cast<GLintptr>(renderCmd.offset + plat.currentByteOffset));
 #if (RENDER_PERF_ENABLED == 1)
         ++perfCounters_.dispatchIndirectCount;
 #endif
@@ -2727,7 +2727,8 @@ void RenderBackendGLES::BindVertexInputs(
         const uint32_t binding = attributeRef.binding;
         // NOTE: we need to bind all the buffers to the correct bindings.
         // shader optimized check (vertexInputs, some locations are not in use)
-        if ((location != ~0u) && (binding != ~0u) && (vertexInputs[location] != Gles::INVALID_LOCATION)) {
+        if ((location != ~0u) && (binding != ~0u) && (location < vertexInputs.size()) &&
+            (binding < decldata.bindingDescriptionCount) && (vertexInputs[location] != Gles::INVALID_LOCATION)) {
             const auto& slot = vertexAttribBindSlots_[binding];
             const auto& bindingRef = decldata.bindingDescriptions[binding];
             PLUGIN_ASSERT(bindingRef.binding == binding);

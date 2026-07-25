@@ -99,6 +99,8 @@ struct PhysicalDeviceRayTracingStructsVk {
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR physicalDeviceRayTracingPipelineFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR physicalDeviceAccelerationStructureFeatures;
     VkPhysicalDeviceRayQueryFeaturesKHR physicalDeviceRayQueryFeatures;
+
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR physicalDeviceAccelerationStructureProperties;
 };
 #endif
 
@@ -354,6 +356,11 @@ AsBuildSizes GetAsBuildGeometryCombine(const VkDevice device, const DeviceVk::Ex
             &buildSizesInfo);                                         // pSizeInfo
     }
 
+    if ((buildSizesInfo.accelerationStructureSize > UINT32_MAX) || (buildSizesInfo.updateScratchSize > UINT32_MAX) ||
+        (buildSizesInfo.buildScratchSize > UINT32_MAX)) {
+        PLUGIN_LOG_E("acceleration structure build size exceeds uint32_t; skipping build");
+        return AsBuildSizes{0U, 0U, 0U};
+    }
     return AsBuildSizes{
         static_cast<uint32_t>(buildSizesInfo.accelerationStructureSize),
         static_cast<uint32_t>(buildSizesInfo.updateScratchSize),
@@ -445,6 +452,14 @@ void GetPhysicalDeviceRayTracingStructs(ChainObjects& co, ChainWrapper& cw)
 
     *cw.ppNextFeatures = &rt->physicalDeviceRayQueryFeatures;
     cw.ppNextFeatures = &rt->physicalDeviceRayTracingPipelineFeatures.pNext;
+
+    rt->physicalDeviceAccelerationStructureProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,  // sType
+        nullptr,                                                                  // pNext
+    };
+
+    *cw.ppNextProperties = &rt->physicalDeviceAccelerationStructureProperties;
+    cw.ppNextProperties = &rt->physicalDeviceAccelerationStructureProperties.pNext;
 }
 #endif
 
@@ -712,6 +727,14 @@ CommonDeviceProperties GetCommonDevicePropertiesFunc(const ChainObjects& co)
             fsrVk.maxFragmentShadingRateAttachmentTexelSize.width,
             fsrVk.maxFragmentShadingRateAttachmentTexelSize.height};
         cdp.fragmentShadingRateProperties.maxFragmentSize = {fsrVk.maxFragmentSize.width, fsrVk.maxFragmentSize.height};
+    }
+#endif
+#if (RENDER_VULKAN_RT_ENABLED == 1)
+    if (co.rt) {
+        const uint32_t scratchAlign =
+            co.rt->physicalDeviceAccelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
+        // Clamp 0 to 1 so the backend's alignment stays a no-op.
+        cdp.accelerationStructureProperties.minScratchOffsetAlignment = (scratchAlign > 0U) ? scratchAlign : 1U;
     }
 #endif
     return cdp;

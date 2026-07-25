@@ -134,7 +134,10 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
 
         const uint32_t startIndex = geomRef.startIndex;
         const uint32_t count = geomRef.count;
-        PLUGIN_ASSERT(frameScratchOffsetIndex_ < static_cast<uint32_t>(scratchOffsetHelper_.size()));
+        if (frameScratchOffsetIndex_ >= static_cast<uint32_t>(scratchOffsetHelper_.size()) ||
+            !RenderHandleUtil::IsValid(rawScratchBuffer_)) {
+            return;
+        }
         const BufferOffset bufferOffset{rawScratchBuffer_, scratchOffsetHelper_[frameScratchOffsetIndex_]};
         frameScratchOffsetIndex_++;  // advance
         AsBuildGeometryData geometry{{geomRef.data.info},
@@ -142,17 +145,17 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessGeometryD
             geomRef.data.dstAccelerationStructure.GetHandle(),
             bufferOffset};
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
-            (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
+            (static_cast<uint64_t>(startIndex) + count <= triangles.size())) {
             const auto& ref = triangles[startIndex];
             const vector<AsGeometryTrianglesData> info = ConvertAsGeometryTrianglesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, info, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
-                   (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= aabbs.size())) {
             const auto& ref = aabbs[startIndex];
             const vector<AsGeometryAabbsData> info = ConvertAsGeometryAabbsData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, info, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
-                   (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= instances.size())) {
             const auto& ref = instances[startIndex];
             const vector<AsGeometryInstancesData> info = ConvertAsGeometryInstancesData({&ref, count});
             cmdList.BuildAccelerationStructures(geometry, {}, {}, info);
@@ -171,7 +174,7 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessInstanceD
         if ((!dataRef.bufferOffset.handle) || (dataRef.count == 0)) {
             return;
         }
-        if (dataRef.startIndex + dataRef.count > static_cast<uint32_t>(fullData.instanceCopyData.size())) {
+        if (static_cast<uint64_t>(dataRef.startIndex) + dataRef.count > fullData.instanceCopyData.size()) {
             return;
         }
 
@@ -208,10 +211,13 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
     };
 
     IDevice& device = renderNodeContextMgr_->GetRenderContext().GetDevice();
+    // Backend aligns each scratch address to this; keep the offsets aligned to match.
+    const uint32_t scratchAlignment =
+        device.GetCommonDeviceProperties().accelerationStructureProperties.minScratchOffsetAlignment;
     const auto& triangles = fullData.geomTriangles;
     const auto& aabbs = fullData.geomAabbs;
     const auto& instances = fullData.geomInstances;
-    uint32_t frameScratchSize = 0U;
+    uint64_t frameScratchSize = 0U;  // accumulate in 64-bit; the buffer byteSize is uint32_t
 
     vector<AsGeometryTrianglesInfo> triInfos;
     vector<AsGeometryAabbsInfo> aabbInfos;
@@ -221,34 +227,44 @@ void RenderNodeDefaultAccelerationStructureStaging::ExecuteFrameProcessScratch(c
         const uint32_t count = geomRef.count;
         AsBuildSizes asbs;
         if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_TRIANGLES) &&
-            (startIndex + count <= static_cast<uint32_t>(triangles.size()))) {
+            (static_cast<uint64_t>(startIndex) + count <= triangles.size())) {
             const auto& triRef = triangles[startIndex];
             GetInfos(array_view{&triRef, count}, triInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, triInfos, {}, {});
         } else if (geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_AABBS &&
-                   (startIndex + count <= static_cast<uint32_t>(aabbs.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= aabbs.size())) {
             const auto& aabbRef = aabbs[startIndex];
             GetInfos(array_view{&aabbRef, count}, aabbInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, aabbInfos, {});
         } else if ((geomRef.geometryType == GeometryType::CORE_GEOMETRY_TYPE_INSTANCES) &&
-                   (startIndex + count <= static_cast<uint32_t>(instances.size()))) {
+                   (static_cast<uint64_t>(startIndex) + count <= instances.size())) {
             const auto& instanceRef = instances[startIndex];
             GetInfos(array_view{&instanceRef, count}, instanceInfos);
             asbs = device.GetAccelerationStructureBuildSizes(geomRef.data.info, {}, {}, instanceInfos);
         }
 
-        scratchOffsetHelper_.push_back(frameScratchSize);
-        frameScratchSize +=
-            Align(asbs.buildScratchSize, PipelineLayoutConstants::MIN_UBO_BIND_OFFSET_ALIGNMENT_BYTE_SIZE);
+        if (frameScratchSize > UINT32_MAX) {
+            PLUGIN_LOG_E("AS frame scratch size exceeds uint32_t; skipping remaining acceleration structure builds");
+            frameScratchSize = 0U;
+            break;
+        }
+        scratchOffsetHelper_.push_back(static_cast<uint32_t>(frameScratchSize));
+        frameScratchSize += Align(asbs.buildScratchSize, scratchAlignment);
+    }
+    if (frameScratchSize + scratchAlignment > UINT32_MAX) {
+        PLUGIN_LOG_E("AS frame scratch size exceeds uint32_t; skipping acceleration structure builds this frame");
+        frameScratchSize = 0U;
     }
     if (frameScratchSize > 0) {
+        // Pad one alignment so the backend's address alignment can't overrun the last build.
+        frameScratchSize += scratchAlignment;
         // allocate scratch
         const GpuBufferDesc scratchDesc{
             BufferUsageFlagBits::CORE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
                 BufferUsageFlagBits::CORE_BUFFER_USAGE_STORAGE_BUFFER_BIT,  // usageFlags
             CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,                          // memoryPropertyFlags
             0U,                                                             // engineCreationFlags
-            frameScratchSize,                                               // byteSize
+            static_cast<uint32_t>(frameScratchSize),                        // byteSize
             BASE_NS::Format::BASE_FORMAT_UNDEFINED,                         // format
         };
 #if (RENDER_VALIDATION_ENABLED == 1)

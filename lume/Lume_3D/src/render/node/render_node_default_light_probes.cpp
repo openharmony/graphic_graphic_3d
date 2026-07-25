@@ -494,7 +494,7 @@ bool RenderNodeDefaultLightProbes::UpdateAndBindSet3Probes(
                   BASE_NS::extent_v<decltype(BASE_NS::remove_reference_t<decltype(plRef)>::descriptorSetLayouts)>);
     const auto& descBindings = plRef.descriptorSetLayouts[FIXED_CUSTOM_SET3].bindings;
     const RenderHandle descSetHandle = descriptorSetMgr.CreateOneFrameDescriptorSet(descBindings);
-    if (!RenderHandleUtil::IsValid(descSetHandle)) {
+    if (!RenderHandleUtil::IsValid(descSetHandle) || (customResourceData.resourceHandleCount > descBindings.size())) {
         return false;
     }
     IDescriptorSetBinder::Ptr binderPtr = descriptorSetMgr.CreateDescriptorSetBinder(descSetHandle, descBindings);

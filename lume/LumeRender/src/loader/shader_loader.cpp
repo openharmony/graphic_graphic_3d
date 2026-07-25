@@ -83,15 +83,18 @@ vector<uint8_t> ReadFile(IFile& file, const string_view uri)
 {
     const uint64_t fileLength = file.GetLength();
     if (fileLength > MAX_SHADER_FILE_BYTE_SIZE) {
-        PLUGIN_LOG_E(
-            "shader file too large (%s): %" PRIu64 " > %" PRIu64, uri.data(), fileLength, MAX_SHADER_FILE_BYTE_SIZE);
+        PLUGIN_LOG_E("shader file too large (%.*s): %" PRIu64 " > %" PRIu64,
+            static_cast<int>(uri.size()),
+            uri.data(),
+            fileLength,
+            MAX_SHADER_FILE_BYTE_SIZE);
         return {};
     }
 
     auto fileData = vector<uint8_t>(static_cast<std::size_t>(fileLength));
     const auto bytesRead = file.Read(fileData.data(), fileData.size());
     if (bytesRead != fileLength) {
-        PLUGIN_LOG_E("failed to read shader file (%s)", uri.data());
+        PLUGIN_LOG_E("failed to read shader file (%.*s)", static_cast<int>(uri.size()), uri.data());
         return {};
     }
     return fileData;
@@ -109,7 +112,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (shaderStatesPath) {
             LoadShaderStates(desc.shaderStatePath, *shaderStatesPath);
         } else {
-            PLUGIN_LOG_W("graphics state path (%s) not found.", desc.shaderStatePath.data());
+            PLUGIN_LOG_W("graphics state path (%.*s) not found.",
+                static_cast<int>(desc.shaderStatePath.size()),
+                desc.shaderStatePath.data());
         }
     }
     if (!desc.vertexInputDeclarationPath.empty()) {
@@ -117,7 +122,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (vidsPath) {
             LoadVids(desc.vertexInputDeclarationPath, *vidsPath);
         } else {
-            PLUGIN_LOG_W("vertex input declaration path (%s) not found.", desc.vertexInputDeclarationPath.data());
+            PLUGIN_LOG_W("vertex input declaration path (%.*s) not found.",
+                static_cast<int>(desc.vertexInputDeclarationPath.size()),
+                desc.vertexInputDeclarationPath.data());
         }
     }
     if (!desc.pipelineLayoutPath.empty()) {
@@ -125,7 +132,9 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (pipelineLayoutsPath) {
             LoadPipelineLayouts(desc.pipelineLayoutPath, *pipelineLayoutsPath);
         } else {
-            PLUGIN_LOG_W("pipeline layout path (%s) not found.", desc.pipelineLayoutPath.data());
+            PLUGIN_LOG_W("pipeline layout path (%.*s) not found.",
+                static_cast<int>(desc.pipelineLayoutPath.size()),
+                desc.pipelineLayoutPath.data());
         }
     }
     if (!desc.shaderPath.empty()) {
@@ -133,7 +142,8 @@ void ShaderLoader::Load(const ShaderManager::ShaderFilePathDesc& desc)
         if (shadersPath) {
             RecurseDirectory(desc.shaderPath, *shadersPath);
         } else {
-            PLUGIN_LOG_W("shader path (%s) not found.", desc.shaderPath.data());
+            PLUGIN_LOG_W(
+                "shader path (%.*s) not found.", static_cast<int>(desc.shaderPath.size()), desc.shaderPath.data());
         }
     }
 }
@@ -217,7 +227,10 @@ void ShaderLoader::HandleShaderFile(
             }
 #endif
         } else {
-            PLUGIN_LOG_E("unable to load shader json %s : %s", fullFileName.data(), result.error.c_str());
+            PLUGIN_LOG_E("unable to load shader json %.*s : %s",
+                static_cast<int>(fullFileName.size()),
+                fullFileName.data(),
+                result.error.c_str());
         }
     }
 }
@@ -230,7 +243,10 @@ void ShaderLoader::HandleShaderStateFile(const string_view fullFileName, const I
         if (result.success) {
             CreateShaderStates(loader.GetUri(), loader.GetGraphicsStateVariantData(), loader.GetGraphicsStates());
         } else {
-            PLUGIN_LOG_E("unable to load shader state json %s : %s", fullFileName.data(), result.error.c_str());
+            PLUGIN_LOG_E("unable to load shader state json %.*s : %s",
+                static_cast<int>(fullFileName.size()),
+                fullFileName.data(),
+                result.error.c_str());
         }
     }
 }
@@ -243,11 +259,17 @@ void ShaderLoader::HandlePipelineLayoutFile(const string_view fullFileName, cons
         if (result.success) {
             auto const handle = CreatePipelineLayout(loader);
             if (!handle) {
-                PLUGIN_LOG_E(
-                    "pipeline layout could not be created (%s) (%s)", fullFileName.data(), loader.GetUri().data());
+                PLUGIN_LOG_E("pipeline layout could not be created (%.*s) (%.*s)",
+                    static_cast<int>(fullFileName.size()),
+                    fullFileName.data(),
+                    static_cast<int>(loader.GetUri().size()),
+                    loader.GetUri().data());
             }
         } else {
-            PLUGIN_LOG_E("unable to load pipeline layout json %s : %s", fullFileName.data(), result.error.c_str());
+            PLUGIN_LOG_E("unable to load pipeline layout json %.*s : %s",
+                static_cast<int>(fullFileName.size()),
+                fullFileName.data(),
+                result.error.c_str());
         }
     }
 }
@@ -261,12 +283,17 @@ void ShaderLoader::HandleVertexInputDeclarationFile(const string_view fullFileNa
             auto const vidName = loader.GetUri();
             auto const handle = CreateVertexInputDeclaration(loader);
             if (!handle) {
-                PLUGIN_LOG_E(
-                    "vertex input declaration could not be created (%s) (%s)", fullFileName.data(), vidName.data());
+                PLUGIN_LOG_E("vertex input declaration could not be created (%.*s) (%.*s)",
+                    static_cast<int>(fullFileName.size()),
+                    fullFileName.data(),
+                    static_cast<int>(vidName.size()),
+                    vidName.data());
             }
         } else {
-            PLUGIN_LOG_E(
-                "unable to load vertex input declaration json %s : %s", fullFileName.data(), result.error.c_str());
+            PLUGIN_LOG_E("unable to load vertex input declaration json %.*s : %s",
+                static_cast<int>(fullFileName.size()),
+                fullFileName.data(),
+                result.error.c_str());
         }
     }
 }
@@ -326,7 +353,7 @@ ShaderLoader::ShaderFile ShaderLoader::LoadShaderFile(const string_view shader, 
         }
         info.info = {stageBits, info.data, ShaderReflectionData{info.reflectionData}};
     } else {
-        PLUGIN_LOG_E("shader file not found (%s)", shader.data());
+        PLUGIN_LOG_E("shader file not found (%.*s)", static_cast<int>(shader.size()), shader.data());
     }
     return info;
 }
@@ -358,7 +385,8 @@ RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& 
             if (!shaderFile.data.empty()) {
                 index = shaderMgr_.CreateShaderModule(computeShader, shaderFile.info);
             } else {
-                PLUGIN_LOG_E("shader file not found (%s)", computeShader.data());
+                PLUGIN_LOG_E(
+                    "shader file not found (%.*s)", static_cast<int>(computeShader.size()), computeShader.data());
             }
         }
         if (index != INVALID_SM_INDEX) {
@@ -400,7 +428,7 @@ RenderHandleReference ShaderLoader::CreateComputeShader(const ShaderDataLoader& 
                 shaderMgr_.SetRenderSlotData({rsId, rhr, {}, {}, {}});
             }
         } else {
-            PLUGIN_LOG_E("Failed to load shader : %s", computeShader.data());
+            PLUGIN_LOG_E("Failed to load shader : %.*s", static_cast<int>(computeShader.size()), computeShader.data());
         }
     }
     return firstShaderVariantRhr;
@@ -488,7 +516,9 @@ RenderHandleReference ShaderLoader::CreateGraphicsShader(const ShaderDataLoader&
                     {rsId, rhr, {}, {}, shaderMgr_.GetVertexInputDeclarationHandle(svRef.vertexInputDeclaration)});
             }
         } else {
-            PLUGIN_LOG_E("Failed to load shader : %s %s", vertexShader.data(), fragmentShader.data());
+            const string vertPath = vertexShader.empty() ? string("(empty)") : string(vertexShader);
+            const string fragPath = fragmentShader.empty() ? string("(empty)") : string(fragmentShader);
+            PLUGIN_LOG_E("Failed to load shader : %s %s", vertPath.c_str(), fragPath.c_str());
         }
     }
     return firstShaderVariantRhr;
@@ -566,8 +596,11 @@ void ShaderLoader::CreateShaderStates(const string_view uri,
             shaderMgr_.SetRenderSlotData({renderSlotId, {}, handle, {}, {}});
         }
         if (!handle) {
-            PLUGIN_LOG_E(
-                "error creating graphics state (name: %s, variant: %s)", uri.data(), variant.variantName.data());
+            PLUGIN_LOG_E("error creating graphics state (name: %.*s, variant: %.*s)",
+                static_cast<int>(uri.size()),
+                uri.data(),
+                static_cast<int>(variant.variantName.size()),
+                variant.variantName.data());
         }
     }
 }
