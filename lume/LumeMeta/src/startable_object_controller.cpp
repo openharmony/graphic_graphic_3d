@@ -147,7 +147,7 @@ META_NS::ITaskQueue::Ptr StartableObjectController::GetStopQueue() const
 bool StartableObjectController::StartAll(ControlBehavior behavior)
 {
     if (const auto root = target_.lock()) {
-        return AddOperation({StartableOperation::START, target_}, GetStartQueue());
+        return AddOperation({StartableOperation::START, target_, behavior}, GetStartQueue());
     }
     return false;
 }
@@ -155,7 +155,7 @@ bool StartableObjectController::StartAll(ControlBehavior behavior)
 bool StartableObjectController::StopAll(ControlBehavior behavior)
 {
     if (auto root = target_.lock()) {
-        return AddOperation({StartableOperation::STOP, target_}, GetStopQueue());
+        return AddOperation({StartableOperation::STOP, target_, behavior}, GetStopQueue());
     }
     return false;
 }
@@ -350,11 +350,11 @@ void StartableObjectController::RunTasks(const ITaskQueue::Ptr& queue)
             switch (op.operation_) {
                 case StartableOperation::START:
                     ++executingStart_;
-                    StartHierarchy(root, ControlBehavior::CONTROL_AUTOMATIC);
+                    StartHierarchy(root, op.behavior_);
                     --executingStart_;
                     break;
                 case StartableOperation::STOP:
-                    StopHierarchy(root, ControlBehavior::CONTROL_AUTOMATIC);
+                    StopHierarchy(root, op.behavior_);
                     break;
                 default:
                     break;
@@ -413,7 +413,7 @@ bool StartableObjectController::AddOperation(StartableOperation&& operation, con
 
 void StartableObjectController::InvalidateTickables()
 {
-    std::unique_lock lock(mutex_);
+    std::unique_lock lock(tickMutex_);
     tickables_.clear();
     tickablesValid_ = false;
 }

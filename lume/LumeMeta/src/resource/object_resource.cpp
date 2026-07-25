@@ -78,7 +78,7 @@ CORE_NS::IResource::Ptr ObjectResourceType::LoadResource(const StorageInfo& s) c
 bool ObjectResourceType::SaveResource(const CORE_NS::IResource::ConstPtr& p, const StorageInfo& s) const
 {
     auto rexport = [&](CORE_NS::IFile& sink) {
-        bool res = true;
+        bool res = false;
         if (!p || p->GetResourceType() != type_.ToUid()) {
             CORE_LOG_W("Invalid resource");
             return false;

@@ -370,6 +370,10 @@ bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource)
 }
 bool FileResourceManager::AddResource(const CORE_NS::IResource::Ptr& resource, BASE_NS::string_view path)
 {
+    if (!resource) {
+        CORE_LOG_W("AddResource: resource is null");
+        return false;
+    }
     CORE_NS::IResource::Ptr res;
     auto id = resource->GetResourceId();
     {
@@ -582,6 +586,10 @@ void FileResourceManager::RemoveAllResources(const ResourceContextPtr& context)
 
 FileResourceManager::Result FileResourceManager::ExportResourcePayload(const CORE_NS::IResource::Ptr& resource)
 {
+    if (!resource) {
+        CORE_LOG_W("ExportResourcePayload: resource is null");
+        return Result::NO_RESOURCE_DATA;
+    }
     std::shared_lock lock{mutex_};
     auto res = FindResource(ResourceIdContext{resource->GetResourceId(), resource->GetContext()});
     if (!res) {
