@@ -155,6 +155,7 @@ public:
 
         auto sceneObj = sceneAdapter_->GetSceneObj();
         auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
+        CHECK_NULL_RET_LOGE(scene, false);
         // renderPipeline is an undocumented, deprecated param. It is in use in multiple apps, so support it for now.
         // If the documented param renderingPipeline is supplied in CameraParameters, it will take precedence.
         auto pipeline = uint32_t(SCENE_NS::CameraPipeline::LIGHT_FORWARD);
@@ -184,6 +185,7 @@ public:
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(camera);
+        CHECK_NULL_RET_LOGE(node, false);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
         node->Rotation()->SetValue({p.rotation_.x, p.rotation_.y, p.rotation_.z, p.rotation_.w});
 
@@ -219,6 +221,7 @@ public:
             static_cast<SCENE_NS::CameraProjection>(static_cast<uint8_t>(p.camModelType_)));
 
         auto node = interface_pointer_cast<SCENE_NS::INode>(cameraPtr_);
+        CHECK_NULL_RET_LOGE(node, false);
         node->Position()->SetValue({p.position_.x, p.position_.y, p.position_.z});
         node->Rotation()->SetValue({p.rotation_.x, p.rotation_.y, p.rotation_.z, p.rotation_.w});
 
@@ -238,8 +241,10 @@ private:
 
         auto sceneObj = sceneAdapter_->GetSceneObj();
         auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
+        CHECK_NULL_RET_LOGE(scene,);
         auto envObj = scene->CreateObject(SCENE_NS::ClassId::Environment).GetResult();
         auto env = interface_pointer_cast<SCENE_NS::IEnvironment>(envObj);
+        CHECK_NULL_RET_LOGE(env,);
         env->Background()->SetValue(SCENE_NS::EnvBackgroundType::NONE);
         auto rc = scene->RenderConfiguration()->GetValue();
         if (rc) {
@@ -258,7 +263,12 @@ private:
                 return {};
             }
             // make sure there's a valid root node
-            scene->GetInternalScene()->GetEcsContext().CreateUnnamedRootNode();
+            auto internalScene = scene->GetInternalScene();
+            if (!internalScene) {
+                WIDGET_LOGE("AttachRootNode get internalScene fail");
+                return {};
+            }
+            internalScene->GetEcsContext().CreateUnnamedRootNode();
             FixName();
             return scene;
         }).GetResult();
@@ -268,6 +278,7 @@ private:
     {
         auto sceneObj = sceneAdapter_->GetSceneObj();
         auto scene = interface_pointer_cast<SCENE_NS::IScene>(sceneObj);
+        CHECK_NULL_RET_LOGE(scene,);
         struct rr {
             uint32_t id = 1;
             // not actual tree, but map of entities, and their children.
@@ -277,9 +288,26 @@ private:
             CORE3D_NS::INameComponentManager* nm;
             explicit rr(SCENE_NS::IScene::Ptr scene)
             {
-                CORE_NS::IEcs::Ptr ecs = scene->GetInternalScene()->GetEcsContext().GetNativeEcs();
+                if (!scene) {
+                    WIDGET_LOGE("FixName scene is null");
+                    return;
+                }
+                auto internalScene = scene->GetInternalScene();
+                if (!internalScene) {
+                    WIDGET_LOGE("FixName get internalScene fail");
+                    return;
+                }
+                CORE_NS::IEcs::Ptr ecs = internalScene->GetEcsContext().GetNativeEcs();
+                if (!ecs) {
+                    WIDGET_LOGE("FixName get ecs fail");
+                    return;
+                }
                 cm = CORE_NS::GetManager<CORE3D_NS::INodeComponentManager>(*ecs);
                 nm = CORE_NS::GetManager<CORE3D_NS::INameComponentManager>(*ecs);
+                if (!cm || !nm) {
+                    WIDGET_LOGE("FixName get manager fail");
+                    return;
+                }
                 Fix();
             }
             void Scan()
