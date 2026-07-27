@@ -28,7 +28,7 @@ class IFileManager;
 
 class SystemGraphLoader final : public ISystemGraphLoader {
 public:
-    explicit SystemGraphLoader(IFileManager&);
+    explicit SystemGraphLoader(IFileManager& fileManager);
     ~SystemGraphLoader() override = default;
     LoadResult Load(BASE_NS::string_view uri, IEcs& ecs) override;
     LoadResult LoadString(BASE_NS::string_view jsonString, IEcs& ecs) override;
