@@ -62,28 +62,6 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
         // CORE_COMPARE_OP_MAX_ENUM is 0x7FFFFFFF
     };
 
-    glGenSamplers(1, &plat_.sampler);
-    glSamplerParameteri(plat_.sampler, GL_TEXTURE_MAG_FILTER, magFilter[desc.magFilter]);
-
-    glSamplerParameteri(plat_.sampler, GL_TEXTURE_MIN_FILTER, minFilter[desc.minFilter + desc.mipMapMode * 2]);
-
-    glSamplerParameteri(plat_.sampler, GL_TEXTURE_WRAP_S, addressMode[desc.addressModeU]);
-    glSamplerParameteri(plat_.sampler, GL_TEXTURE_WRAP_T, addressMode[desc.addressModeV]);
-    glSamplerParameteri(plat_.sampler, GL_TEXTURE_WRAP_R, addressMode[desc.addressModeW]);
-
-    // "desc.mipLodBias" can not be set here on GLES, needs a shader work around if needed!
-    // "desc.enableAnisotropy" is NOT SUPPORTED! it requires EXT_texture_filter_anisotropic.
-    if (desc.enableCompareOp) {
-        glSamplerParameteri(plat_.sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glSamplerParameteri(plat_.sampler, GL_TEXTURE_COMPARE_FUNC, compareMode[desc.compareOp]);
-    } else {
-        glSamplerParameteri(plat_.sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-        glSamplerParameteri(plat_.sampler, GL_TEXTURE_COMPARE_FUNC, GL_ALWAYS);
-    }
-
-    glSamplerParameterf(plat_.sampler, GL_TEXTURE_MIN_LOD, desc.minLod);
-    glSamplerParameterf(plat_.sampler, GL_TEXTURE_MAX_LOD, desc.maxLod);
-
     float color[4] = {0.f};
     switch (desc.borderColor) {
         case CORE_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK:
@@ -106,9 +84,40 @@ GpuSamplerGLES::GpuSamplerGLES(Device& device, const GpuSamplerDesc& desc) : dev
             color[0] = color[1] = color[2] = color[3] = 0.f;
             break;
     }
-    glSamplerParameterfv(plat_.sampler, GL_TEXTURE_BORDER_COLOR, color);
 
+    // filter-independent state, shared by the primary sampler and its NEAREST companion.
+    // "desc.mipLodBias" can not be set here on GLES, needs a shader work around if needed!
+    // "desc.enableAnisotropy" is NOT SUPPORTED! it requires EXT_texture_filter_anisotropic.
     // "desc.enableUnnormalizedCoordinates" is NOT SUPPORTED!
+    const auto applyCommonState = [&](const GLuint sampler) {
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, addressMode[desc.addressModeU]);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, addressMode[desc.addressModeV]);
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, addressMode[desc.addressModeW]);
+        if (desc.enableCompareOp) {
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, compareMode[desc.compareOp]);
+        } else {
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, GL_ALWAYS);
+        }
+        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, desc.minLod);
+        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, desc.maxLod);
+        glSamplerParameterfv(sampler, GL_TEXTURE_BORDER_COLOR, color);
+    };
+
+    glGenSamplers(1, &plat_.sampler);
+    glSamplerParameteri(plat_.sampler, GL_TEXTURE_MAG_FILTER, magFilter[desc.magFilter]);
+    glSamplerParameteri(plat_.sampler, GL_TEXTURE_MIN_FILTER, minFilter[desc.minFilter + desc.mipMapMode * 2]);
+    applyCommonState(plat_.sampler);
+
+    // NEAREST companion for formats that are not linear-filterable (e.g. RGBA32F without GL_OES_texture_float_linear).
+    // Mip mode must be NEAREST too: cross-mip interpolation also needs it.
+    if ((desc.magFilter == CORE_FILTER_LINEAR) || (desc.minFilter == CORE_FILTER_LINEAR)) {
+        glGenSamplers(1, &plat_.samplerNonLinear);
+        glSamplerParameteri(plat_.samplerNonLinear, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glSamplerParameteri(plat_.samplerNonLinear, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+        applyCommonState(plat_.samplerNonLinear);
+    }
 }
 
 GpuSamplerGLES::~GpuSamplerGLES()
@@ -116,6 +125,10 @@ GpuSamplerGLES::~GpuSamplerGLES()
     if (plat_.sampler) {
         PLUGIN_ASSERT(device_.IsActive());
         device_.DeleteSampler(plat_.sampler);
+    }
+    if (plat_.samplerNonLinear) {
+        PLUGIN_ASSERT(device_.IsActive());
+        device_.DeleteSampler(plat_.samplerNonLinear);
     }
 }
 

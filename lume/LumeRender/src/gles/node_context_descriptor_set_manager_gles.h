@@ -45,6 +45,7 @@ struct ImageType {
 
 struct SamplerType {
     uint32_t samplerId;
+    uint32_t nonLinearSamplerId;  // NEAREST companion for non-filterable formats (0 if none)
 };
 
 struct Bind {
@@ -53,7 +54,7 @@ struct Bind {
             BufferType buffer{0U, 0U, 0U, 0U};
             ImageType image;
         };
-        SamplerType sampler{0U};
+        SamplerType sampler{0U, 0U};
     };
 
     DescriptorType descriptorType{CORE_DESCRIPTOR_TYPE_MAX_ENUM};
