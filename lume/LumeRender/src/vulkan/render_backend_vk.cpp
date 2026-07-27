@@ -1720,8 +1720,8 @@ void RenderBackendVk::RenderCommand(const RenderCommandBindVertexBuffers& render
 
     const uint32_t vertexBufferCount = renderCmd.vertexBufferCount;
 
-    VkBuffer vertexBuffers[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
-    VkDeviceSize offsets[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT];
+    VkBuffer vertexBuffers[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT] = {};
+    VkDeviceSize offsets[PipelineStateConstants::MAX_VERTEX_BUFFER_COUNT] = {};
     const GpuBufferVk* gpuBuffer = nullptr;
     RenderHandle currBufferHandle;
     for (size_t idx = 0; idx < vertexBufferCount; ++idx) {

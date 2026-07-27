@@ -47,6 +47,9 @@ enum SwapchainFlagBits {
     CORE_SWAPCHAIN_SRGB_BIT = 0x00000008,
     /** Hint to prefer high dynamic range format */
     CORE_SWAPCHAIN_HDR_BIT = 0x00000010,
+    /** Hint to prefer Linear memory structure.
+     *  Only used for the two attachments in MRT scenario for vulkan backend to workaround bugs in HISI GPU.*/
+    CORE_SWAPCHAIN_VK_FORCE_LINEAR_BIT = 0x00000020,
 };
 /** Container for swapchain flag bits */
 using SwapchainFlags = uint32_t;

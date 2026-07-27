@@ -322,11 +322,21 @@ SwapchainVk::SwapchainVk(Device& device, const SwapchainCreateInfo& swapchainCre
         if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
             compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         }
+#if defined(__OHOS_PLATFORM__)
+        // this flagbit is only used for resolving the bug in VK backend only
+        constexpr uint32_t vkSwapchainCreateInfoFlagForceLinearBit = 0x00000400;  // as required by HISI vulkan team
+        constexpr uint32_t vkSwapchainCreateInfoFlagDefaultBit = 0x00000000;
+        const uint32_t swapchainCreateInfoFlags = (flags_ & SwapchainFlagBits::CORE_SWAPCHAIN_VK_FORCE_LINEAR_BIT)
+                                                      ? vkSwapchainCreateInfoFlagForceLinearBit
+                                                      : vkSwapchainCreateInfoFlagDefaultBit;
+#else
+        constexpr uint32_t swapchainCreateInfoFlags = 0;
+#endif
 
         VkSwapchainCreateInfoKHR const vkSwapchainCreateInfo{
             VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,        // sType
             nullptr,                                            // pNext
-            0,                                                  // flags
+            swapchainCreateInfoFlags,                           // flags
             surface_,                                           // surface
             imageCount,                                         // minImageCount
             ci.format,                                          // imageFormat
