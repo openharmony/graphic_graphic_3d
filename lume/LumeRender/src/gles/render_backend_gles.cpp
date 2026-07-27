@@ -2012,6 +2012,12 @@ void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
         const GLenum dstType = GetTarget(dstPlat.type, layer, dstSampleCount);
         // glFramebufferTextureLayer for array textures....
         if (srcType == GL_TEXTURE_3D) {
+            if (srcRect[0U].depth >= srcRect[1U].depth || dstRect[0U].depth >= dstRect[1U].depth) {
+                PLUGIN_LOG_W("RENDER_VALIDATION: BlitImage 3D depth extent must be positive "
+                    "(srcRect depth [%u..%u], dstRect depth [%u..%u]).",
+                    srcRect[0U].depth, srcRect[1U].depth, dstRect[0U].depth, dstRect[1U].depth);
+                    continue;
+            }
             const auto srcDepth = GLint(srcRect[1U].depth - srcRect[0U].depth);
             const auto dstDepth = GLint(dstRect[1U].depth - dstRect[0U].depth);
             const auto srcStep = GLint(Math::round(float(srcDepth) / float(dstDepth)));
