@@ -49,6 +49,7 @@ struct WindowChangeInfo {
     uint64_t producerSurfaceId = 0x0;
     std::shared_ptr<Rosen::RSUIContext> rsUIContext = nullptr;
     void* customNativeWin = nullptr;
+    int32_t colorSpace = 0; // 0 indicates "No need to care, default, unknown"
 };
 } // namespace OHOS::Render3D
 #endif // OHOS_RENDER_3D_TEXTURE_INFO_H
