@@ -22,7 +22,6 @@
 #include <string>
 #include <napi_api.h>
 #include <core/intf_logger.h>
-#include "3d_widget_adapter_log.h"
 
 namespace NapiErrorUtil {
 enum Code : int32_t {
@@ -76,16 +75,21 @@ inline BASE_NS::string FormatErrorMessage(Code code, const BASE_NS::string& msg 
 FORMAT_FUNC(3, 4)
 inline void ThrowBusinessError(napi_env env, Code code, const char* fmt, ...)
 {
-    if (!fmt) {
-        WIDGET_LOGW("ThrowBusinessError: fmt is null");
-        napi_throw_business_error(env, static_cast<int32_t>(code), ToString(code));
-        return;
+    std::string msg;
+    if (fmt) {
+        va_list ap;
+        va_start(ap, fmt);
+        msg = FormatStringV(fmt, ap);
+        va_end(ap);
+    } else {
+        LOG_W("ThrowBusinessError: fmt is null");
+        msg = ToString(code);
     }
-    va_list ap;
-    va_start(ap, fmt);
-    std::string buf = FormatStringV(fmt, ap);
-    va_end(ap);
-    napi_throw_business_error(env, static_cast<int32_t>(code), buf.c_str());
+#ifdef __OHOS_PLATFORM__
+    napi_throw_business_error(env, static_cast<int32_t>(code), msg.c_str());
+#else
+    napi_throw_error(env, BASE_NS::to_string(static_cast<int32_t>(code)).c_str(), msg.c_str());
+#endif
 }
 } // namespace NapiErrorUtil
 
