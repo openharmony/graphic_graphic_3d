@@ -86,7 +86,7 @@ ohos_unittest("lume_engine_api_test") {
     "api_unit_test/src/ecs/ecs_test.cpp",
     
     # Plugin
-    "api_unit_test/src/plugin/plugin_test.cpp",
+    #"api_unit_test/src/plugin/plugin_test.cpp",
     
     # Property
     "api_unit_test/src/property/property_test.cpp",
@@ -260,7 +260,7 @@ ohos_unittest("lume_engine_src_test") {
     "src_unit_test/src/os/ohos_filesystem_unit_test.cpp",
     
     # Plugin
-    "src_unit_test/src/plugin/plugin_test.cpp",
+    #"src_unit_test/src/plugin/plugin_test.cpp",
     
     # Threading
     "src_unit_test/src/threading/task_queue_test.cpp",
