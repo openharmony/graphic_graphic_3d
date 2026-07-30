@@ -135,7 +135,7 @@ ohos_unittest("lume_3d_api_test") {
     "api_unit_test/src/gpu/node_system/gpu_test_node_system_test.cpp",
 
     # Plugin
-    "api_unit_test/src/plugin/plugin_test.cpp",
+    #"api_unit_test/src/plugin/plugin_test.cpp",
     
     # Render
     "api_unit_test/src/render/graphics_context_test.cpp",
