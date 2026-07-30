@@ -27,6 +27,7 @@ class Device;
 class DeviceGLES;
 struct GpuSamplerPlatformDataGL final : public GpuSamplerPlatformData {
     uint32_t sampler{0};
+    uint32_t samplerNonLinear{0};  // NEAREST twin of 'sampler' for non-filterable formats (0 if unused)
 };
 
 struct GpuSamplerDesc;
