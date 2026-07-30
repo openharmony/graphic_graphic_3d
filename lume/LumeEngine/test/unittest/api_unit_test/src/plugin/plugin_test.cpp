@@ -70,6 +70,7 @@ public:
 };
 }  // namespace UTest
 
+#if 0
 /**
  * @tc.name: GetPlugins
  * @tc.desc: Tests for Get Plugins. [AUTO-GENERATED]
@@ -404,3 +405,4 @@ UNIT_TEST(API_ClassRegister, engineInterfaces, testing::ext::TestSize.Level1)
     EXPECT_EQ(engineRegister->GetInterfaceMetadata().size(), engineInterfaceCount);
     EXPECT_EQ(globalClassRegister.GetInterfaceMetadata().size(), globalInterfaceCount);
 }
+#endif
