@@ -166,7 +166,6 @@ BASE_NS::string StageInvalidPlugins(CORE_NS::FileManager& fileManager)
 }
 }  // namespace
 
-#if 0
 /**
  * @tc.name: GetPlugins
  * @tc.desc: Tests for Get Plugins. [AUTO-GENERATED]
@@ -324,7 +323,6 @@ UNIT_TEST(SRC_PluginTest, LoadPluginsWithExplicitDependency, testing::ext::TestS
     pluginRegister.UnloadPlugins(uids);
     EXPECT_EQ(pluginRegister.GetPlugins().size(), 0);
 }
-#endif
 
 #ifndef __OHOS__
 /**
@@ -354,7 +352,6 @@ UNIT_TEST(SRC_PluginTest, LoadPluginsRejectCircularDependency, testing::ext::Tes
 
 #endif
 
-#if 0
 /**
  * @tc.name: globalInterfaces
  * @tc.desc: Tests for Global Interfaces. [AUTO-GENERATED]
@@ -478,4 +475,3 @@ UNIT_TEST(SRC_ClassRegister, engineInterfaces, testing::ext::TestSize.Level1)
     EXPECT_EQ(engineRegister->GetInterfaceMetadata().size(), engineInterfaceCount);
     EXPECT_EQ(globalClassRegister.GetInterfaceMetadata().size(), globalInterfaceCount);
 }
-#endif
