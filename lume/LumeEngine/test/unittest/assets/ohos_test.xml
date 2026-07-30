@@ -20,9 +20,9 @@
             <option name="shell" value="rm -rf /data/test/resource/graphic_3d/LumeEngine/invalid_plugins/"/>
             <option name="shell" value="mkdir -p /data/test/resource/graphic_3d/LumeEngine/test_data/"/>
             <option name="push" value="test_data/. -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin2.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin3.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin.z.so -> /system/lib/graphics3d/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin2.z.so -> /system/lib/graphics3d/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin3.z.so -> /system/lib/graphics3d/" src="res"/>
         </preparer>
     </target>
     <target name="lume_engine_src_test">
@@ -31,9 +31,9 @@
             <option name="shell" value="rm -rf /data/test/resource/graphic_3d/LumeEngine/invalid_plugins/"/>
             <option name="shell" value="mkdir -p /data/test/resource/graphic_3d/LumeEngine/test_data/"/>
             <option name="push" value="test_data/. -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin2.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
-            <option name="push" value="libCoreTestSharedPlugin3.z.so -> /data/test/resource/graphic_3d/LumeEngine/test_data/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin.z.so -> /system/lib/graphics3d/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin2.z.so -> /system/lib/graphics3d/" src="res"/>
+            <option name="push" value="libCoreTestSharedPlugin3.z.so -> /system/lib/graphics3d/" src="res"/>
         </preparer>
     </target>
 </configuration>

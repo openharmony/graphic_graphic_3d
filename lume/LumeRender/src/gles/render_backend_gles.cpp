@@ -1992,6 +1992,9 @@ void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
     const auto& srcPlat = srcImage->GetPlatformData();
     const auto& dstDesc = dstImage->GetDesc();
     const auto& dstPlat = dstImage->GetPlatformData();
+    // GL_LINEAR blit samples black on non-filterable float sources (e.g. RGBA32F without float-linear).
+    const Filter blitFilter =
+        device_.IsInternalFormatLinearFilterable(srcPlat.internalFormat) ? renderCmd.filter : CORE_FILTER_NEAREST;
     const auto& srcRect = renderCmd.imageBlit.srcOffsets;
     const auto& dstRect = renderCmd.imageBlit.dstOffsets;
     const auto& src = renderCmd.imageBlit.srcSubresource;
@@ -2027,7 +2030,7 @@ void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
                     GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcPlat.image, srcMipLevel, depth * srcStep);
                 glFramebufferTextureLayer(
                     GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstPlat.image, dstMipLevel, depth * dstStep);
-                DoBlit(renderCmd.filter,
+                DoBlit(blitFilter,
                     {src.mipLevel, srcRect[0], srcRect[1], srcDesc.height},
                     {dst.mipLevel, dstRect[0], dstRect[1], dstDesc.height});
             }
@@ -2036,7 +2039,7 @@ void RenderBackendGLES::RenderCommandBlitImage(const RenderCommandWithType& ref)
         } else {
             glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, srcPlat.image, srcMipLevel);
             glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstType, dstPlat.image, dstMipLevel);
-            DoBlit(renderCmd.filter,
+            DoBlit(blitFilter,
                 {src.mipLevel, srcRect[0], srcRect[1], srcDesc.height},
                 {dst.mipLevel, dstRect[0], dstRect[1], dstDesc.height});
             glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, srcType, 0, 0);
@@ -2769,6 +2772,7 @@ void RenderBackendGLES::BindSampler(const array_view<const Gles::Bind::Resource>
             continue;
         }
         const auto samplerId = resources[index].sampler.samplerId;
+        const auto nonLinearSamplerId = resources[index].sampler.nonLinearSamplerId;
         for (const auto& id : array_view(ids.data() + idRange.index, idRange.count)) {
             const auto textureUnit = index + id;
 #if (RENDER_PERF_ENABLED == 1)
@@ -2777,6 +2781,10 @@ void RenderBackendGLES::BindSampler(const array_view<const Gles::Bind::Resource>
             }
 #endif
             device_.BindSampler(textureUnit, samplerId);
+            // record companion for BindTexture's per-unit fallback (separate sampler + sampled image)
+            if (textureUnit < MAX_TEXTURE_UNITS) {
+                nonLinearSamplerForUnit_[textureUnit] = nonLinearSamplerId;
+            }
         }
     }
 }
@@ -2801,6 +2809,11 @@ void RenderBackendGLES::BindTexture(array_view<const Gles::Bind::Resource> resou
             uint32_t samplerId = UINT32_MAX;
             if (descriptorType == CORE_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                 samplerId = resources[index].sampler.samplerId;
+                // non-filterable format: use the sampler's NEAREST companion instead (else samples black)
+                const auto nonLinearSamplerId = resources[index].sampler.nonLinearSamplerId;
+                if ((nonLinearSamplerId != 0U) && !device_.IsInternalFormatLinearFilterable(plat.internalFormat)) {
+                    samplerId = nonLinearSamplerId;
+                }
             } else if (descriptorType == CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
                 samplerId = 0U;
             }
@@ -2824,6 +2837,12 @@ void RenderBackendGLES::BindTexture(array_view<const Gles::Bind::Resource> resou
                 }
 #endif
                 device_.BindTexture(textureUnit, plat.type, plat.image);
+                // separate sampler bound by BindSampler(): swap to its NEAREST companion if non-filterable
+                if ((descriptorType == CORE_DESCRIPTOR_TYPE_SAMPLED_IMAGE) && (textureUnit < MAX_TEXTURE_UNITS) &&
+                    (nonLinearSamplerForUnit_[textureUnit] != 0U) &&
+                    !device_.IsInternalFormatLinearFilterable(plat.internalFormat)) {
+                    device_.BindSampler(textureUnit, nonLinearSamplerForUnit_[textureUnit]);
+                }
                 uint32_t highestLevel = plat.mipCount ? (plat.mipCount - 1) : 0u;
                 // NOTE: the last setting is active, can not have different miplevels bound from single
                 // resource.

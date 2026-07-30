@@ -18,7 +18,7 @@
         <preparer>
             <option name="shell" value="mkdir -p /data/test/resource/graphic_3d/Lume3D/test_data/"/>
             <option name="push" value="test_data/. -> /data/test/resource/graphic_3d/Lume3D/test_data/" src="res"/>
-            <option name="push" value="libCore3DTestSharedPlugin.z.so -> /system/lib64/graphics3d/" src="res"/>
+            <option name="push" value="libCore3DTestSharedPlugin.z.so -> /system/lib/graphics3d/" src="res"/>
         </preparer>
     </target>
 
@@ -26,7 +26,7 @@
         <preparer>
             <option name="shell" value="mkdir -p /data/test/resource/graphic_3d/Lume3D/test_data/"/>
             <option name="push" value="test_data/. -> /data/test/resource/graphic_3d/Lume3D/test_data/" src="res"/>
-            <option name="push" value="libCore3DTestSharedPlugin.z.so -> /system/lib64/graphics3d/" src="res"/>
+            <option name="push" value="libCore3DTestSharedPlugin.z.so -> /system/lib/graphics3d/" src="res"/>
         </preparer>
     </target>
 </configuration>
