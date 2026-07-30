@@ -31,7 +31,7 @@ class Device;
 struct GpuAccelerationStructurePlatformDataMln {
     uint32_t byteSize{0u};
     uint64_t deviceAddress{0};  // AS device address from MlnGetAccelerationStructureDeviceAddress
-    MlnAccelerationStructure accelerationStructure{MLN_NULL_HANDLE};
+    MlnResource accelerationStructure{MLN_NULL_HANDLE};
 };
 
 class GpuBufferMln final : public GpuBuffer {

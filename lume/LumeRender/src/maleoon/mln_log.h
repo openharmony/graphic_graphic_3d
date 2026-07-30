@@ -51,39 +51,38 @@ namespace Render {
 extern MlnLogFlags g_mlnLog;
 void MlnLogRefreshFlags();
 }  // namespace Render
-using Render::g_mlnLog;
 
 #define MLN_LOG_INIT(...)                            \
     do {                                             \
-        if (g_mlnLog.init) {                         \
+        if (RENDER_NS::g_mlnLog.init) {              \
             PLUGIN_LOG_E("[MLN-INIT] " __VA_ARGS__); \
         }                                            \
     } while (0)
 
 #define MLN_LOG_FRAME(...)                            \
     do {                                              \
-        if (g_mlnLog.frame) {                         \
+        if (RENDER_NS::g_mlnLog.frame) {              \
             PLUGIN_LOG_E("[MLN-FRAME] " __VA_ARGS__); \
         }                                             \
     } while (0)
 
 #define MLN_LOG_GRAPH(...)                            \
     do {                                              \
-        if (g_mlnLog.graph) {                         \
+        if (RENDER_NS::g_mlnLog.graph) {              \
             PLUGIN_LOG_E("[MLN-GRAPH] " __VA_ARGS__); \
         }                                             \
     } while (0)
 
 #define MLN_LOG_TRANS(...)                            \
     do {                                              \
-        if (g_mlnLog.trans) {                         \
+        if (RENDER_NS::g_mlnLog.trans) {              \
             PLUGIN_LOG_E("[MLN-TRANS] " __VA_ARGS__); \
         }                                             \
     } while (0)
 
 #define MLN_LOG_COMP(...)                            \
     do {                                             \
-        if (g_mlnLog.comp) {                         \
+        if (RENDER_NS::g_mlnLog.comp) {              \
             PLUGIN_LOG_E("[MLN-COMP] " __VA_ARGS__); \
         }                                            \
     } while (0)

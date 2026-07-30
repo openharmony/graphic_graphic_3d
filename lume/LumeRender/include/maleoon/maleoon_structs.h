@@ -227,6 +227,11 @@ typedef struct MlnGpuFeatures {
     b32 shaderResourceMinLod;
     b32 variableMultisampleRate;
     b32 inheritedQueries;
+    b32 accelerationStructure;
+    b32 rayQuery;
+    b32 callableInRaygen;
+    b32 callableInCompute;
+    b32 callableInFragment;
 } MlnGpuFeatures;
 
 /**
@@ -241,16 +246,12 @@ typedef struct MlnRayTracingCapabilities {
     u32 maxAccelerationStructuresPerBindingSet;
     u32 maxAccelerationStructuresPerBindingSetAfterUpdate;
     u32 minScratchOffsetAlignment;
-    u32 shaderGroupHandleByteSize;
-    u32 maxRecursionDepth;
-    u32 maxShaderGroupByteStride;
-    u32 shaderGroupBaseByteAlignment;
-    u32 shaderGroupHandleCaptureReplayByteSize;
-    u32 maxTraceRaysInvocations;
-    u32 shaderGroupHandleByteAlignment;
-    u32 maxHitAttributeByteSize;
     u32 maxMicromapOpacity2StateLevel;
     u32 maxMicromapOpacity4StateLevel;
+    u32 maxCallablesPerProgram;
+    u32 maxComputeRaytracingWorkGroupsX;
+    u32 maxComputeRaytracingWorkGroupsY;
+    u32 maxComputeRaytracingWorkGroupsZ;
 } MlnRayTracingCapabilities;
 
 /**
@@ -1032,7 +1033,7 @@ typedef struct MlnWriteBindingSet {
     const MlnBindingBufferDescriptor* bufferDescriptor;
     const MlnResourceView* texelBufferResourceView;
     const MlnBindingInlineUniformDescriptor* inlineUniformDescriptor;
-    const MlnAccelerationStructure* accelerationStructure;
+    const MlnResource* accelerationStructure;
 } MlnWriteBindingSet;
 
 /**
@@ -2138,8 +2139,8 @@ typedef struct MlnPassNodeResourceDescriptor {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
     MlnPassNodeResourceType type;
-    MlnResourceView imageResourceView;
-    MlnResource bufferResource;
+    MlnResourceView resourceView;
+    MlnResource resource;
 } MlnPassNodeResourceDescriptor;
 
 /**
@@ -2582,7 +2583,7 @@ typedef struct MlnAccelerationStructureInstance {
     MlnTransformMatrix transform;
     u32 instanceCustomIndex : 24;
     u32 mask : 8;
-    u32 instanceShaderBindingTableRecordOffset : 24;
+    u32 instanceCallableIndex : 24;
     MlnAccelerationStructureInstanceFlags flags : 8;
     u64 accelerationStructureReference;
 } MlnAccelerationStructureInstance;
@@ -2679,8 +2680,8 @@ typedef struct MlnAccelerationStructureBuildGeometryDescriptor {
     MlnAccelerationStructureType type;
     MlnBuildAccelerationStructureFlags flags;
     MlnAccelerationStructureBuildMode mode;
-    MlnAccelerationStructure srcAccelerationStructure;
-    MlnAccelerationStructure dstAccelerationStructure;
+    MlnResource srcAccelerationStructure;
+    MlnResource dstAccelerationStructure;
     u32 geometryCount;
     const MlnAccelerationStructureGeometryDescriptor* geometries;
     const MlnAccelerationStructureGeometryDescriptor* const *
@@ -2716,8 +2717,8 @@ typedef struct MlnAccelerationStructureCopyCommand {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
     MlnAccelerationStructureCopyMode mode;
-    MlnAccelerationStructure src;
-    MlnAccelerationStructure dst;
+    MlnResource src;
+    MlnResource dst;
 } MlnAccelerationStructureCopyCommand;
 
 /**
@@ -2726,7 +2727,7 @@ typedef struct MlnAccelerationStructureCopyCommand {
 typedef struct MlnAccelerationStructureSerializeCommand {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
-    MlnAccelerationStructure src;
+    MlnResource src;
     MlnDeviceAddress dst;
 } MlnAccelerationStructureSerializeCommand;
 
@@ -2737,7 +2738,7 @@ typedef struct MlnAccelerationStructureDeserializeCommand {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
     MlnDeviceAddress src;
-    MlnAccelerationStructure dst;
+    MlnResource dst;
 } MlnAccelerationStructureDeserializeCommand;
 
 /**
@@ -2765,7 +2766,7 @@ typedef struct MlnAccelerationStructureDescriptor {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
     MlnAccelerationStructureDescriptorFlags flags;
-    const u32 primitiveCount;
+    u32 primitiveCount;
     MlnResource buffer;
     MlnDeviceSize offset;
     MlnDeviceSize size;
@@ -2838,10 +2839,23 @@ typedef struct MlnGetQueryPoolResultDescriptor {
     u32 extensionCount;
     const MlnExtensionBlock* extensions;
     MlnQueryPool srcQueryPool;
-    void* pData;
+    void* data;
     u32 regionCount;
     const MlnQueryPoolResultCopyRegion* regions;
 } MlnGetQueryPoolResultDescriptor;
+
+/**
+ * @brief The structure for callable program extension.
+ */
+typedef struct MlnCallableProgramExtension {
+    u32 extensionCount;
+    const MlnExtensionBlock* extensions;
+    MlnCallableProgramExtensionFlags flags;
+    u32 visibleEntryCount;
+    const MlnShaderStageState* visibleEntries;
+    u32 opacityEntryCount;
+    const MlnShaderStageState* opacityEntries;
+} MlnCallableProgramExtension;
 
 #ifdef __cplusplus
 }

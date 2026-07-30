@@ -178,6 +178,7 @@ using QuerySampleCollectionLocation = MlnQuerySampleCollectionLocation;
 using CounterStorage = MlnCounterStorage;
 using CounterUnit = MlnCounterUnit;
 using QueryPoolDescriptorFlagBits = MlnQueryPoolDescriptorFlagBits;
+using CallableProgramExtensionFlagBits = MlnCallableProgramExtensionFlagBits;
 
 // ===== Flag Aliases =====
 using AccelerationStructureDataGraphDescriptorFlagBits =
@@ -214,6 +215,8 @@ using BufferViewDescriptorFlags = MlnBufferViewDescriptorFlags;
 using BuildAccelerationStructureFlagBits =
     MlnBuildAccelerationStructureFlagBits;
 using BuildAccelerationStructureFlags = MlnBuildAccelerationStructureFlags;
+using CallableProgramExtensionFlagBits = MlnCallableProgramExtensionFlagBits;
+using CallableProgramExtensionFlags = MlnCallableProgramExtensionFlags;
 using ClearObjectGroupDescriptorFlagBits =
     MlnClearObjectGroupDescriptorFlagBits;
 using ClearObjectGroupDescriptorFlags = MlnClearObjectGroupDescriptorFlags;
@@ -618,6 +621,7 @@ struct AccelerationStructureVersion;
 struct QueryPoolDescriptor;
 struct GpuCounterProperties;
 struct GetQueryPoolResultDescriptor;
+struct CallableProgramExtension;
 
 // ===== Handle Wrapper Classes =====
 class DeviceMemory {
@@ -800,18 +804,6 @@ private:
     ctype m_handle{};
 };
 
-class AccelerationStructure {
-public:
-    using ctype = MlnAccelerationStructure;
-    AccelerationStructure() = default;
-    explicit AccelerationStructure(ctype handle) : m_handle(handle) {}
-    ctype get() const { return m_handle; }
-    operator ctype() const noexcept { return m_handle; }
-
-private:
-    ctype m_handle{};
-};
-
 class PrivateDataSlot {
 public:
     using ctype = MlnPrivateDataSlot;
@@ -899,10 +891,10 @@ public:
                                        GpuImageFormatProperties* properties);
     Status DeviceWaitIdle();
     Status GetGpuFragmentShadingRates(
-        u32* pFragmentShadingRateCount,
-        GpuFragmentShadingRate* pFragmentShadingRates,
-        GpuFragmentShadingRateFeatures* pFragmentShadingRateFeatures,
-        GpuFragmentShadingRateProperties* pFragmentShadingRateProperties);
+        u32* fragmentShadingRateCount,
+        GpuFragmentShadingRate* fragmentShadingRates,
+        GpuFragmentShadingRateFeatures* fragmentShadingRateFeatures,
+        GpuFragmentShadingRateProperties* fragmentShadingRateProperties);
     Queue GetDeviceQueue(u32 index);
     Status GetGpuMemoryProperties(GpuMemoryProperties* properties);
     void GetResourceMemoryRequirements(
@@ -920,7 +912,7 @@ public:
                                      NativeBufferProperties* properties);
     Status GetMemoryNativeBuffer(
         const MemoryGetNativeBufferDescriptor* descriptor,
-        OH_NativeBuffer** pBuffer);
+        OH_NativeBuffer** buffer);
     void GetBufferResourceMemoryRequirements(
         const BufferDescriptor* descriptor,
         MemoryRequirements* memoryRequirements);
@@ -1050,12 +1042,10 @@ public:
         const AccelerationStructureBuildGeometryDescriptor* buildGeometry,
         const u32* maxPrimitiveCounts,
         AccelerationStructureBuildSizesDescriptor* buildSizes);
-    AccelerationStructure CreateAccelerationStructure(
+    Resource CreateAccelerationStructure(
         const AccelerationStructureDescriptor* descriptor);
     DeviceAddress GetAccelerationStructureDeviceAddress(
-        AccelerationStructure accelerationStructure);
-    void DestroyAccelerationStructure(
-        AccelerationStructure accelerationStructure);
+        Resource accelerationStructure);
     Status GetRayTracingCapabilities(RayTracingCapabilities* capabilities);
     Status CheckAccelerationStructureCompatibility(
         const AccelerationStructureVersion* version,
@@ -1253,6 +1243,11 @@ struct GpuFeatures {
     b32 shaderResourceMinLod;
     b32 variableMultisampleRate;
     b32 inheritedQueries;
+    b32 accelerationStructure;
+    b32 rayQuery;
+    b32 callableInRaygen;
+    b32 callableInCompute;
+    b32 callableInFragment;
 };
 
 struct RayTracingCapabilities {
@@ -1264,16 +1259,12 @@ struct RayTracingCapabilities {
     u32 maxAccelerationStructuresPerBindingSet;
     u32 maxAccelerationStructuresPerBindingSetAfterUpdate;
     u32 minScratchOffsetAlignment;
-    u32 shaderGroupHandleByteSize;
-    u32 maxRecursionDepth;
-    u32 maxShaderGroupByteStride;
-    u32 shaderGroupBaseByteAlignment;
-    u32 shaderGroupHandleCaptureReplayByteSize;
-    u32 maxTraceRaysInvocations;
-    u32 shaderGroupHandleByteAlignment;
-    u32 maxHitAttributeByteSize;
     u32 maxMicromapOpacity2StateLevel;
     u32 maxMicromapOpacity4StateLevel;
+    u32 maxCallablesPerProgram;
+    u32 maxComputeRaytracingWorkGroupsX;
+    u32 maxComputeRaytracingWorkGroupsY;
+    u32 maxComputeRaytracingWorkGroupsZ;
 };
 
 struct GpuProperties {
@@ -1864,7 +1855,7 @@ struct WriteBindingSet {
     const BindingBufferDescriptor* bufferDescriptor;
     const ResourceView* texelBufferResourceView;
     const BindingInlineUniformDescriptor* inlineUniformDescriptor;
-    const AccelerationStructure* accelerationStructure;
+    const Resource* accelerationStructure;
 };
 
 struct CopyBindingSet {
@@ -2679,8 +2670,8 @@ struct PassNodeResourceDescriptor {
     u32 extensionCount;
     const ExtensionBlock* extensions;
     PassNodeResourceType type;
-    ResourceView imageResourceView;
-    Resource bufferResource;
+    ResourceView resourceView;
+    Resource resource;
 };
 
 struct PassNodeDependencyDescriptor {
@@ -3012,7 +3003,7 @@ struct AccelerationStructureInstance {
     TransformMatrix transform;
     u32 instanceCustomIndex;
     u32 mask;
-    u32 instanceShaderBindingTableRecordOffset;
+    u32 instanceCallableIndex;
     AccelerationStructureInstanceFlags flags;
     u64 accelerationStructureReference;
 };
@@ -3085,8 +3076,8 @@ struct AccelerationStructureBuildGeometryDescriptor {
     AccelerationStructureType type;
     BuildAccelerationStructureFlags flags;
     AccelerationStructureBuildMode mode;
-    AccelerationStructure srcAccelerationStructure;
-    AccelerationStructure dstAccelerationStructure;
+    Resource srcAccelerationStructure;
+    Resource dstAccelerationStructure;
     u32 geometryCount;
     const AccelerationStructureGeometryDescriptor* geometries;
     const AccelerationStructureGeometryDescriptor* const * geometriesPointers;
@@ -3112,14 +3103,14 @@ struct AccelerationStructureCopyCommand {
     u32 extensionCount;
     const ExtensionBlock* extensions;
     AccelerationStructureCopyMode mode;
-    AccelerationStructure src;
-    AccelerationStructure dst;
+    Resource src;
+    Resource dst;
 };
 
 struct AccelerationStructureSerializeCommand {
     u32 extensionCount;
     const ExtensionBlock* extensions;
-    AccelerationStructure src;
+    Resource src;
     DeviceAddress dst;
 };
 
@@ -3127,7 +3118,7 @@ struct AccelerationStructureDeserializeCommand {
     u32 extensionCount;
     const ExtensionBlock* extensions;
     DeviceAddress src;
-    AccelerationStructure dst;
+    Resource dst;
 };
 
 union AccelerationStructureCommandData {
@@ -3146,7 +3137,7 @@ struct AccelerationStructureDescriptor {
     u32 extensionCount;
     const ExtensionBlock* extensions;
     AccelerationStructureDescriptorFlags flags;
-    const u32 primitiveCount;
+    u32 primitiveCount;
     Resource buffer;
     DeviceSize offset;
     DeviceSize size;
@@ -3201,9 +3192,19 @@ struct GetQueryPoolResultDescriptor {
     u32 extensionCount;
     const ExtensionBlock* extensions;
     QueryPool srcQueryPool;
-    void* pData;
+    void* data;
     u32 regionCount;
     const QueryPoolResultCopyRegion* regions;
+};
+
+struct CallableProgramExtension {
+    u32 extensionCount;
+    const ExtensionBlock* extensions;
+    CallableProgramExtensionFlags flags;
+    u32 visibleEntryCount;
+    const ShaderStageState* visibleEntries;
+    u32 opacityEntryCount;
+    const ShaderStageState* opacityEntries;
 };
 
 // ===== Method Definitions =====
@@ -3246,18 +3247,17 @@ Status Device::GetGpuImageFormatProperties(Format format, ImageType type,
 Status Device::DeviceWaitIdle() { return ::MlnDeviceWaitIdle(m_handle); }
 
 Status Device::GetGpuFragmentShadingRates(
-    u32* pFragmentShadingRateCount,
-    GpuFragmentShadingRate* pFragmentShadingRates,
-    GpuFragmentShadingRateFeatures* pFragmentShadingRateFeatures,
-    GpuFragmentShadingRateProperties* pFragmentShadingRateProperties)
+    u32* fragmentShadingRateCount, GpuFragmentShadingRate* fragmentShadingRates,
+    GpuFragmentShadingRateFeatures* fragmentShadingRateFeatures,
+    GpuFragmentShadingRateProperties* fragmentShadingRateProperties)
 {
     return ::MlnGetGpuFragmentShadingRates(
-        m_handle, pFragmentShadingRateCount,
-        reinterpret_cast<MlnGpuFragmentShadingRate*>(pFragmentShadingRates),
+        m_handle, fragmentShadingRateCount,
+        reinterpret_cast<MlnGpuFragmentShadingRate*>(fragmentShadingRates),
         reinterpret_cast<MlnGpuFragmentShadingRateFeatures*>(
-            pFragmentShadingRateFeatures),
+            fragmentShadingRateFeatures),
         reinterpret_cast<MlnGpuFragmentShadingRateProperties*>(
-            pFragmentShadingRateProperties));
+            fragmentShadingRateProperties));
 }
 
 Queue Device::GetDeviceQueue(u32 index)
@@ -3333,13 +3333,12 @@ Status Device::GetNativeBufferProperties(const OH_NativeBuffer* buffer,
 }
 
 Status Device::GetMemoryNativeBuffer(
-    const MemoryGetNativeBufferDescriptor* descriptor,
-    OH_NativeBuffer** pBuffer)
+    const MemoryGetNativeBufferDescriptor* descriptor, OH_NativeBuffer** buffer)
 {
     return ::MlnGetMemoryNativeBuffer(
         m_handle,
         reinterpret_cast<const MlnMemoryGetNativeBufferDescriptor*>(descriptor),
-        pBuffer);
+        buffer);
 }
 
 void Device::GetBufferResourceMemoryRequirements(
@@ -3898,26 +3897,19 @@ Status Device::GetAccelerationStructureBuildSizes(
             buildSizes));
 }
 
-AccelerationStructure Device::CreateAccelerationStructure(
+Resource Device::CreateAccelerationStructure(
     const AccelerationStructureDescriptor* descriptor)
 {
-    return AccelerationStructure(::MlnCreateAccelerationStructure(
+    return Resource(::MlnCreateAccelerationStructure(
         m_handle, reinterpret_cast<const MlnAccelerationStructureDescriptor*>(
                       descriptor)));
 }
 
 DeviceAddress Device::GetAccelerationStructureDeviceAddress(
-    AccelerationStructure accelerationStructure)
+    Resource accelerationStructure)
 {
     return ::MlnGetAccelerationStructureDeviceAddress(
-        m_handle, static_cast<MlnAccelerationStructure>(accelerationStructure));
-}
-
-void Device::DestroyAccelerationStructure(
-    AccelerationStructure accelerationStructure)
-{
-    ::MlnDestroyAccelerationStructure(
-        m_handle, static_cast<MlnAccelerationStructure>(accelerationStructure));
+        m_handle, static_cast<MlnResource>(accelerationStructure));
 }
 
 Status Device::GetRayTracingCapabilities(RayTracingCapabilities* capabilities)

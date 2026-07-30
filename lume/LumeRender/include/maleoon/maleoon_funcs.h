@@ -68,10 +68,10 @@ MLNAPI_ATTR void MLNAPI_CALL MlnDestroyDevice(MlnDevice device);
  * properties related to fragment shading rate.
  */
 MLNAPI_ATTR MlnStatus MLNAPI_CALL MlnGetGpuFragmentShadingRates(
-    MlnDevice device, u32* pFragmentShadingRateCount,
-    MlnGpuFragmentShadingRate* pFragmentShadingRates,
-    MlnGpuFragmentShadingRateFeatures* pFragmentShadingRateFeatures,
-    MlnGpuFragmentShadingRateProperties* pFragmentShadingRateProperties);
+    MlnDevice device, u32* fragmentShadingRateCount,
+    MlnGpuFragmentShadingRate* fragmentShadingRates,
+    MlnGpuFragmentShadingRateFeatures* fragmentShadingRateFeatures,
+    MlnGpuFragmentShadingRateProperties* fragmentShadingRateProperties);
 
 /**
  * @brief Get a queue handle from device.
@@ -166,7 +166,7 @@ MlnGetNativeBufferProperties(MlnDevice device, const OH_NativeBuffer* buffer,
  */
 MLNAPI_ATTR MlnStatus MLNAPI_CALL MlnGetMemoryNativeBuffer(
     MlnDevice device, const MlnMemoryGetNativeBufferDescriptor* descriptor,
-    OH_NativeBuffer** pBuffer);
+    OH_NativeBuffer** buffer);
 
 /**
  * @brief Get buffer memory requirements of a resource.
@@ -665,21 +665,15 @@ MLNAPI_ATTR MlnStatus MLNAPI_CALL MlnGetAccelerationStructureBuildSizes(
 /**
  * @brief Create acceleration structure.
  */
-MLNAPI_ATTR MlnAccelerationStructure MLNAPI_CALL MlnCreateAccelerationStructure(
+MLNAPI_ATTR MlnResource MLNAPI_CALL MlnCreateAccelerationStructure(
     MlnDevice device, const MlnAccelerationStructureDescriptor* descriptor);
 
 /**
  * @brief Get acceleration structure device address.
  */
 MLNAPI_ATTR MlnDeviceAddress MLNAPI_CALL
-MlnGetAccelerationStructureDeviceAddress(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure);
-
-/**
- * @brief Destroy acceleration structure.
- */
-MLNAPI_ATTR void MLNAPI_CALL MlnDestroyAccelerationStructure(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure);
+MlnGetAccelerationStructureDeviceAddress(MlnDevice device,
+                                         MlnResource accelerationStructure);
 
 /**
  * @brief Query acceleration structure limits for the device.

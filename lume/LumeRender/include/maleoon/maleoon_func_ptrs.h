@@ -7,11 +7,6 @@
 
 #include <cstddef>
 #include <stdint.h>
-#include <vector>
-#include <map>
-#include <atomic>
-#include <string>
-#include <memory>
 #include <maleoon/maleoon_platform.h>
 #include <maleoon/maleoon_defines.h>
 #include <maleoon/maleoon_structs.h>
@@ -47,10 +42,10 @@ typedef MlnStatus(MLNAPI_PTR *PFN_MlnDeviceWaitIdle)(MlnDevice device);
 typedef void(MLNAPI_PTR *PFN_MlnDestroyDevice)(MlnDevice device);
 
 typedef MlnStatus(MLNAPI_PTR *PFN_MlnGetGpuFragmentShadingRates)(
-    MlnDevice device, u32 *pFragmentShadingRateCount,
-    MlnGpuFragmentShadingRate *pFragmentShadingRates,
-    MlnGpuFragmentShadingRateFeatures *pFragmentShadingRateFeatures,
-    MlnGpuFragmentShadingRateProperties *pFragmentShadingRateProperties);
+    MlnDevice device, u32 *fragmentShadingRateCount,
+    MlnGpuFragmentShadingRate *fragmentShadingRates,
+    MlnGpuFragmentShadingRateFeatures *fragmentShadingRateFeatures,
+    MlnGpuFragmentShadingRateProperties *fragmentShadingRateProperties);
 
 typedef MlnQueue(MLNAPI_PTR *PFN_MlnGetDeviceQueue)(MlnDevice device,
                                                     u32 index);
@@ -99,7 +94,7 @@ typedef MlnStatus(MLNAPI_PTR *PFN_MlnGetNativeBufferProperties)(
 
 typedef MlnStatus(MLNAPI_PTR *PFN_MlnGetMemoryNativeBuffer)(
     MlnDevice device, const MlnMemoryGetNativeBufferDescriptor *descriptor,
-    OH_NativeBuffer **pBuffer);
+    OH_NativeBuffer **buffer);
 
 typedef void(MLNAPI_PTR *PFN_MlnGetBufferResourceMemoryRequirements)(
     MlnDevice device, const MlnBufferDescriptor *descriptor,
@@ -363,16 +358,12 @@ typedef MlnStatus(MLNAPI_PTR *PFN_MlnGetAccelerationStructureBuildSizes)(
     const u32 *maxPrimitiveCounts,
     MlnAccelerationStructureBuildSizesDescriptor *buildSizes);
 
-typedef MlnAccelerationStructure(
-    MLNAPI_PTR *PFN_MlnCreateAccelerationStructure)(
+typedef MlnResource(MLNAPI_PTR *PFN_MlnCreateAccelerationStructure)(
     MlnDevice device, const MlnAccelerationStructureDescriptor *descriptor);
 
 typedef MlnDeviceAddress(
     MLNAPI_PTR *PFN_MlnGetAccelerationStructureDeviceAddress)(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure);
-
-typedef void(MLNAPI_PTR *PFN_MlnDestroyAccelerationStructure)(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure);
+    MlnDevice device, MlnResource accelerationStructure);
 
 typedef MlnStatus(MLNAPI_PTR *PFN_MlnGetRayTracingCapabilities)(
     MlnDevice device, MlnRayTracingCapabilities *capabilities);
