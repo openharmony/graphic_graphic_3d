@@ -188,7 +188,7 @@ public:
     void BindBufferRange(uint32_t target, uint32_t binding, uint32_t buffer, uint64_t offset, uint64_t size);
     void BindSampler(uint32_t textureUnit, uint32_t sampler);
     void BindTexture(uint32_t textureUnit, uint32_t target, uint32_t texture);  // target = GL_TEXTURE_2D et al.
-    bool IsInternalFormatLinearFilterable(uint32_t internalFormat) const;
+    bool IsInternalFormatLinearFilterable(const uint32_t internalFormat) const;
     void BindImageTexture(uint32_t unit, uint32_t texture, uint32_t level, bool layered, uint32_t layer,
         uint32_t access, uint32_t format);
     void BindFrameBuffer(uint32_t fbo);
