@@ -208,7 +208,8 @@ void EnvironmentImpl::setIrradianceCoefficients(::taihe::optional_view<::taihe::
     WIDGET_LOGI("environmentTransferStaticImpl");
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    taihe::env_guard guard;
+    if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("environmentTransferStaticImpl failed during arkts_esvalue_unwrap.");
         return SceneResources::Environment({nullptr, nullptr});
     }
@@ -252,8 +253,9 @@ uintptr_t environmentTransferDynamicImpl(::SceneResources::Environment input)
 
     SCENE_NS::IEnvironment::Ptr environment = interface_pointer_cast<SCENE_NS::IEnvironment>(envETS->GetNativeObj());
     RETURN_IF_NULL_WITH_VALUE(environment, 0);
+    taihe::env_guard guard;
     napi_env jsenv;
-    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+    if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }

@@ -166,7 +166,7 @@ struct EngineInstance {
 };
 
 static EngineInstance engineInstance_;
-static std::mutex mute;
+static BASE_NS::SpinLock mute;
 static HapInfo hapInfo_;
 META_NS::ITaskQueue::Ptr engineThread;
 META_NS::ITaskQueue::Ptr ioThread;
@@ -175,12 +175,12 @@ META_NS::ITaskQueue::Token renderTask{};
 
 void LockCompositor()
 {
-    mute.lock();
+    mute.Lock();
 }
 
 void UnlockCompositor()
 {
-    mute.unlock();
+    mute.Unlock();
 }
 
 static constexpr BASE_NS::Uid ENGINE_THREAD{"2070e705-d061-40e4-bfb7-90fad2c280af"};
@@ -1318,7 +1318,10 @@ bool SceneAdapter::EngineTickFrame(CORE_NS::IEcs::Ptr ecs)
         WIDGET_LOGE("engine not ready");
         return false;
     }
-
+    if (!ecs) {
+        WIDGET_LOGE("ecs is null");
+        return false;
+    }
     auto* ecsRawPtr = ecs.get();
     const BASE_NS::array_view arrView{&ecsRawPtr, 1};
     return engineInstance_.engine_->TickFrame(arrView);
