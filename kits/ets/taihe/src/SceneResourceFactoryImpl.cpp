@@ -232,7 +232,8 @@ namespace OHOS::Render3D::KITETS {
 {
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void* nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    taihe::env_guard guard;
+    if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
         return SceneTH::SceneResourceFactory({nullptr, nullptr});
     }
@@ -269,8 +270,9 @@ uintptr_t sceneResourceFactoryTransferDynamicImpl(::SceneTH::weak::SceneResource
         WIDGET_LOGE("get IScene failed");
         return 0;
     }
+    taihe::env_guard guard;
     napi_env jsenv;
-    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+    if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }

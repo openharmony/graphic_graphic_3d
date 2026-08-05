@@ -47,8 +47,9 @@ static const TypeChecker typeCheckers[] = {
 
 ani_object WrapDoubleAsObj(const ani_double value, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     static constexpr const char* className = "std.core.Double";
     ani_object obj{};
@@ -78,8 +79,9 @@ ani_object WrapDoubleAsObj(const ani_double value, ani_env* env)
 
 ani_double ParseObjToDouble(ani_object obj, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_double value = 0.0;
     ani_status status = env->Object_CallMethodByName_Double(obj, "toDouble", ":d", &value);
@@ -91,8 +93,9 @@ ani_double ParseObjToDouble(ani_object obj, ani_env* env)
 
 ani_object WrapIntAsObj(const ani_int value, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     static constexpr const char* className = "std.core.Int";
     ani_object obj{};
@@ -122,8 +125,9 @@ ani_object WrapIntAsObj(const ani_int value, ani_env* env)
 
 ani_int ParseObjToInt(ani_object obj, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_int value = 0;
     ani_status status = env->Object_CallMethodByName_Int(obj, "toInt", ":i", &value);
@@ -136,8 +140,9 @@ ani_int ParseObjToInt(ani_object obj, ani_env* env)
 
 ani_object WrapBoolAsObj(const ani_boolean value, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     static constexpr const char* className = "std.core.Boolean";
     ani_object obj{};
@@ -167,8 +172,9 @@ ani_object WrapBoolAsObj(const ani_boolean value, ani_env* env)
 
 ani_boolean ParseObjToBool(ani_object obj, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_boolean value = ANI_FALSE;
     ani_status status = env->Object_CallMethodByName_Boolean(obj, "toBoolean", ":z", &value);
@@ -181,8 +187,9 @@ ani_boolean ParseObjToBool(ani_object obj, ani_env* env)
 
 ani_object WrapColorAsObj(::SceneTypes::Color color, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
 
     ani_object obj{};
@@ -215,8 +222,9 @@ ani_object WrapColorAsObj(::SceneTypes::Color color, ani_env* env)
 
 BASE_NS::Color ParseObjToColor(ani_object obj, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
 
     ani_double r = 0.0;
@@ -245,8 +253,9 @@ BASE_NS::Color ParseObjToColor(ani_object obj, ani_env* env)
 
 AniObjectType HandleAniObject(ani_object obj, ani_env* env)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
 
     for (const auto& checker : typeCheckers) {
@@ -260,8 +269,9 @@ AniObjectType HandleAniObject(ani_object obj, ani_env* env)
 std::string ResourceToString(ani_object ani_obj, ani_env* env)
 {
     std::string resourceStr;
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
 
     ani_object params;
@@ -299,8 +309,9 @@ std::string ExtractUri(uintptr_t uri, ani_env *env)
         return uriStr;
     }
 
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     if (IsString(uri, env)) {
         // actually not supported anymore.

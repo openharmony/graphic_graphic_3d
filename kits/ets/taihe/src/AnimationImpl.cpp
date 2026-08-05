@@ -149,7 +149,8 @@ std::shared_ptr<AnimationETS> AnimationImpl::getAnimationETS() const
 {
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void *nativePtr = nullptr;
-    if (!arkts_esvalue_unwrap(taihe::get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
+    taihe::env_guard guard;
+    if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         TH_THROW(std::runtime_error, "animationTransferStaticImpl failed during arkts_esvalue_unwrap.");
     }
 
@@ -193,8 +194,9 @@ uintptr_t animationTransferDynamicImpl(::SceneResources::Animation input)
         return 0;
     }
 
+    taihe::env_guard guard;
     napi_env jsenv;
-    if (!arkts_napi_scope_open(taihe::get_env(), &jsenv)) {
+    if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");
         return 0;
     }
