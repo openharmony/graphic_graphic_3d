@@ -38,8 +38,9 @@ enum AniObjectType { TYPE_INT = 0, TYPE_DOUBLE = 1, TYPE_BOOLEAN = 2, TYPE_COLOR
  */
 inline bool IsString(uintptr_t resourceStr, ani_env* env = nullptr)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_class cls;
     auto stringClass = arkts::ani_signature::Builder::BuildClass({"std", "core", "String"});
@@ -55,8 +56,9 @@ inline bool IsString(uintptr_t resourceStr, ani_env* env = nullptr)
 
 inline std::string ToStdString(const ani_string& ani_str, ani_env* env = nullptr)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_size sz{};
 
@@ -74,8 +76,9 @@ inline std::string ToStdString(const ani_string& ani_str, ani_env* env = nullptr
 
 inline ani_string ToANIString(std::string str, ani_env* env = nullptr)
 {
+    taihe::env_guard guard;
     if (env == nullptr) {
-        env = taihe::get_env();
+        env = guard.get_env();
     }
     ani_string result_string{};
     if (env->String_NewUTF8(str.c_str(), str.size(), &result_string) != ANI_OK) {
