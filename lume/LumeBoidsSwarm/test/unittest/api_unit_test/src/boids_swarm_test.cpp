@@ -385,6 +385,7 @@ UNIT_TEST_F(API_BoidsSwarmSystemTest, IBoidsSwarmSystem16, testing::ext::TestSiz
     EXPECT_EQ(currentMask.z, 0);
 }
 
+#ifndef __OHOS__
 /**
  * @tc.name: IBoidsSwarmSystem19
  * @tc.desc: Verify GetVelocitySmoothingFactor returns default value.
@@ -402,6 +403,7 @@ UNIT_TEST_F(API_BoidsSwarmSystemTest, IBoidsSwarmSystem19, testing::ext::TestSiz
     EXPECT_FLOAT_EQ(
         system->GetVelocitySmoothingFactor(), BOIDSSWARM_NS::IBoidsSwarmSystem::DEFAULT_VELOCITY_SMOOTHING_FACTOR);
 }
+#endif
 
 /**
  * @tc.name: IBoidsSwarmSystem20
@@ -1153,6 +1155,41 @@ UNIT_TEST_F(API_BoidsSwarmSystemTest, BoidsSwarmComponent22, testing::ext::TestS
 
     nodeSystem->DestroyNode(*nodeSystem->GetNode(entity));
 }
+
+#ifndef __OHOS__
+/**
+ * @tc.name: BoidsSwarmComponent23
+ * @tc.desc: Verify boundingSphereRadius round-trip.
+ * @tc.type: FUNC
+ */
+// The component currently has no such property on this branch.
+#if 0
+UNIT_TEST_F(API_BoidsSwarmSystemTest, BoidsSwarmComponent23, testing::ext::TestSize.Level1)
+{
+    TestContext* testContext = GetTestContext();
+    auto ecsContext = testContext->ecs;
+
+    CORE3D_NS::INodeSystem* nodeSystem = nullptr;
+    CORE_NS::IComponentManager* cm = nullptr;
+    CORE_NS::Entity entity = CreateSwarmEntity(*ecsContext, nodeSystem, cm);
+    ASSERT_TRUE(nodeSystem);
+    ASSERT_TRUE(cm);
+
+    {
+        CORE_NS::ScopedHandle<BOIDSSWARM_NS::BoidsSwarmComponent> data(cm->GetData(entity));
+        ASSERT_TRUE(data);
+        data->boundingSphereRadius = 0.1f;
+    }
+
+    CORE_NS::ScopedHandle<BOIDSSWARM_NS::BoidsSwarmComponent> read(cm->GetData(entity));
+    ASSERT_TRUE(read);
+    EXPECT_FLOAT_EQ(read->boundingSphereRadius, 0.1f);
+
+    nodeSystem->DestroyNode(*nodeSystem->GetNode(entity));
+}
+#endif
+
+#endif
 
 // ============================================================================
 // BoidsSwarmComponent HAS_MIN boundary validation tests

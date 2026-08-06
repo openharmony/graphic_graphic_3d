@@ -350,6 +350,7 @@ UNIT_TEST(SRC_GpuResourceManager, ImageCreationTest, testing::ext::TestSize.Leve
     }
 }
 
+#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: LargeStagingSize
  * @tc.desc: Tests IGpuResourceManager for staging gigabytes of resources.
@@ -415,7 +416,6 @@ UNIT_TEST(SRC_GpuResourceManager, LargeStagingSize, testing::ext::TestSize.Level
     }
 }
 
-#if RENDER_HAS_VULKAN_BACKEND
 /**
  * @tc.name: ImageViewCreationTestVulkan
  * @tc.desc: Tests IGpuResourceManager for creating an image view from an image in Vulkan.

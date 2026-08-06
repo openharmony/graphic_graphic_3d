@@ -67,7 +67,7 @@ struct QueryRowIndices {
     enum class RepulsionEntity : uint32_t { BOIDS_SWARM_REPULSION_COMP = 0, TRANSFORM_COMP = 1 };
 };
 
-template <typename T>
+template<typename T>
 uint32_t GetQueryRowIndex(T IndexAsEnum)
 {
     return static_cast<uint32_t>(IndexAsEnum);

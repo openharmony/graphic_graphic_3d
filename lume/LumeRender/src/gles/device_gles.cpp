@@ -2593,6 +2593,19 @@ void DeviceGLES::BindTexture(uint32_t textureUnit, uint32_t target, uint32_t tex
     }
 }
 
+bool DeviceGLES::IsInternalFormatLinearFilterable(const uint32_t internalFormat) const
+{
+#if RENDER_HAS_GL_BACKEND
+    // desktop GL can filter anything (matches GetFormatProperties)
+    return true;
+#else
+    const auto pos = std::find_if(std::begin(IMAGE_FORMAT_FEATURES), std::end(IMAGE_FORMAT_FEATURES),
+        [internalFormat](const FormatFeatures& features) { return features.internalFormat == internalFormat; });
+    return (pos != std::end(IMAGE_FORMAT_FEATURES)) &&
+           ((pos->flags & CORE_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0U);
+#endif
+}
+
 void DeviceGLES::TexSwizzle(uint32_t image, uint32_t target, const Math::UVec4& swizzle)
 {
     // set only if not default..

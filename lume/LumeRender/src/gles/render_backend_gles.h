@@ -340,6 +340,10 @@ private:
     bool vertexBufferUpdate_{false};
     bool indexBufferUpdate_{false};
 
+    // per-unit NEAREST companion of the separately-bound sampler (0 = none); applied by BindTexture
+    static constexpr uint32_t MAX_TEXTURE_UNITS{16U};
+    uint32_t nonLinearSamplerForUnit_[MAX_TEXTURE_UNITS]{};
+
     void BufferToImageCopy(const struct RenderCommandCopyBufferImage& renderCmd);
     void ImageToBufferCopy(const struct RenderCommandCopyBufferImage& renderCmd);
 #if defined(RENDER_HAS_GLES_BACKEND) && (RENDER_HAS_GLES_BACKEND == 1)

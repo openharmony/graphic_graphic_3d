@@ -91,8 +91,10 @@ inline void BindSampler(GpuResourceManager& gpuResourceMgr, const BindableSample
     if (const auto* gpuSampler = gpuResourceMgr.GetSampler<GpuSamplerGLES>(res.handle)) {
         const auto& plat = gpuSampler->GetPlatformData();
         obj.resources[index].sampler.samplerId = plat.sampler;
+        obj.resources[index].sampler.nonLinearSamplerId = plat.samplerNonLinear;
     } else {
         obj.resources[index].sampler.samplerId = 0;
+        obj.resources[index].sampler.nonLinearSamplerId = 0;
     }
 }
 
