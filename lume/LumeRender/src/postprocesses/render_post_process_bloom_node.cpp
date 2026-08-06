@@ -157,8 +157,9 @@ void RenderPostProcessBloomNode::ExecuteFrame(IRenderCommandList& cmdList)
 
     RENDER_DEBUG_MARKER_COL_SCOPE(cmdList, "RenderBloom", DefaultDebugConstants::CORE_DEFAULT_DEBUG_COLOR);
 
-    const auto bloomQualityType = effectProperties_.bloomConfiguration.bloomQualityType;
-    PLUGIN_ASSERT(bloomQualityType < CORE_BLOOM_QUALITY_COUNT);
+    const uint32_t bloomQualityType =
+        Math::min(static_cast<uint32_t>(effectProperties_.bloomConfiguration.bloomQualityType),
+            static_cast<uint32_t>(CORE_BLOOM_QUALITY_COUNT - 1));
     if (effectProperties_.bloomConfiguration.useCompute) {
         psos_.downscale = psos_.downscaleHandlesCompute[bloomQualityType].regular;
         psos_.downscaleAndThreshold = psos_.downscaleHandlesCompute[bloomQualityType].threshold;

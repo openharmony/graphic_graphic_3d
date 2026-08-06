@@ -89,8 +89,12 @@ void RenderNodeBloom::PreExecuteFrame()
     pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
     pp.propertiesData.enabled = ((ppConfig_.enableFlags & PostProcessConfiguration::ENABLE_BLOOM_BIT) > 0);
 
-    pp.nodeInputsData.input = GetBindableImage(inputResources_.customInputImages[0]);
-    pp.nodeOutputsData.output = GetBindableImage(inputResources_.customOutputImages[0]);
+    pp.nodeInputsData.input = inputResources_.customInputImages.empty()
+                                  ? BindableImage{}
+                                  : GetBindableImage(inputResources_.customInputImages[0]);
+    pp.nodeOutputsData.output = inputResources_.customOutputImages.empty()
+                                    ? BindableImage{}
+                                    : GetBindableImage(inputResources_.customOutputImages[0]);
 
     ppRenderBloomInterface_.postProcessNode->PreExecuteFrame();
 }
@@ -130,7 +134,8 @@ void RenderNodeBloom::ProcessPostProcessConfiguration(const IRenderNodeRenderDat
     if (!jsonInputs_.renderDataStore.dataStoreName.empty()) {
         if (const IRenderDataStore* ds = dataStoreMgr.GetRenderDataStore(jsonInputs_.renderDataStore.dataStoreName);
             ds) {
-            if (jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) {
+            if ((jsonInputs_.renderDataStore.typeName == RenderDataStorePod::TYPE_NAME) &&
+                (ds->GetUid() == IRenderDataStorePod::UID)) {
                 auto const dataStore = static_cast<const IRenderDataStorePod*>(ds);
                 auto const dataView = dataStore->Get(jsonInputs_.renderDataStore.configurationName);
                 if (dataView.data() && (dataView.size_bytes() == sizeof(PostProcessConfiguration))) {
