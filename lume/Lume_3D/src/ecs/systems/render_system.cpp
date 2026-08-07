@@ -961,15 +961,19 @@ ReflectionPlaneTargetUpdate UpdatePlaneReflectionTargetResolution(IGpuResourceMa
         }
         rptu.mipCount = Math::min(reflectionMaxMipBlur,
             static_cast<uint32_t>(std::log2f(static_cast<float>(std::max(targetRes.x, targetRes.y)))) + 1u);
-        gpuHandleMgr.Write(rptu.colorRenderTarget)->reference = reCreateGpuImage(
-            gpuResourceMgr, entity.id, colorRenderTarget, targetRes.x, targetRes.y, rptu.mipCount, false);
+        if (auto handle = gpuHandleMgr.Write(rptu.colorRenderTarget)) {
+            handle->reference = reCreateGpuImage(
+                gpuResourceMgr, entity.id, colorRenderTarget, targetRes.x, targetRes.y, rptu.mipCount, false);
+        }
 
         if (!EntityUtil::IsValid(rptu.depthRenderTarget)) {
             rptu.depthRenderTarget = gpuHandleMgr.GetEcs().GetEntityManager().CreateReferenceCounted();
             gpuHandleMgr.Create(rptu.depthRenderTarget);
         }
-        gpuHandleMgr.Write(rptu.depthRenderTarget)->reference =
-            reCreateGpuImage(gpuResourceMgr, entity.id, depthRenderTarget, targetRes.x, targetRes.y, 1u, true);
+        if (auto handle = gpuHandleMgr.Write(rptu.depthRenderTarget)) {
+            handle->reference = reCreateGpuImage(
+                gpuResourceMgr, entity.id, depthRenderTarget, targetRes.x, targetRes.y, 1u, true);
+        }
 
         rptu.renderTargetResolution[0] = targetRes.x;
         rptu.renderTargetResolution[1] = targetRes.y;
