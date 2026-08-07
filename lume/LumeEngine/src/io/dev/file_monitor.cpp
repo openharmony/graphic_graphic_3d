@@ -81,6 +81,10 @@ FileMonitor::FileMonitor(IFileManager& manager) : fileManager_(manager)
 void FileMonitor::CleanPath(const string_view inPath, string& path)
 {
     // cleanup slashes. (partial sanitation, path needs to end with '/' and slashes must be '/' (not '\\')
+    if (inPath.empty()) {
+        path.clear();
+        return;
+    }
     if ((inPath.back() != '/') && (inPath.back() != '\\')) {
         path.reserve(inPath.size() + 1);
         path = inPath;
@@ -97,6 +101,9 @@ void FileMonitor::CleanPath(const string_view inPath, string& path)
 
 bool FileMonitor::AddPath(const string_view inPath)
 {
+    if (inPath.empty()) {
+        return false;
+    }
     string path;
     CleanPath(inPath, path);
     if (IsWatchingDirectory(path) || IsWatchingSubDirectory(path)) {
@@ -119,6 +126,9 @@ bool FileMonitor::AddPath(const string_view inPath)
 
 bool FileMonitor::RemovePath(const string_view inPath)
 {
+    if (inPath.empty()) {
+        return false;
+    }
     string path;
     CleanPath(inPath, path);
     const auto iterator = std::find(directories_.cbegin(), directories_.cend(), path);

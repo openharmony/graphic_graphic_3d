@@ -281,7 +281,7 @@ public:
         desc.imageViewType = GetImageViewType(ktx, desc.imageType);
         if (desc.format == Format::BASE_FORMAT_UNDEFINED || desc.imageType == ImageType::TYPE_MAX_ENUM ||
             desc.imageViewType == ImageViewType::VIEW_TYPE_MAX_ENUM) {
-            CORE_LOG_D(
+            CORE_LOG_E(
                 "glFormat=%u imageType=%u imageViewType=%u", ktx.glInternalFormat, desc.imageType, desc.imageViewType);
             return false;
         }
@@ -295,7 +295,7 @@ public:
         desc.depth = ((ktx.pixelDepth == 0) ? 1 : ktx.pixelDepth);
         const uint64_t totalLayers = static_cast<uint64_t>(arrayElementCount) * faceCount;
         if (totalLayers > MAX_ARRAY_ELEMENTS) {
-            CORE_LOG_D("Ktx layerCount too large.");
+            CORE_LOG_E("Ktx layerCount too large.");
             return false;
         }
         desc.layerCount = static_cast<uint32_t>(totalLayers);
@@ -356,21 +356,21 @@ public:
     {
         if (formatInfo.compressed) {
             if (ktx.glTypeSize != 1) {
-                CORE_LOG_D("Invalid typesize for a compressed image.");
+                CORE_LOG_E("Invalid typesize for a compressed image.");
                 return false;
             }
             if (ktx.glFormat != 0) {
-                CORE_LOG_D("Invalid glFormat for a compressed image.");
+                CORE_LOG_E("Invalid glFormat for a compressed image.");
                 return false;
             }
             if (ktx.glType != 0) {
-                CORE_LOG_D("Invalid glType for a compressed image.");
+                CORE_LOG_E("Invalid glType for a compressed image.");
                 return false;
             }
         }
 
         if (ktx.pixelDepth != 0 && ktx.pixelHeight == 0) {
-            CORE_LOG_D("No pixelHeight defined for a 3d texture.");
+            CORE_LOG_E("No pixelHeight defined for a 3d texture.");
             return false;
         }
 
@@ -381,13 +381,13 @@ public:
         uint64_t mipSize, const GlImageFormatInfo& formatInfo, const MipDimensions& dims)
     {
         if (totalSizePadded >= UINT32_MAX) {
-            CORE_LOG_D("imageSize too big");
+            CORE_LOG_E("imageSize too big");
             return false;
         }
 
         const auto fileBytesLeft = image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get());
         if (totalSizePadded > fileBytesLeft) {
-            CORE_LOG_D("Not enough data for the element");
+            CORE_LOG_E("Not enough data for the element");
             return false;
         }
 
@@ -407,12 +407,12 @@ public:
             const uint64_t maxPerZ = maxPerLayer / blocksZ;
             const uint64_t maxPerY = maxPerZ / blocksY;
             if (rowSizePadded > maxPerY) {
-                CORE_LOG_D("Ktx mip size overflow.");
+                CORE_LOG_E("Ktx mip size overflow.");
                 return false;
             }
             const uint64_t expectedMipSize = rowSizePadded * blocksY * blocksZ * layerCount;
             if (mipSize != expectedMipSize) {
-                CORE_LOG_D("Ktx mip data size mismatch with declared dimensions and layers.");
+                CORE_LOG_E("Ktx mip data size mismatch with declared dimensions and layers.");
                 return false;
             }
         }
@@ -458,12 +458,12 @@ public:
             size_t imageBufferIndex = 0;
             for (uint32_t mipmapLevel = 0; mipmapLevel < inputMipCount; ++mipmapLevel) {
                 if (data < ktxDataSection) {
-                    CORE_LOG_D("Trying to jump out of the parsed data.");
+                    CORE_LOG_E("Trying to jump out of the parsed data.");
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
                 if (sizeof(uint32_t) >=
                     image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get())) {
-                    CORE_LOG_D("Not enough data in the bytearray.");
+                    CORE_LOG_E("Not enough data in the bytearray.");
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
 
@@ -471,7 +471,7 @@ public:
                 // Pad to to a multiple of 4.
                 const size_t lodSizePadded = lodSize + ((~lodSize + 1) & (4u - 1u));
                 if (lodSizePadded < lodSize) {
-                    CORE_LOG_D("imageSize padding overflow");
+                    CORE_LOG_E("imageSize padding overflow");
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
                 const uint64_t mipSize = static_cast<uint64_t>(lodSize) * iterations;
@@ -483,7 +483,7 @@ public:
 
                 const auto offset = static_cast<size_t>(data - image->imageBytes_);
                 if (offset > UINT32_MAX) {
-                    CORE_LOG_D("Image element offset exceeds uint32_t range.");
+                    CORE_LOG_E("Image element offset exceeds uint32_t range.");
                     return ImageLoaderManager::ResultFailure("Invalid ktx data.");
                 }
                 const auto currentImageElementOffset = static_cast<uint32_t>(offset);
@@ -513,7 +513,7 @@ public:
             }
 
             if (data != (image->fileBytes_.get() + image->fileBytesLength_)) {
-                CORE_LOG_D("File data left over.");
+                CORE_LOG_E("File data left over.");
                 return ImageLoaderManager::ResultFailure("Invalid ktx data.");
             }
         }
@@ -523,40 +523,40 @@ public:
     static bool ValidateKtxHeader(const KtxHeader& ktxHeader)
     {
         if (memcmp(ktxHeader.identifier, KTX_IDENTIFIER_REFERENCE, KTX_IDENTIFIER_LENGTH) != 0) {
-            CORE_LOG_D("Ktx invalid file identifier.");
+            CORE_LOG_E("Ktx invalid file identifier.");
             return false;
         }
         if (ktxHeader.endianness != KTX_FILE_ENDIANNESS && ktxHeader.endianness != KTX_FILE_ENDIANNESS_FLIPPED) {
-            CORE_LOG_D("Ktx invalid endian marker.");
+            CORE_LOG_E("Ktx invalid endian marker.");
             return false;
         }
         if (ktxHeader.numberOfFaces != 1U && ktxHeader.numberOfFaces != 6U) {  // 1 for regular, 6 for cubemaps
-            CORE_LOG_D("Ktx invalid numberOfFaces.");
+            CORE_LOG_E("Ktx invalid numberOfFaces.");
             return false;
         }
         if ((ktxHeader.pixelWidth == 0) || (ktxHeader.pixelDepth > 0 && ktxHeader.pixelHeight == 0)) {
-            CORE_LOG_D("Ktx pixelWidth can't be 0.");
+            CORE_LOG_E("Ktx pixelWidth can't be 0.");
             return false;
         }
         if ((ktxHeader.pixelWidth > MAX_DIMENSIONS) || (ktxHeader.pixelHeight > MAX_DIMENSIONS) ||
             (ktxHeader.pixelDepth > MAX_DIMENSIONS)) {
-            CORE_LOG_D("Ktx pixel dimensions too big.");
+            CORE_LOG_E("Ktx pixel dimensions too big.");
             return false;
         }
         if (ktxHeader.numberOfArrayElements > MAX_ARRAY_ELEMENTS) {
-            CORE_LOG_D("Ktx numberOfArrayElements too large.");
+            CORE_LOG_E("Ktx numberOfArrayElements too large.");
             return false;
         }
         if (ktxHeader.numberOfMipmapLevels) {
             if (ktxHeader.numberOfMipmapLevels > 32U) {  // 2^32 - 1, limit to
-                CORE_LOG_D("Ktx numberOfMipmapLevels suspiciously large.");
+                CORE_LOG_E("Ktx numberOfMipmapLevels suspiciously large.");
                 return false;
             }
             const uint32_t maxSize =
                 std::max(std::max(ktxHeader.pixelWidth, ktxHeader.pixelHeight), ktxHeader.pixelDepth);
             const auto maxMipSize = 1U << (ktxHeader.numberOfMipmapLevels - 1U);
             if (maxSize < maxMipSize) {
-                CORE_LOG_D("Ktx numberOfMipmapLevels too big for dimensions.");
+                CORE_LOG_E("Ktx numberOfMipmapLevels too big for dimensions.");
                 return false;
             }
         }
@@ -588,7 +588,7 @@ public:
         if ((loadFlags & IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY) == 0) {
             if (ktxHeader.bytesOfKeyValueData >
                 image->fileBytesLength_ - static_cast<uintptr_t>(data - image->fileBytes_.get())) {
-                CORE_LOG_D("Ktx bytesOfKeyValueData too large.");
+                CORE_LOG_E("Ktx bytesOfKeyValueData too large.");
                 return ImageLoaderManager::ResultFailure("Invalid ktx data.");
             }
 
@@ -720,9 +720,13 @@ public:
 
         // Read the file to a buffer.
         unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(byteLength);
+        if (!buffer) {
+            CORE_LOG_E("Failed to allocate memory for image");
+            return ImageLoaderManager::ResultFailure("Allocating buffer failed.");
+        }
         const uint64_t read = file.Read(buffer.get(), byteLength);
         if (read != byteLength) {
-            CORE_LOG_D("Error loading image");
+            CORE_LOG_E("Error loading image");
             return ImageLoaderManager::ResultFailure("Reading file failed.");
         }
 
@@ -733,9 +737,11 @@ public:
     {
         // NOTE: could reuse this and remove the extra copy here if the data would be given as a unique_ptr.
         unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(static_cast<size_t>(imageFileBytes.size()));
-        if (buffer) {
-            std::copy(imageFileBytes.begin(), imageFileBytes.end(), buffer.get());
+        if (!buffer) {
+            CORE_LOG_E("Failed to allocate memory for image");
+            return ImageLoaderManager::ResultFailure("Allocating buffer failed.");
         }
+        std::copy(imageFileBytes.begin(), imageFileBytes.end(), buffer.get());
 
         return KtxImage::Load(move(buffer), imageFileBytes.size(), loadFlags);
     }

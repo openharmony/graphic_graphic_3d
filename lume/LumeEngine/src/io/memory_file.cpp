@@ -56,6 +56,10 @@ uint64_t MemoryFile::Read(void* buffer, uint64_t count)
     if (mode_ == Mode::INVALID) {
         return {};
     }
+    if (!buffer_) {
+        CORE_LOG_E("MemoryFile::Read: no backing storage.");
+        return {};
+    }
     uint64_t toRead = count;
     if ((index_ + toRead) > buffer_->GetStorage().size()) {
         toRead = buffer_->GetStorage().size() - index_;
@@ -81,6 +85,10 @@ uint64_t MemoryFile::Read(void* buffer, uint64_t count)
 uint64_t MemoryFile::Write(const void* buffer, uint64_t count)
 {
     if (mode_ == Mode::READ_WRITE) {
+        if (!buffer_) {
+            CORE_LOG_E("MemoryFile::Write: no backing storage.");
+            return 0;
+        }
         const uint64_t requiredSize = index_ + count;
         if (requiredSize < index_ || requiredSize > SIZE_MAX) {
             return 0;
@@ -98,6 +106,10 @@ uint64_t MemoryFile::Write(const void* buffer, uint64_t count)
 uint64_t MemoryFile::Append(const void* buffer, uint64_t count, uint64_t /*chunkSize*/)
 {
     if (mode_ == Mode::READ_WRITE) {
+        if (!buffer_) {
+            CORE_LOG_E("MemoryFile::Append: no backing storage.");
+            return 0;
+        }
         auto exSize = buffer_->Size();
         if (count > SIZE_MAX - exSize) {
             return 0;
@@ -110,11 +122,17 @@ uint64_t MemoryFile::Append(const void* buffer, uint64_t count, uint64_t /*chunk
 
 uint64_t MemoryFile::GetLength() const
 {
+    if (!buffer_) {
+        return 0;
+    }
     return buffer_->GetStorage().size();
 }
 
 bool MemoryFile::Seek(uint64_t aOffset)
 {
+    if (!buffer_) {
+        return false;
+    }
     if (aOffset < buffer_->GetStorage().size()) {
         index_ = aOffset;
         return true;

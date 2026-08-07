@@ -45,8 +45,16 @@ void ConvertConstantToUniform(const CoreCompiler& compiler, std::string& source,
 
 void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, uint32_t value);
 
-void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base, uint32_t structTypeId,
-    std::vector<PushConstantReflection>& reflections);
+/** Bundles the inputs/output of ProcessStruct to keep its signature short. */
+struct ProcessStructParams {
+    const spirv_cross::Compiler& compiler;
+    const PushConstantReflection& base;
+    uint32_t structTypeId;
+    std::vector<PushConstantReflection>& reflections;
+};
+
+// depth is intentionally kept independent so callers do not need to pass it.
+void ProcessStruct(const ProcessStructParams& params, const uint32_t depth = 0u);
 }  // namespace Gles
 
 #endif  // GLES_SPIRV_CROSS_HELPERS_H
