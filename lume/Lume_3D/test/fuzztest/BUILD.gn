@@ -18,8 +18,8 @@ group("fuzztest") {
 
     # Minimal-link fuzzers (compile only the loader/parse translation units; no
     # lume_3d_src/render/engine-DLL link). See gltf2_*_fuzzer/BUILD.gn.
-    "gltf2_accessor_fuzzer:fuzztest",
-    "gltf2_glb_builder_fuzzer:fuzztest",
-    "gltf2_json_loader_fuzzer:fuzztest",
+    "gltf2accessor_fuzzer:fuzztest",
+    "gltf2glbbuilder_fuzzer:fuzztest",
+    "gltf2jsonloader_fuzzer:fuzztest",
   ]
 }

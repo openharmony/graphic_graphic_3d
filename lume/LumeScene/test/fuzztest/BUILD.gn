@@ -15,7 +15,7 @@
 group("fuzztest") {
   testonly = true
   deps = [
-    "scene_importer_fuzzer:fuzztest",
+    "sceneimporter_fuzzer:fuzztest",
   ]
 }
 ###############################################################################

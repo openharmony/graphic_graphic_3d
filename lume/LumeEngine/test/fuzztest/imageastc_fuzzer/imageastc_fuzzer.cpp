@@ -13,16 +13,27 @@
  * limitations under the License.
  */
 
-#ifndef GLTF2LOADER_FUZZER_H
-#define GLTF2LOADER_FUZZER_H
+#include "imageastc_fuzzer.h"
 
-#include <climits>
+#include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <fcntl.h>
-#include <unistd.h>
 
-#define FUZZ_PROJECT_NAME "gltf2loader_fuzzer"
+#include <base/containers/array_view.h>
 
-#endif  // GLTF2LOADER_FUZZER_H
+#include "image/loaders/image_loader_astc.h"
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
+    auto loader = CORE_NS::CreateImageLoaderAstc(nullptr);
+    if (!loader) {
+        return 0;
+    }
+
+    const BASE_NS::array_view<const uint8_t> bytes(data, size);
+
+    (void)loader->Load(bytes, CORE_NS::IImageLoaderManager::IMAGE_LOADER_METADATA_ONLY);
+    (void)loader->Load(bytes, 0U);
+    (void)loader->Load(bytes, CORE_NS::IImageLoaderManager::IMAGE_LOADER_FORCE_SRGB_BIT);
+
+    return 0;
+}

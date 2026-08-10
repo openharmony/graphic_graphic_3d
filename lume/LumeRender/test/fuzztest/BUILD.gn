@@ -15,10 +15,10 @@
 group("fuzztest") {
   testonly = true
   deps = [
-    "pipeline_layout_loader_fuzzer:fuzztest",
-    "render_node_graph_loader_fuzzer:fuzztest",
-    "shader_data_loader_fuzzer:fuzztest",
-    "shader_state_loader_fuzzer:fuzztest",
+    "pipelinelayoutloader_fuzzer:fuzztest",
+    "rendernodegraphloader_fuzzer:fuzztest",
+    "shaderdataloader_fuzzer:fuzztest",
+    "shaderstateloader_fuzzer:fuzztest",
   ]
 }
 ###############################################################################

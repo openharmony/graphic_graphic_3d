@@ -14,6 +14,6 @@
 group("fuzztest") {
   testonly = true
   deps = [
-    "jpg_image_loader_fuzzer:fuzztest",
+    "jpgimageloader_fuzzer:fuzztest",
   ]
 }

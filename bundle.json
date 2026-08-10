@@ -371,10 +371,10 @@
         "//foundation/graphic/graphic_3d/lume/LumeScene/test/unittest:unittest",
         "//foundation/graphic/graphic_3d/lume/Lume_3D/test/fuzztest/gltf2loader_fuzzer:fuzztest",
         "//foundation/graphic/graphic_3d/lume/LumeEngine/test/fuzztest/json_fuzzer:fuzztest",
-        "//foundation/graphic/graphic_3d/lume/LumeEngine/test/fuzztest/image_loader_fuzzer:fuzztest",
-        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/gltf_load_fuzzer:fuzztest",
-        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/json_parse_fuzzer:fuzztest",
-        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/property_path_fuzzer:fuzztest"
+        "//foundation/graphic/graphic_3d/lume/LumeEngine/test/fuzztest/imageloader_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/gltfload_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/jsonparse_fuzzer:fuzztest",
+        "//foundation/graphic/graphic_3d/lume/LumeScene/test/fuzztest/propertypath_fuzzer:fuzztest"
       ]
     },
     "deps": {

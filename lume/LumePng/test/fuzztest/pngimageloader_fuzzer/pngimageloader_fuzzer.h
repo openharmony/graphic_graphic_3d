@@ -13,16 +13,13 @@
  * limitations under the License.
  */
 
-#ifndef GLTF2LOADER_FUZZER_H
-#define GLTF2LOADER_FUZZER_H
+#ifndef PNGIMAGELOADER_FUZZER_H
+#define PNGIMAGELOADER_FUZZER_H
 
-#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <fcntl.h>
-#include <unistd.h>
 
-#define FUZZ_PROJECT_NAME "gltf2loader_fuzzer"
+#define FUZZ_PROJECT_NAME "pngimageloader_fuzzer"
 
-#endif  // GLTF2LOADER_FUZZER_H
+#endif  // PNGIMAGELOADER_FUZZER_H
