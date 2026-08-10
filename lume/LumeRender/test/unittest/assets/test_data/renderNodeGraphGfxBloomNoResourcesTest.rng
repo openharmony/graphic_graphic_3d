@@ -1,0 +1,47 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "OutputImage0",
+                    "dependencyImageName": "InputImage0",
+                    "dependencyFlags": "size | format | mipCount | layerCount | samples",
+                    "configurationName": "RenderConfiguration",
+                    "imageType": "2d",
+                    "imageViewType": "2d",
+                    "format": "r16g16b16a16_sfloat",
+                    "imageTiling": "optimal",
+                    "usageFlags": "storage | color_attachment | transfer_src | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers",
+                    "width": 512,
+                    "height": 512,
+                    "depth": 1
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeBloom",
+            "nodeName": "RenderNodeBloom",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderDataStore": {
+                "typeName": "RenderDataStorePod",
+                "dataStoreName": "BloomDataStore",
+                "configurationName": "BloomConfiguration"
+            },
+            "resources": {
+                "customInputImages": [],
+                "customOutputImages": []
+            }
+        }
+    ]
+}
