@@ -150,7 +150,7 @@ public:
     {
         WIDGET_SCOPED_TRACE("OffScreenScene::RenderFrame");
 
-        sceneAdapter_->RenderFrame(false);
+        sceneAdapter_->RenderFrame(true);
         return true;
     }
 
