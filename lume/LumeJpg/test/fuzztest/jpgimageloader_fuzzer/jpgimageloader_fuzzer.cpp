@@ -189,7 +189,9 @@ public:
         }
         const uint64_t remaining = static_cast<uint64_t>(size_ - pos_);
         const uint64_t n = (count < remaining) ? count : remaining;
-        std::memcpy(buffer, data_ + pos_, static_cast<size_t>(n));
+        if (FUZZ_MEMCPY_S(buffer, static_cast<size_t>(count), data_ + pos_, static_cast<size_t>(n)) != EOK) {
+            return 0;
+        }
         pos_ += static_cast<size_t>(n);
         return n;
     }
