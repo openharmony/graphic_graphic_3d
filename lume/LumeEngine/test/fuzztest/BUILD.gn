@@ -15,8 +15,8 @@
 group("fuzztest") {
   testonly = true
   deps = [
-    "image_astc_fuzzer:fuzztest",
-    "image_ktx_fuzzer:fuzztest",
+    "imageastc_fuzzer:fuzztest",
+    "imagektx_fuzzer:fuzztest",
     "jsonescape_fuzzer:fuzztest",
     "jsonparse_fuzzer:fuzztest",
     "jsontyped_fuzzer:fuzztest",

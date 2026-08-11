@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#ifndef GLTF2LOADER_FUZZER_H
-#define GLTF2LOADER_FUZZER_H
+#ifndef IMAGELOADER_FUZZER_H
+#define IMAGELOADER_FUZZER_H
 
-#include <climits>
 #include <cstdint>
+#include <unistd.h>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <unistd.h>
 
-#define FUZZ_PROJECT_NAME "gltf2loader_fuzzer"
+#define FUZZ_PROJECT_NAME "imageloader_fuzzer"
 
-#endif  // GLTF2LOADER_FUZZER_H
+#endif // IMAGELOADER_FUZZER_H
