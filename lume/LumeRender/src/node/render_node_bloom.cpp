@@ -89,8 +89,12 @@ void RenderNodeBloom::PreExecuteFrame()
     pp.propertiesData.bloomConfiguration = ppConfig_.bloomConfiguration;
     pp.propertiesData.enabled = ((ppConfig_.enableFlags & PostProcessConfiguration::ENABLE_BLOOM_BIT) > 0);
 
-    pp.nodeInputsData.input = GetBindableImage(inputResources_.customInputImages[0]);
-    pp.nodeOutputsData.output = GetBindableImage(inputResources_.customOutputImages[0]);
+    pp.nodeInputsData.input = inputResources_.customInputImages.empty()
+                                  ? BindableImage{}
+                                  : GetBindableImage(inputResources_.customInputImages[0]);
+    pp.nodeOutputsData.output = inputResources_.customOutputImages.empty()
+                                    ? BindableImage{}
+                                    : GetBindableImage(inputResources_.customOutputImages[0]);
 
     ppRenderBloomInterface_.postProcessNode->PreExecuteFrame();
 }
