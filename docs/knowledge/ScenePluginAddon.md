@@ -1,5 +1,9 @@
 # ScenePluginAddon AGENTS.md
 
+## 适用范围与相关路由
+
+本文适用于 `kits/js` 的 NAPI 类型注册、包装器、属性代理、对象生命周期和线程模式。整仓门禁见 [仓级 AGENTS.md](../../AGENTS.md)，局部规范见 [kits/js/AGENTS.md](../../kits/js/AGENTS.md)；涉及 ETS/ANI 同步、Scene Adapter 或 Surface 时继续读取 [平台适配与绑定链路](platform-adapter-binding.md) 和 [构建与验证地图](build-test-validation.md)。
+
 This document describes how to expose LumeScene interfaces to JavaScript/ArkTS via N-API bindings.
 
 ## Module Dependencies
@@ -77,11 +81,13 @@ When ScenePluginAddon calls into LumeScene, these rules apply:
 
 ## Public API Definition
 
-The JS/ArkTS public API is defined in TypeScript declaration files:
-- **Primary:** `@pr/LumeTS/ModuleDeclaration/api/graphics3d/scene.d.ts` — Scene, SceneResourceFactory, SceneComponent, RenderContext, etc.
-- **Related:** `sceneNodes.d.ts` (Camera, Light, Node, Geometry), `sceneTypes.d.ts` (Vec3, Color, enums), `sceneResources.d.ts` (Shader, Material, Animation, etc.)
+The public contract must be checked at the owning declaration layer before changing a wrapper:
 
-APIs that appear in these `.d.ts` files are **public**. APIs exposed in NAPI but NOT in the `.d.ts` files are **private/internal** — they exist for internal use or testing and are not part of the public contract.
+- **ArkTS/ETS in this checkout:** `kits/ets/taihe/idl/*.taihe` defines the Taihe-facing scene, node, resource, type, post-process, and Boids APIs. Changes must follow [kits/ets/AGENTS.md](../../kits/ets/AGENTS.md) and the [ArkTS static API guide](../../kits/ets/docs/ARKTS_STATIC_API_GUIDE.md).
+- **JS/NAPI implementation in this checkout:** `kits/js/src/register_module.cpp` and the `*JS` wrappers define what the native module registers, but registration alone does not prove that an API belongs to the public contract.
+- **External declaration ownership:** this checkout contains no `.d.ts` declaration tree. If a JS declaration is maintained in another repository or product branch, confirm that owner and update it together with the NAPI change.
+
+An API exposed only by NAPI may be private/internal. Confirm public versus internal status and cross-language parity before adding or changing a binding.
 
 ## Step-by-Step: Exposing a New Type to JS
 
@@ -206,7 +212,7 @@ If native and JS class names differ, add mapping in `src/BaseObjectJS.cpp:GetCon
 
 ### Ask First
 
-- **Which interfaces should be exposed as public API?** Check the public API definition in `@pr/LumeTS/ModuleDeclaration/api/graphics3d/scene.d.ts` (and related `.d.ts` files). New public APIs must be added to these declaration files. If the interface should NOT be public, explicitly confirm it is a private/internal API.
+- **Which interfaces should be exposed as public API?** Check `kits/ets/taihe/idl/*.taihe` for ArkTS/ETS and confirm the owner of any external JS declaration. Public changes must update every applicable declaration and binding; otherwise explicitly confirm the API is private/internal.
 - **Are there private/internal NAPI APIs to add?** Some APIs are exposed in NAPI but do not appear in the `.d.ts` files (e.g., internal test interfaces, plugin-specific helpers). Confirm whether new bindings are public or private before implementing.
 - **Which LumeScene interfaces need wrapping?** Not all LumeScene interfaces have JS wrappers. Confirm which interfaces need exposure before creating new wrapper classes.
 

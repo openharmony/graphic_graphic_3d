@@ -1,5 +1,9 @@
 # Lume3D AGENTS.md — ECS System & Component Reference
 
+## 适用范围与相关路由
+
+本文适用于 Lume_3D 的 ECS 组件、组件管理器、系统执行顺序和相关单测。整仓门禁见 [仓级 AGENTS.md](../../AGENTS.md)，局部规范见 [Lume_3D/AGENTS.md](../../lume/Lume_3D/AGENTS.md)；涉及 RenderDataStore、Shader、插件或目标选择时继续读取 [渲染资源与插件链路](render-resource-plugin-pipeline.md) 和 [构建与验证地图](build-test-validation.md)。
+
 This document is the **canonical reference** for writing new ECS systems with components. The patterns here apply to Lume3D itself AND any plugin that extends it (e.g., LumeBoidsSwarm, future physics plugins, etc.).
 
 ## Module Dependencies
