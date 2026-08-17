@@ -444,7 +444,7 @@ bool SceneAdapter::InitEngine(CORE_NS::PlatformCreateInfo platformCreateInfo)
 
         const auto& configuredBackend = LumeRenderConfig::GetInstance().renderBackend_;
         std::string backendProp = (configuredBackend == "force_vulkan") ? "vulkan" :
-            ((configuredBackend == "vulkan" || configuredBackend == "maleoon") ? configuredBackend : "gles");
+            ((configuredBackend == "maleoon") ? "maleoon" : "gles");
 
         if (backendProp == "vulkan") {
             WIDGET_LOGI("backend vulkan");
