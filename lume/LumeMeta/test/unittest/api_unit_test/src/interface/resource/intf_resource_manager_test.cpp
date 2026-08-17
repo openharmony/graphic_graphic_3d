@@ -533,7 +533,8 @@ UNIT_TEST_F(API_FileResourceManagerTest, ImportInvalidFile, testing::ext::TestSi
 
 /**
  * @tc.name: GetResourceInfoNotFound
- * @tc.desc: Tests that GetResourceInfo with non-existent id returns empty ResourceInfo.
+ * @tc.desc: Tests that GetResourceInfo with non-existent id returns empty
+ * ResourceInfo.
  * @tc.type: FUNC
  */
 UNIT_TEST_F(API_FileResourceManagerTest, GetResourceInfoNotFound, testing::ext::TestSize.Level1)
@@ -554,6 +555,26 @@ UNIT_TEST_F(API_FileResourceManagerTest, RenameToExistingTarget, testing::ext::T
     ASSERT_TRUE(resources->AddResource(res1, "app://res1.json"));
     ASSERT_TRUE(resources->AddResource(res2, "app://res2.json"));
     EXPECT_FALSE(resources->RenameResource({"app://res1", context}, {"app://res2", context}));
+}
+
+/**
+ * @tc.name: RenameAcrossGroups
+ * @tc.desc: Tests that renaming a resource across groups moves it correctly.
+ * @tc.type: FUNC
+ */
+UNIT_TEST_F(API_FileResourceManagerTest, RenameAcrossGroups, testing::ext::TestSize.Level1)
+{
+    auto res = CreateTestResource(CORE_NS::ResourceId("source", "groupA"));
+    ASSERT_TRUE(resources->AddResource(res, "app://source.json"));
+    EXPECT_TRUE(resources->RenameResource(
+        {CORE_NS::ResourceId("source", "groupA"), context}, {CORE_NS::ResourceId("dest", "groupB"), context}));
+
+    // Old location is gone.
+    EXPECT_FALSE(resources->GetResource({CORE_NS::ResourceId("source", "groupA"), context}));
+    // New location holds the same object instance.
+    auto queried = resources->GetResource(CORE_NS::ResourceIdContext(CORE_NS::ResourceId("dest", "groupB"), context));
+    ASSERT_TRUE(queried);
+    EXPECT_EQ(queried, res);
 }
 
 /**
