@@ -1655,10 +1655,13 @@ void RenderBackendMln::AcquirePresentationInfo(
 
         pi.useSwapchain = true;
 
-        // Avoid re-acquiring if the same swapchain was already acquired
-        for (const auto& piRef : presentationData_.infos) {
-            if (piRef.useSwapchain && piRef.validAcquire) {
+        // Avoid re-acquiring if the same swapchain handle was already acquired
+        // Only check previously processed entries to prevent double-present
+        for (size_t prevIdx = 0; prevIdx < swapIdx; ++prevIdx) {
+            const auto& prevSwapData = backBufferConfig.swapchainData[prevIdx];
+            if (prevSwapData.handle == swapData.handle && presentationData_.infos[prevIdx].validAcquire) {
                 pi.useSwapchain = false;
+                pi.swapchainImageIndex = presentationData_.infos[prevIdx].swapchainImageIndex;
                 break;
             }
         }
@@ -2073,7 +2076,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
                 MlnPassNodeDependencyDescriptor& dep = depDescs[i];
                 dep.extensionCount = 0;
                 dep.extensions = nullptr;
-                dep.passId = lastPassid;  // depend on previous pass
+                dep.passId = lastPassid; // depend on previous pass
                 // [REFAC Step 8a] producer's output stage / consumer's input stage approx
                 dep.srcStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
                 dep.dstStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
@@ -2390,7 +2393,7 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
         for (uint32_t di = 0; di < dgCount && !foundSwapPass; ++di) {
             if (di < allDgResources.size()) {
                 for (uint32_t oi = 0; oi < allDgResources[di].outputCount; ++oi) {
-                    const MlnResource outRes = allDgResources[di].outputs[oi].bufferResource;
+                    const MlnResource outRes = allDgResources[di].outputs[oi].resource;
                     for (const auto& swapRes : acquiredSwapImages) {
                         if (outRes == swapRes) {
                             firstSwapPassId = passIds[di];
@@ -3185,13 +3188,13 @@ void RenderBackendMln::UpdateCommandListDescriptorSets(
 // WalkSecondaryCtx — independent secondary ctx walker. Collects RenderPassSegments
 // with DrawCallGroup snapshots for primary ctx to lazy-merge. No DG/OG building.
 void RenderBackendMln::WalkSecondaryCtx(
-    RenderCommandContext& renderCommandCtx, void* outRpSegsOnlyVoid, void* pendingFrameVoid)
+    RenderCommandContext& renderCommandCtx, void* outRpSegsOnly, void* pendingFrame)
 {
-    auto* outRpSegsOnly = static_cast<vector<RenderPassSegment>*>(outRpSegsOnlyVoid);
+    auto* outRpSegs = static_cast<vector<RenderPassSegment>*>(outRpSegsOnly);
     // [OPT] pendingFrame tracks OGs created by secondary ctx (when ogDirectBuild=true).
     // Caller guarantees non-null when direct-build is enabled. nullptr is OK only in
     // legacy fallback path (ogDirectBuild=false, no OGs created here).
-    auto* pendingFrame = static_cast<PendingDestroyFrame*>(pendingFrameVoid);
+    auto* pendingDestroyFrame = static_cast<PendingDestroyFrame*>(pendingFrame);
     const RenderCommandList& cmdList = *renderCommandCtx.renderCommandList;
     NodeContextPsoManager& psoMgr = *renderCommandCtx.nodeContextPsoMgr;
     NodeContextDescriptorSetManager& descriptorSetMgr = *renderCommandCtx.nodeContextDescriptorSetMgr;
@@ -3270,9 +3273,9 @@ void RenderBackendMln::WalkSecondaryCtx(
                 const auto& cmd = *static_cast<const RenderCommandDraw*>(ref.rc);
                 // [OPT] Direct-build path: stack-only DrawCallGroup, no vector heap alloc.
                 // Fallback path: full DrawCallGroup snapshot to drawGroups (legacy 3-phase).
-                if (g_mlnLog.ogDirectBuild && pendingFrame) {
+                if (g_mlnLog.ogDirectBuild && pendingDestroyFrame) {
                     MlnObjectGroup og =
-                        BuildOGFromDrawCommand(&state, &cmd, currentRP, currentSubpassIndex, *pendingFrame);
+                        BuildOGFromDrawCommand(&state, &cmd, currentRP, currentSubpassIndex, *pendingDestroyFrame);
                     if (og) {
                         currentRP->secondaryOGHandles.push_back(og);
                     }
@@ -3309,9 +3312,9 @@ void RenderBackendMln::WalkSecondaryCtx(
                     break;
                 const auto& cmd = *static_cast<const RenderCommandDrawIndirect*>(ref.rc);
                 // [OPT] Direct-build path.
-                if (g_mlnLog.ogDirectBuild && pendingFrame) {
-                    MlnObjectGroup og =
-                        BuildOGFromDrawIndirectCommand(&state, &cmd, currentRP, currentSubpassIndex, *pendingFrame);
+                if (g_mlnLog.ogDirectBuild && pendingDestroyFrame) {
+                    MlnObjectGroup og = BuildOGFromDrawIndirectCommand(
+                        &state, &cmd, currentRP, currentSubpassIndex, *pendingDestroyFrame);
                     if (og) {
                         currentRP->secondaryOGHandles.push_back(og);
                     }
@@ -3365,8 +3368,8 @@ void RenderBackendMln::WalkSecondaryCtx(
         }
     }
     MergeStitchedRpSegs(renderPassSegments, nullptr);
-    if (outRpSegsOnly) {
-        *outRpSegsOnly = BASE_NS::move(renderPassSegments);
+    if (outRpSegs) {
+        *outRpSegs = BASE_NS::move(renderPassSegments);
     }
 }
 
@@ -3477,9 +3480,9 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
         auto& res = dgResInfo.outputs[idx];
         res.extensionCount = 0;
         res.extensions = nullptr;
-        res.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
-        res.imageResourceView = transferDstImages[ti].resourceView;
-        res.bufferResource = transferDstImages[ti].resource;
+        res.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE_VIEW;
+        res.resourceView = transferDstImages[ti].resourceView;
+        res.resource = transferDstImages[ti].resource;
         dgResInfo.storeOps[idx] = MLN_ATTACHMENT_STORE_OP_STORE;
     }
     for (size_t bi = 0; bi < transferDstBuffers.size() && dgResInfo.outputCount < MAX_DG_OUTPUT_RESOURCES; ++bi) {
@@ -3487,9 +3490,9 @@ void RenderBackendMln::BuildTransferDg(void* transferOpsVec, void* transferDstIm
         auto& res = dgResInfo.outputs[idx];
         res.extensionCount = 0;
         res.extensions = nullptr;
-        res.type = MLN_PASS_NODE_RESOURCE_TYPE_BUFFER;
-        res.imageResourceView = MLN_NULL_HANDLE;
-        res.bufferResource = transferDstBuffers[bi];
+        res.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE;
+        res.resourceView = MLN_NULL_HANDLE;
+        res.resource = transferDstBuffers[bi];
         dgResInfo.storeOps[idx] = MLN_ATTACHMENT_STORE_OP_STORE;
     }
     // [REFAC §8.7] Stage mask precision: transfer DG writes at ALL_TRANSFER
@@ -3670,7 +3673,7 @@ void RenderBackendMln::BuildComputeDg(const void* computeDispatchGroupPtr, Pendi
         // De-dup against earlier entries (same resource may appear in multiple sets)
         bool dup = false;
         for (uint32_t i = 0; i < dgResInfo.outputCount; ++i) {
-            if (dgResInfo.outputs[i].bufferResource == res.bufferResource && dgResInfo.outputs[i].type == res.type) {
+            if (dgResInfo.outputs[i].resource == res.resource && dgResInfo.outputs[i].type == res.type) {
                 dup = true;
                 break;
             }
@@ -4403,19 +4406,19 @@ void RenderBackendMln::BuildOGFromState(const void* inputsPtr, PendingDestroyFra
     const uint64_t contentFp = ComputeOGContentFingerprint(dg);
     bool cacheHit = false;
     uint16_t lastMask = 0;
-    OGPoolEntry* entryPtr = nullptr;
+    uint32_t entryIdx = 0;
     {
         const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
         auto& slot = ogPools_[ogHash].slots[currentSlot];
         const uint32_t idx = slot.frameAllocIndex++;
         if (idx < static_cast<uint32_t>(slot.entries.size())) {
-            entryPtr = &slot.entries[idx];
-            entryPtr->lastFrameUsed = frameCount;
-            objGroup = entryPtr->objectGroup;
-            lastMask = entryPtr->lastModifierMask;
+            entryIdx = idx;
+            slot.entries[idx].lastFrameUsed = frameCount;
+            objGroup = slot.entries[idx].objectGroup;
+            lastMask = slot.entries[idx].lastModifierMask;
             cacheHit = true;
 
-            if (contentFp == entryPtr->contentFingerprint) {
+            if (contentFp == slot.entries[idx].contentFingerprint) {
                 *outOG = objGroup;
                 return;
             }
@@ -4424,25 +4427,18 @@ void RenderBackendMln::BuildOGFromState(const void* inputsPtr, PendingDestroyFra
 
     if (cacheHit) {
         uint16_t newMask = 0;
-        bool updateOk = UpdateCachedOG(mlnDevice,
-            objGroup,
-            dg,
-            *in.resVB,
-            *in.resIB,
-            *in.resBS,
-            *in.resPC,
-            *in.vpState,
-            *in.scState,
-            *in.depthBiasState,
-            *in.depthBoundsState,
-            *in.stencilCompareMask,
-            *in.stencilWriteMask,
-            *in.stencilReference,
-            lastMask,
-            newMask);
+        bool updateOk = UpdateCachedOG(mlnDevice, objGroup, dg,
+            *in.resVB, *in.resIB, *in.resBS, *in.resPC,
+            *in.vpState, *in.scState, *in.depthBiasState,
+            *in.depthBoundsState, *in.stencilCompareMask,
+            *in.stencilWriteMask, *in.stencilReference, lastMask, newMask);
         if (updateOk) {
-            entryPtr->lastModifierMask = newMask;
-            entryPtr->contentFingerprint = contentFp;
+            const auto lock = std::lock_guard<std::mutex>(ogPoolsMutex_);
+            auto& slot = ogPools_[ogHash].slots[currentSlot];
+            if (entryIdx < slot.entries.size()) {
+                slot.entries[entryIdx].lastModifierMask = newMask;
+                slot.entries[entryIdx].contentFingerprint = contentFp;
+            }
             *outOG = objGroup;
         } else {
             cacheHit = false;
@@ -4486,9 +4482,9 @@ void RenderBackendMln::BuildOGFromState(const void* inputsPtr, PendingDestroyFra
 }
 
 // Walker helpers — converted from lambdas so Handle* can call them.
-void RenderBackendMln::FlushTransferBatch(void* wctxPtr)
+void RenderBackendMln::FlushTransferBatch(void* wctx)
 {
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     auto& pf = *static_cast<PendingDestroyFrame*>(w.pendingFrame);
     auto& dgs = *static_cast<BASE_NS::vector<MlnDataGraph>*>(w.outDataGraphs);
     auto& dgr = *static_cast<BASE_NS::vector<DataGraphResourceInfo>*>(w.outDgResources);
@@ -4507,9 +4503,9 @@ void RenderBackendMln::FlushTransferBatch(void* wctxPtr)
     }
 }
 
-void RenderBackendMln::FlushGraphicsBatch(void* wctxPtr)
+void RenderBackendMln::FlushGraphicsBatch(void* wctx)
 {
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     auto& pf = *static_cast<PendingDestroyFrame*>(w.pendingFrame);
     auto& dgs = *static_cast<BASE_NS::vector<MlnDataGraph>*>(w.outDataGraphs);
     auto& dgr = *static_cast<BASE_NS::vector<DataGraphResourceInfo>*>(w.outDgResources);
@@ -4538,14 +4534,14 @@ void RenderBackendMln::FlushGraphicsBatch(void* wctxPtr)
     }
 }
 
-void RenderBackendMln::HandleBeginRenderPass(const void* refPtr, void* wctxPtr)
+void RenderBackendMln::HandleBeginRenderPass(const void* refPtr, void* wctx)
 {
     const auto& ref = *static_cast<const RenderCommandWithType*>(refPtr);
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     auto& psoMgr = *static_cast<NodeContextPsoManager*>(w.psoMgr);
 
-    FlushTransferBatch(wctxPtr);
-    FlushGraphicsBatch(wctxPtr);
+    FlushTransferBatch(wctx);
+    FlushGraphicsBatch(wctx);
     w.curRP = {};
     w.curStreamOGs.clear();
     w.curStreamSubpass = 0;
@@ -4598,10 +4594,10 @@ void RenderBackendMln::HandleBeginRenderPass(const void* refPtr, void* wctxPtr)
     }
 }
 
-void RenderBackendMln::HandleDraw(const void* refPtr, void* wctxPtr)
+void RenderBackendMln::HandleDraw(const void* refPtr, void* wctx)
 {
     const auto& ref = *static_cast<const RenderCommandWithType*>(refPtr);
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     auto& psoMgr = *static_cast<NodeContextPsoManager*>(w.psoMgr);
     auto& pendingFrame = *static_cast<PendingDestroyFrame*>(w.pendingFrame);
 
@@ -4673,10 +4669,10 @@ void RenderBackendMln::HandleDraw(const void* refPtr, void* wctxPtr)
     w.curStreamSubpass = w.currentSubpassIndex;
 }
 
-void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
+void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctx)
 {
     const auto& ref = *static_cast<const RenderCommandWithType*>(refPtr);
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
 
     switch (ref.type) {
         case RenderCommandType::COPY_BUFFER: {
@@ -4711,7 +4707,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 }
                 w.curTransferOps.push_back(BASE_NS::move(op));
                 // Track dst buffer so SG can insert transfer→consumer dependency edge.
-                AddTransferDstBuffer(wctxPtr, dstBuf->GetPlatformData().resource);
+                AddTransferDstBuffer(wctx, dstBuf->GetPlatformData().resource);
             }
             break;
         }
@@ -4835,9 +4831,9 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                     w.openSeg = OpenSegment::TRANSFER;
                 }
                 if (cmd.copyType == RenderCommandCopyBufferImage::CopyType::BUFFER_TO_IMAGE) {
-                    AddTransferDstImage(wctxPtr, imgPlat.resource, imgPlat.resourceView);
+                    AddTransferDstImage(wctx, imgPlat.resource, imgPlat.resourceView);
                 } else {
-                    AddTransferDstBuffer(wctxPtr, bufPlat.resource);
+                    AddTransferDstBuffer(wctx, bufPlat.resource);
                 }
                 w.curTransferOps.push_back(BASE_NS::move(op));
             }
@@ -4901,7 +4897,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 if (w.openSeg != OpenSegment::TRANSFER) {
                     w.openSeg = OpenSegment::TRANSFER;
                 }
-                AddTransferDstImage(wctxPtr, dstPlat.resource, dstPlat.resourceView);
+                AddTransferDstImage(wctx, dstPlat.resource, dstPlat.resourceView);
                 w.curTransferOps.push_back(BASE_NS::move(op));
             }
             break;
@@ -4974,7 +4970,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
                 if (w.openSeg != OpenSegment::TRANSFER) {
                     w.openSeg = OpenSegment::TRANSFER;
                 }
-                AddTransferDstImage(wctxPtr, blitDstPlat.resource, blitDstPlat.resourceView);
+                AddTransferDstImage(wctx, blitDstPlat.resource, blitDstPlat.resourceView);
                 w.curTransferOps.push_back(BASE_NS::move(op));
             }
             break;
@@ -5025,7 +5021,7 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
 
                 if (w.openSeg != OpenSegment::TRANSFER)
                     w.openSeg = OpenSegment::TRANSFER;
-                AddTransferDstImage(wctxPtr, dstPlat.resource, dstPlat.resourceView);
+                AddTransferDstImage(wctx, dstPlat.resource, dstPlat.resourceView);
                 w.curTransferOps.push_back(BASE_NS::move(op));
             }
             if (g_mlnLog.trans) {
@@ -5065,16 +5061,16 @@ void RenderBackendMln::HandleTransferOp(const void* refPtr, void* wctxPtr)
 // skew). Post-call we check whether any MlnDataGraph was pushed; if not, log an ERROR
 // indicating the dispatch type so subclass authors can see they need to override the
 // mutable overload to support Maleoon.
-void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctxPtr)
+void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctx)
 {
     const auto& ref = *static_cast<const RenderCommandWithType*>(refPtr);
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     const auto& cmd = *static_cast<const RenderCommandExecuteBackendFramePosition*>(ref.rc);
 
     // Preserve command-order correctness: pending transfer/graphics batches must
     // be flushed BEFORE the backend pushes its DGs.
-    FlushTransferBatch(wctxPtr);
-    FlushGraphicsBatch(wctxPtr);
+    FlushTransferBatch(wctx);
+    FlushGraphicsBatch(wctx);
 
     auto& outDGs = *static_cast<BASE_NS::vector<MlnDataGraph>*>(w.outDataGraphs);
     auto& outRes = *static_cast<BASE_NS::vector<DataGraphResourceInfo>*>(w.outDgResources);
@@ -5154,9 +5150,9 @@ void RenderBackendMln::HandleExecuteBackendFrame(const void* refPtr, void* wctxP
     }
 }
 
-void RenderBackendMln::AddTransferDstImage(void* wctxPtr, MlnResource res, MlnResourceView view)
+void RenderBackendMln::AddTransferDstImage(void* wctx, MlnResource res, MlnResourceView view)
 {
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     if (!res || w.curTransferDsts.size() >= MAX_DG_OUTPUT_RESOURCES) {
         return;
     }
@@ -5167,9 +5163,9 @@ void RenderBackendMln::AddTransferDstImage(void* wctxPtr, MlnResource res, MlnRe
     w.curTransferDsts.push_back({res, view});
 }
 
-void RenderBackendMln::AddTransferDstBuffer(void* wctxPtr, MlnResource res)
+void RenderBackendMln::AddTransferDstBuffer(void* wctx, MlnResource res)
 {
-    auto& w = *static_cast<PrimaryWalkerState*>(wctxPtr);
+    auto& w = *static_cast<PrimaryWalkerState*>(wctx);
     if (!res) {
         return;
     }
@@ -5377,9 +5373,9 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                             auto& rd = setStorage.entries[setStorage.count++];
                                             rd.extensionCount = 0;
                                             rd.extensions = nullptr;
-                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_BUFFER;
-                                            rd.imageResourceView = MLN_NULL_HANDLE;
-                                            rd.bufferResource = bufPtr->GetPlatformData().resource;
+                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE;
+                                            rd.resourceView = MLN_NULL_HANDLE;
+                                            rd.resource = bufPtr->GetPlatformData().resource;
                                         }
                                     }
                                 }
@@ -5402,9 +5398,9 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
                                             auto& rd = setStorage.entries[setStorage.count++];
                                             rd.extensionCount = 0;
                                             rd.extensions = nullptr;
-                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
-                                            rd.imageResourceView = imgPlat.resourceView;
-                                            rd.bufferResource = imgPlat.resource;
+                                            rd.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE_VIEW;
+                                            rd.resourceView = imgPlat.resourceView;
+                                            rd.resource = imgPlat.resource;
                                         }
                                     }
                                 }
@@ -6388,9 +6384,9 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
             }
             const uint32_t idx = dgResInfo.outputCount++;
             auto& res = dgResInfo.outputs[idx];
-            res.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
-            res.imageResourceView = colorAttachments[ci].imageResourceView;
-            res.bufferResource = img->GetPlatformData().resource;  // real image MlnResource
+            res.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE_VIEW;
+            res.resourceView =colorAttachments[ci].imageResourceView;
+            res.resource = img->GetPlatformData().resource;  // real image MlnResource
             dgResInfo.storeOps[idx] = colorAttachments[ci].storeOp;
         }
         if (hasDepth && depthAttachment.imageResourceView && sp.depthAttachmentIndex < rpDesc.attachmentCount &&
@@ -6400,9 +6396,9 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
             if (depthImg) {
                 const uint32_t idx = dgResInfo.outputCount++;
                 auto& res = dgResInfo.outputs[idx];
-                res.type = MLN_PASS_NODE_RESOURCE_TYPE_IMAGE;
-                res.imageResourceView = depthAttachment.imageResourceView;
-                res.bufferResource = depthImg->GetPlatformData().resource;  // real depth MlnResource
+                res.type = MLN_PASS_NODE_RESOURCE_TYPE_RESOURCE_VIEW;
+                res.resourceView =depthAttachment.imageResourceView;
+                res.resource = depthImg->GetPlatformData().resource;  // real depth MlnResource
                 dgResInfo.storeOps[idx] = depthAttachment.storeOp;
             }
         }
@@ -6424,16 +6420,16 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
 // Secondary ctx (outRpSegsOnly!=null) → WalkSecondaryCtx (collects rpSegs only)
 void RenderBackendMln::RenderSingleCommandList(RenderCommandContext& renderCommandCtx,
     PendingDestroyFrame& pendingFrame, BASE_NS::vector<MlnDataGraph>& outDataGraphs,
-    BASE_NS::vector<DataGraphResourceInfo>& outDgResources, void* additionalRpSegsVoid, void* outRpSegsOnlyVoid)
+    BASE_NS::vector<DataGraphResourceInfo>& outDgResources, void* additionalRpSegs, void* outRpSegsOnly)
 {
-    if (outRpSegsOnlyVoid) {
+    if (outRpSegsOnly) {
         // [OPT] Pass pendingFrame so secondary ctx can track OGs it creates
         // via direct-build path (ogDirectBuild=true). Caller (RenderAllCommandLists)
         // must share this frame across the whole multi-ctx group so OGs get tracked
         // for deferred destruction and don't leak.
-        WalkSecondaryCtx(renderCommandCtx, outRpSegsOnlyVoid, &pendingFrame);
+        WalkSecondaryCtx(renderCommandCtx, outRpSegsOnly, &pendingFrame);
     } else {
-        WalkPrimaryCtx(renderCommandCtx, pendingFrame, outDataGraphs, outDgResources, additionalRpSegsVoid);
+        WalkPrimaryCtx(renderCommandCtx, pendingFrame, outDataGraphs, outDgResources, additionalRpSegs);
     }
 }
 
@@ -6441,9 +6437,9 @@ void RenderBackendMln::RenderSingleCommandList(RenderCommandContext& renderComma
 // WalkPrimaryCtx — streaming-only primary ctx walker. Builds DGs inline in command order.
 void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, PendingDestroyFrame& pendingFrame,
     BASE_NS::vector<MlnDataGraph>& outDataGraphs, BASE_NS::vector<DataGraphResourceInfo>& outDgResources,
-    void* additionalRpSegsVoid)
+    void* additionalRpSegs)
 {
-    auto* additionalRpSegs = static_cast<vector<RenderPassSegment>*>(additionalRpSegsVoid);
+    auto* addiRpSegs = static_cast<vector<RenderPassSegment>*>(additionalRpSegs);
     const RenderCommandList& cmdList = *renderCommandCtx.renderCommandList;
     NodeContextPsoManager& psoMgr = *renderCommandCtx.nodeContextPsoMgr;
     NodeContextDescriptorSetManager& descriptorSetMgr = *renderCommandCtx.nodeContextDescriptorSetMgr;
@@ -6516,7 +6512,7 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
         &pendingFrame,
         &outDataGraphs,
         &outDgResources,
-        additionalRpSegs,
+        addiRpSegs,
         &psoMgr,
         renderCommandCtx.renderBackendNode};
 
@@ -6546,8 +6542,8 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                 // [REFAC Step 8b] Streaming path: lazy-merge any matching secondary
                 // rpSegs into curRP, then immediately build the graphics DG.
                 if (curRP.beginCmd) {
-                    if (additionalRpSegs && !additionalRpSegs->empty()) {
-                        for (auto it = additionalRpSegs->begin(); it != additionalRpSegs->end();) {
+                    if (addiRpSegs && !addiRpSegs->empty()) {
+                        for (auto it = addiRpSegs->begin(); it != addiRpSegs->end();) {
                             if (it->beginCmd &&
                                 it->beginCmd->beginType == RenderPassBeginType::RENDER_PASS_SUBPASS_BEGIN &&
                                 it->subpassStartIndex == curRP.subpassStartIndex) {
@@ -6558,7 +6554,7 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                                 for (auto& og : it->secondaryOGHandles) {
                                     curRP.secondaryOGHandles.push_back(og);
                                 }
-                                it = additionalRpSegs->erase(it);
+                                it = addiRpSegs->erase(it);
                             } else {
                                 ++it;
                             }
@@ -6811,7 +6807,7 @@ void RenderBackendMln::WalkPrimaryCtx(RenderCommandContext& renderCommandCtx, Pe
                         mlnInst.transform.matrix[2][3] = tr[3].z;
                         mlnInst.instanceCustomIndex = inst.instanceCustomIndex;
                         mlnInst.mask = inst.mask;
-                        mlnInst.instanceShaderBindingTableRecordOffset = 0U;
+                        mlnInst.instanceCallableIndex = 0U;
                         mlnInst.flags = static_cast<MlnAccelerationStructureInstanceFlags>(inst.flags);
                         mlnInst.accelerationStructureReference = accelDeviceAddress;
 

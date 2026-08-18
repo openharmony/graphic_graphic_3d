@@ -245,7 +245,6 @@ static PFN_MlnSetResourceDebugName s_MlnSetResourceDebugName;
 //   at this stage (AGP RT direction decision — rayquery only).
 static PFN_MlnGetBufferResourceAddress s_MlnGetBufferResourceAddress;
 static PFN_MlnCreateAccelerationStructure s_MlnCreateAccelerationStructure;
-static PFN_MlnDestroyAccelerationStructure s_MlnDestroyAccelerationStructure;
 static PFN_MlnGetAccelerationStructureDeviceAddress s_MlnGetAccelerationStructureDeviceAddress;
 static PFN_MlnGetAccelerationStructureBuildSizes s_MlnGetAccelerationStructureBuildSizes;
 static PFN_MlnCreateAccelerationStructureObjectGroup s_MlnCreateAccelerationStructureObjectGroup;
@@ -576,7 +575,6 @@ MLN_LOADER_EXPORT void MLNAPI_CALL mlnLoaderDeinit()
     // Ray Tracing
     s_MlnGetBufferResourceAddress = nullptr;
     s_MlnCreateAccelerationStructure = nullptr;
-    s_MlnDestroyAccelerationStructure = nullptr;
     s_MlnGetAccelerationStructureDeviceAddress = nullptr;
     s_MlnGetAccelerationStructureBuildSizes = nullptr;
     s_MlnCreateAccelerationStructureObjectGroup = nullptr;
@@ -743,7 +741,6 @@ MLN_LOADER_EXPORT bool MLNAPI_CALL mlnLoaderResolveWithDevice(MlnDevice device)
     // Ray Tracing (optional on legacy drivers; unresolved => RT support flag stays false)
     LOAD_CORE_P2(MlnGetBufferResourceAddress);
     LOAD_CORE_P2(MlnCreateAccelerationStructure);
-    LOAD_CORE_P2(MlnDestroyAccelerationStructure);
     LOAD_CORE_P2(MlnGetAccelerationStructureDeviceAddress);
     LOAD_CORE_P2(MlnGetAccelerationStructureBuildSizes);
     LOAD_CORE_P2(MlnCreateAccelerationStructureObjectGroup);
@@ -1630,16 +1627,8 @@ MLN_LOADER_EXPORT MlnAccelerationStructure MLNAPI_CALL MlnCreateAccelerationStru
     return s_MlnCreateAccelerationStructure(device, descriptor);
 }
 
-MLN_LOADER_EXPORT void MLNAPI_CALL MlnDestroyAccelerationStructure(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure)
-{
-    if (s_MlnDestroyAccelerationStructure) {
-        s_MlnDestroyAccelerationStructure(device, accelerationStructure);
-    }
-}
-
 MLN_LOADER_EXPORT MlnDeviceAddress MLNAPI_CALL MlnGetAccelerationStructureDeviceAddress(
-    MlnDevice device, MlnAccelerationStructure accelerationStructure)
+    MlnDevice device, MlnResource accelerationStructure)
 {
     if (!s_MlnGetAccelerationStructureDeviceAddress) {
         fprintf(stderr, "[MaleoonLoader] NULL call: MlnGetAccelerationStructureDeviceAddress\n");
