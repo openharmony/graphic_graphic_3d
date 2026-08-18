@@ -400,7 +400,7 @@ uint32_t GpuImageMln::FindMemoryType(
 
     // First pass: try to find a memory type matching preferred flags (include LAZILY_ALLOCATED)
     for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-        if ((memoryTypeBits & (1u << i)) && 
+        if ((memoryTypeBits & (1u << i)) &&
             (memProps.memoryTypes[i].propertyFlags & preferredFlags) == preferredFlags) {
             return i;
         }
