@@ -101,7 +101,7 @@ void ClampSwapchainExtent(const MlnDisplaySurfaceCapabilities& caps, uint32_t& w
     height = std::clamp(height, caps.minImageExtent.height, caps.maxImageExtent.height);
 
     MLN_LOG_INIT("swapchainExtent: %u x %u", width, height);
-    
+
     // maleoon compatibility: prevent zero-sized swapchain
     if ((width == 0) || (height == 0)) {
         PLUGIN_LOG_E("Maleoon zero sized swapchain cannot be created (width: %u, height: %u)", width, height);
@@ -138,7 +138,7 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
     // Use current extent from surface capabilities
     desc_.width = caps.currentExtent.width;
     desc_.height = caps.currentExtent.height;
-    
+
     // Clamp extent to valid range (mirrors Vulkan backend behavior)
     ClampSwapchainExtent(caps, desc_.width, desc_.height);
     desc_.depth = 1;
