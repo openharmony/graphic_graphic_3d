@@ -147,6 +147,7 @@ struct MlnRenderState {
     // Index buffer
     MlnResource indexBuffer{MLN_NULL_HANDLE};
     MlnDeviceSize indexBufferOffset{0};
+    MlnDeviceSize indexBufferSize{0};
     MlnIndexType indexType{MLN_INDEX_TYPE_UINT32};
 
     // Descriptor set bindings (tracked but MlnBindingSet resolved separately)
@@ -220,6 +221,7 @@ struct DrawCallGroup {
 
     MlnResource indexBuffer{MLN_NULL_HANDLE};
     MlnDeviceSize indexBufferOffset{0};
+    MlnDeviceSize indexBufferSize{0};
     MlnIndexType indexType{MLN_INDEX_TYPE_UINT32};
 
     MlnBindingSet bindingSets[PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT]{};
@@ -488,6 +490,7 @@ void SnapshotStateToDrawGroup(DrawCallGroup& group, const MlnRenderState& state)
     }
     group.indexBuffer = state.indexBuffer;
     group.indexBufferOffset = state.indexBufferOffset;
+    group.indexBufferSize = state.indexBufferSize;
     group.indexType = state.indexType;
 
     group.firstSet = state.firstSet;
@@ -913,7 +916,7 @@ bool UpdateCachedOGFromDG(MlnDevice mlnDevice, MlnObjectGroup cachedOG, const Dr
         if (dg.indexBuffer) {
             resIB.bufferResource = dg.indexBuffer;
             resIB.offset = dg.indexBufferOffset;
-            resIB.size = 0;
+            resIB.size = dg.indexBufferSize;
             resIB.indexType = dg.indexType;
             auto& c = contents[contentCount++];
             c.type = MLN_GRAPHICS_OBJECT_GROUP_MODIFIER_TYPE_INDEX_BUFFER;
@@ -2340,9 +2343,8 @@ void RenderBackendMln::RenderAllCommandLists(RenderCommandFrameData& renderComma
     // Only need to signal once (last pass) — Present and WaitForFrameFence
     // just need to know "all rendering is done", not per-pass completion.
     const uint64_t lastPassId = passIds[dgCount - 1];
-    // [REFAC Step 8a §8.7] Use last pass's actual srcStage (set by Build* helpers)
-    // instead of conservative ALL_COMMANDS_BIT. Default is ALL_COMMANDS_BIT, so
-    // unset DGs still get the old behavior.
+    // 0-OG Graphics DG: BuildGraphicsDg sets srcStage=ALL_COMMANDS_BIT to mark it.
+    // UMD will detect this and wait all subqueues. Normal Graphics DG: srcStage=0xc0.
     MlnProgramStageFlags lastPassStage = ((dgCount - 1) < allDgResources.size()) ? allDgResources[dgCount - 1].srcStage
                                                                                  : MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
 
@@ -3254,6 +3256,8 @@ void RenderBackendMln::WalkSecondaryCtx(
                 state.isComputeContext = false;
                 state.vertexBufferCount = 0;
                 state.indexBuffer = MLN_NULL_HANDLE;
+                state.indexBufferOffset = 0;
+                state.indexBufferSize = 0;
                 state.pushConstantSize = 0;
                 state.hasViewport = false;
                 state.hasScissor = false;
@@ -4581,6 +4585,7 @@ void RenderBackendMln::HandleBeginRenderPass(const void* refPtr, void* wctx)
     w.state.vertexBufferCount = 0;
     w.state.indexBuffer = MLN_NULL_HANDLE;
     w.state.indexBufferOffset = 0;
+    w.state.indexBufferSize = 0;
     w.state.pushConstantSize = 0;
     w.state.hasViewport = false;
     w.state.hasScissor = false;
@@ -5267,16 +5272,25 @@ bool RenderBackendMln::HandleStateCommand(const void* refPtr, void* statePtr, vo
             const auto& cmd = *static_cast<const RenderCommandBindIndexBuffer*>(ref.rc);
             const auto* buf = gpuResourceMgr_.GetBuffer<GpuBufferMln>(cmd.indexBuffer.bufferHandle);
             if (buf) {
-                state.indexBuffer = buf->GetPlatformData().resource;
+                const auto& plat = buf->GetPlatformData();
+                state.indexBuffer = plat.resource;
                 state.indexBufferOffset = static_cast<MlnDeviceSize>(cmd.indexBuffer.bufferOffset);
+                // Native driver now dereferences IB size; use full buffer capacity
+                // (same approach as VB BUG-22 fix)
+                state.indexBufferSize = static_cast<MlnDeviceSize>(plat.bindMemoryByteSize);
                 state.indexType = (cmd.indexBuffer.indexType == IndexType::CORE_INDEX_TYPE_UINT16)
                                       ? MLN_INDEX_TYPE_UINT16
                                       : MLN_INDEX_TYPE_UINT32;
+            } else {
+                state.indexBuffer = MLN_NULL_HANDLE;
+                state.indexBufferOffset = 0;
+                state.indexBufferSize = 0;
             }
             if (g_mlnLog.graph) {
-                MLN_LOG_GRAPH("Phase1 frame=%u: offset=%llu type=%u",
+                MLN_LOG_GRAPH("Phase1 frame=%u: offset=%llu size=%llu type=%u",
                     g_debugFrameCount,
                     static_cast<unsigned long long>(state.indexBufferOffset),
+                    static_cast<unsigned long long>(state.indexBufferSize),
                     static_cast<uint32_t>(state.indexType));
             }
             break;
@@ -5770,7 +5784,7 @@ void RenderBackendMln::BuildSingleOGFromDrawGroup(
         MlnResourceIndexBuffer resIB{};
         resIB.bufferResource = dg.indexBuffer;
         resIB.offset = dg.indexBufferOffset;
-        resIB.size = 0;
+        resIB.size = dg.indexBufferSize;
         resIB.indexType = dg.indexType;
 
         const uint32_t maxSetCount = PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT;
@@ -6403,9 +6417,17 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
             }
         }
         dgResInfo.renderTarget = renderTarget;
-        // [REFAC §8.7] Stage mask: graphics DG writes at ALL_GRAPHICS stage.
-        dgResInfo.srcStage = MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT;
         dgResInfo.dstStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+        // 0-og Graphics DG (clear-only pass): mark with ALL_COMMANDS_BIT so UMD waits all subqueues.
+        // Normal Graphics DG: srcStage=0xc0 (COLOR_ATTACHMENT_OUTPUT_BIT | LATE_FRAGMENT_TESTS_BIT).
+        if (objectGroups.empty()) {
+            dgResInfo.srcStage = MLN_PROGRAM_STAGE_ALL_COMMANDS_BIT;
+            MLN_LOG_GRAPH("0-og Graphics DG: frame = %u rpSeg=%u srcStage=ALL_COMMANDS",
+                g_debugFrameCount, rpSegIdx);
+        } else {
+            dgResInfo.srcStage = MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+                                 MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        }
         dgResources.push_back(dgResInfo);
     } else {
         MLN_LOG_ERR("Phase2 frame=%u: MlnCreateGraphicsDataGraph FAILED (subpass=%u, OGs=%u)",
