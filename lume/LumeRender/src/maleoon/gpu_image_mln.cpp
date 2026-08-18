@@ -357,8 +357,15 @@ void GpuImageMln::AllocateAndBindMemory()
     memReqDesc.aspectMask = GetImageAspectFlags(desc_.format);
     MlnGetResourceMemoryRequirements(mlnDevice, &memReqDesc, &memReqs);
 
-    const MlnMemoryPropertyFlags requiredFlags = ToMlnMemoryPropertyFlags(desc_.memoryPropertyFlags);
-    const uint32_t memTypeIndex = FindMemoryType(memReqs.memoryTypeBits, requiredFlags);
+    // Separate required vs preferred flags
+    // LAZILY_ALLOCATED_BIT should be preferred but not required, so that
+    // the allocator prefers lazy memory when available but falls back to 
+    // regular device-local memory if no lazy type is supported.
+    const MlnMemoryPropertyFlags allFlags = ToMlnMemoryPropertyFlags(desc_.memoryPropertyFlags);
+    const MlnMemoryPropertyFlags requiredFlags =
+        allFlags & ~(MLN_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT | MLN_MEMORY_PROPERTY_LAZILY_HOST_CACHED_BIT);
+    const MlnMemoryPropertyFlags preferredFlags = allFlags;
+    const uint32_t memTypeIndex = FindMemoryType(memReqs.memoryTypeBits, requiredFlags, preferredFlags);
 
     MlnMemoryAllocateDescriptor allocDesc{};
     allocDesc.extensionCount = 0;
@@ -385,16 +392,28 @@ void GpuImageMln::AllocateAndBindMemory()
     }
 }
 
-uint32_t GpuImageMln::FindMemoryType(uint32_t memoryTypeBits, MlnMemoryPropertyFlags requiredFlags) const
+uint32_t GpuImageMln::FindMemoryType(
+    uint32_t memoryTypeBits, MlnMemoryPropertyFlags requiredFlags, MlnMemoryPropertyFlags preferredFlags) const
 {
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
     const auto& memProps = deviceMln.GetCachedMemoryProperties();
 
+    // First pass: try to find a memory type matching preferred flags (include LAZILY_ALLOCATED)
     for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-        if ((memoryTypeBits & (1u << i)) && (memProps.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
+        if ((memoryTypeBits & (1u << i)) && 
+            (memProps.memoryTypes[i].propertyFlags & preferredFlags) == preferredFlags) {
             return i;
         }
     }
+    // Second pass: fallback to required flags only (excludes LAZILY_ALLOCATED)
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+        if ((memoryTypeBits & (1u << i)) && 
+            (memProps.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
+            return i;
+        }
+    }
+
+    // Third pass: any memory type that's available
     for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
         if (memoryTypeBits & (1u << i)) {
             return i;
