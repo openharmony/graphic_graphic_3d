@@ -358,11 +358,12 @@ void GpuImageMln::AllocateAndBindMemory()
     MlnGetResourceMemoryRequirements(mlnDevice, &memReqDesc, &memReqs);
 
     // Separate required vs preferred flags
-    // LAZILY_ALLOCATED_BIT should be preferred but not required, so that
-    // the allocator prefers lazy memory when available but falls back to 
-    // regular device-local memory if no lazy type is supported.
+    // LAZILY_ALLOCATED_BIT and HOST_CACHED_BIT should be preferred but not
+    // required, so that the allocator prefers lazy/cached memory when available
+    // but falls back to regular memory if no such type is supported.
     const MlnMemoryPropertyFlags allFlags = ToMlnMemoryPropertyFlags(desc_.memoryPropertyFlags);
-    const MlnMemoryPropertyFlags requiredFlags = allFlags & ~MLN_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+    const MlnMemoryPropertyFlags requiredFlags =
+        allFlags & ~(MLN_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT | MLN_MEMORY_PROPERTY_HOST_CACHED_BIT);
     const MlnMemoryPropertyFlags preferredFlags = allFlags;
     const uint32_t memTypeIndex = FindMemoryType(memReqs.memoryTypeBits, requiredFlags, preferredFlags);
 
