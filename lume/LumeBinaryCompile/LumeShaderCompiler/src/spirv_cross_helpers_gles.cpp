@@ -140,8 +140,11 @@ void ReflectPushConstants(spirv_cross::Compiler& compiler, const spirv_cross::Sh
         base.name.resize(nameBaseSize);
         base.name.append(std::to_string(id));
         compiler.set_name(remap.id, base.name);
-        assert((blockType.basetype == spirv_cross::SPIRType::Struct) && "Push constant is not a struct!");
-        ProcessStruct(compiler, base, remap.base_type_id, reflections);
+        if (blockType.basetype != spirv_cross::SPIRType::Struct) {
+            LUME_LOG_E("Push constant '%s' is not a struct, skipping.", base.name.c_str());
+            continue;
+        }
+        ProcessStruct({compiler, base, remap.base_type_id, reflections});
         ++id;
     }
 }
@@ -182,7 +185,8 @@ void ConvertConstantToUniform(const CoreCompiler& compiler, std::string& source,
     } else if (type.basetype == spirv_cross::SPIRType::Float) {
         tmp += constFloat;
     } else {
-        assert(false && "Unhandled specialization constant type");
+        LUME_LOG_E("Unhandled specialization constant type for '%s'", name);
+        return;
     }
     // We expect spirv_cross to generate them with certain pattern...
     tmp += name;
@@ -219,9 +223,19 @@ void SetSpecMacro(spirv_cross::CompilerGLSL& compiler, const char* name, const u
         "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(constantId) + " " + std::to_string(value) + "u");
 }
 
-void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantReflection& base,  // NOLINT(*-no-recursion)
-    const uint32_t structTypeId, std::vector<PushConstantReflection>& reflections)
+void ProcessStruct(const ProcessStructParams& params,  // NOLINT(*-no-recursion)
+    const uint32_t depth)
 {
+    // Guard against cyclic / pathological struct nesting in a malicious SPIR-V.
+    constexpr uint32_t MAX_STRUCT_DEPTH = 32u;
+    if (depth >= MAX_STRUCT_DEPTH) {
+        LUME_LOG_E("Max push-constant struct nesting depth exceeded for '%s'", params.base.name.c_str());
+        return;
+    }
+    const auto& compiler = params.compiler;
+    const auto& base = params.base;
+    const uint32_t structTypeId = params.structTypeId;
+    auto& reflections = params.reflections;
     const auto& structType = compiler.get_type(structTypeId);
     reflections.reserve(reflections.size() + structType.member_types.size());
     for (uint32_t bi = 0; bi < structType.member_types.size(); bi++) {
@@ -272,12 +286,18 @@ void ProcessStruct(const spirv_cross::Compiler& compiler, const PushConstantRefl
             }
             t.type = FLOAT_TYPES[memberType.vecsize][memberType.columns];
         } else if (memberType.basetype == spirv_cross::SPIRType::Struct) {
-            ProcessStruct(compiler, t, memberTypeId, reflections);
+            ProcessStruct({compiler, t, memberTypeId, reflections}, depth + 1u);
             continue;
         }
-        assert((t.type != 0) && "Unhandled Type!");
+        if (t.type == 0) {
+            LUME_LOG_E("Unhandled push-constant member type for '%s'", t.name.c_str());
+            continue;
+        }
         const int32_t res = FindConstant(reflections, t);
-        assert((res >= NOT_FOUND) && "Push constant conflict.");
+        if (res == INVALID_MATCH) {
+            LUME_LOG_E("Push constant conflict for '%s'", t.name.c_str());
+            continue;
+        }
         if (res == NOT_FOUND) {
             reflections.push_back(std::move(t));
         }

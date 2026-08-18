@@ -1241,7 +1241,7 @@ std::vector<Gles::PushConstantReflection> CreatePushConstantReflection(const spi
         (void)(blockType);
         assert((blockType.basetype == spirv_cross::SPIRType::Struct) && "Push constant is not a struct!");
 
-        Gles::ProcessStruct(compiler, base, remap.base_type_id, pushConstantReflection);
+        Gles::ProcessStruct({compiler, base, remap.base_type_id, pushConstantReflection});
     }
     return pushConstantReflection;
 }
@@ -1834,22 +1834,25 @@ void WriteMetaFile(const std::filesystem::path& outputMetaFilename, const std::f
     // write meta data so that recompilation can be skipped when there are no
     // changes to files or settings.
     std::ofstream meta(outputMetaFilename);
+    if (!meta.is_open()) {
+        LUME_LOG_E("Failed to open meta file for writing: %s", outputMetaFilename.u8string().c_str());
+        return;
+    }
 
     // store the unix epoch with simple xor of the compile mask for later
     // comparision
     meta << inputFilenamePath.u8string() << ':'
-         << (static_cast<std::uint64_t>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
-                        .count()) ^
+         << (static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 std::filesystem::last_write_time(inputFilenamePath).time_since_epoch())
+                                            .count()) ^
                 mask)
          << '\n';
 
     for (const auto& itt : includes) {
         meta << std::filesystem::absolute(itt.first).u8string() << ':'
              << (static_cast<std::uint64_t>(
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
-                        .count()) ^
+                     std::chrono::duration_cast<std::chrono::nanoseconds>(itt.second.modicationTime.time_since_epoch())
+                         .count()) ^
                     mask)
              << '\n';
     }

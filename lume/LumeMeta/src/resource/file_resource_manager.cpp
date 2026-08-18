@@ -103,6 +103,7 @@ BASE_NS::vector<CORE_NS::IResourceType::Ptr> FileResourceManager::GetResourceTyp
     }
     return res;
 }
+
 CORE_NS::ResourceIdContext FileResourceManager::ReadHeader(
     const std::string& line, const ResourceContextPtr& context, BASE_NS::vector<CORE_NS::IResource::Ptr>& destroy)
 {
@@ -457,12 +458,17 @@ bool FileResourceManager::RenameResource(const ResourceIdContext& ric, const Res
         if (it == git->second.end()) {
             return false;
         }
-        auto& v = resources_[ResourceGroupContext{newId}][newId.id.name];
-        if (v) {
-            return false;
+        // Capture the data before any mutating map operation: operator[] below may
+        // rehash the (unordered) maps and invalidate the iterators git/it.
+        auto data = it->second;
+        // Verify destination is free using non-mutating lookups (no rehash).
+        if (auto dgit = resources_.find(ResourceGroupContext{newId}); dgit != resources_.end()) {
+            if (auto dit = dgit->second.find(newId.id.name); dit != dgit->second.end() && dit->second) {
+                return false;
+            }
         }
-        v = it->second;
         git->second.erase(it);
+        resources_[ResourceGroupContext{newId}][newId.id.name] = data;
     }
 
     Notify({ric}, IResourceListener::EventType::REMOVED);
@@ -798,8 +804,12 @@ BASE_NS::vector<CORE_NS::ResourceIdContext> FileResourceManager::UpdateOptionsDa
             }
         }
     }
-    for (auto&& r : matched) {
-        UpdateOptions(*r, depsContext);
+    {
+        // UpdateOptions reads types_ which is guarded by mutex_.
+        std::shared_lock lock{mutex_};
+        for (auto&& r : matched) {
+            UpdateOptions(*r, depsContext);
+        }
     }
     return deps.resources;
 }
@@ -820,11 +830,15 @@ BASE_NS::vector<CORE_NS::ResourceIdContext> FileResourceManager::UpdateOptionsDa
         }
     }
     BASE_NS::vector<CORE_NS::ResourceIdContext> list;
-    for (auto&& m : matched) {
-        DependencyCollector deps{m.context};
-        IObject::Ptr depsContext(&deps, [](auto) {});
-        UpdateOptions(*m.data, depsContext);
-        list.insert(list.end(), deps.resources.begin(), deps.resources.end());
+    {
+        // UpdateOptions reads types_ which is guarded by mutex_.
+        std::shared_lock lock{mutex_};
+        for (auto&& m : matched) {
+            DependencyCollector deps{m.context};
+            IObject::Ptr depsContext(&deps, [](auto) {});
+            UpdateOptions(*m.data, depsContext);
+            list.insert(list.end(), deps.resources.begin(), deps.resources.end());
+        }
     }
     return list;
 }
