@@ -6425,7 +6425,7 @@ void RenderBackendMln::BuildGraphicsDg(const void* beginCmdPtr, uint32_t activeS
             MLN_LOG_GRAPH("0-og Graphics DG: frame = %u rpSeg=%u srcStage=ALL_COMMANDS",
                 g_debugFrameCount, rpSegIdx);
         } else {
-            dgResInfo.srcStage = MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+            dgResInfo.srcStage = MLN_PROGRAM_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
                                  MLN_PROGRAM_STAGE_LATE_FRAGMENT_TESTS_BIT;
         }
         dgResources.push_back(dgResInfo);

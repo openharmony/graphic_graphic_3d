@@ -203,7 +203,6 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
         auto findFormatWithColorSpace = [&surfaceFormats](const Format* candidates, uint32_t count,
                                         const MlnColorSpace* preferredColorSpaces, uint32_t csCount,
                                         MlnColorSpace& outColorSpace) -> Format {
-
             for (uint32_t i = 0; i < count; ++i) {
                 const MlnFormat mlnFmt = ToMlnFormat(candidates[i]);
                 for (const auto& sf : surfaceFormats) {

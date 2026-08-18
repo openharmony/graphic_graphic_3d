@@ -407,7 +407,7 @@ uint32_t GpuImageMln::FindMemoryType(
     }
     // Second pass: fallback to required flags only (excludes LAZILY_ALLOCATED)
     for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-        if ((memoryTypeBits & (1u << i)) && 
+        if ((memoryTypeBits & (1u << i)) &&
             (memProps.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
             return i;
         }
