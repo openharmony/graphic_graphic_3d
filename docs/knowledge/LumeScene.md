@@ -1,5 +1,9 @@
 # LumeScene AGENTS.md
 
+## 适用范围与相关路由
+
+本文适用于 LumeScene 场景对象、ECS 接口提取、属性转发和线程安全。整仓门禁见 [仓级 AGENTS.md](../../AGENTS.md)，局部规范见 [LumeScene/AGENTS.md](../../lume/LumeScene/AGENTS.md)；涉及 ETS/JS、Scene Adapter、Surface 或任务队列时继续读取 [平台适配与绑定链路](platform-adapter-binding.md) 和 [构建与验证地图](build-test-validation.md)。
+
 This document describes how to extract ECS component interfaces to the upper scene layer in LumeScene.
 
 ## Module Dependencies

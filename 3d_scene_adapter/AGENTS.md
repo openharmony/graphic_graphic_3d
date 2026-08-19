@@ -39,7 +39,7 @@ summary: OpenHarmony平台适配层，桥接应用与Lume引擎，处理Surface�
 
 ### Include 路径
 
-- 模块内部：`#include "scene_adapter.h"`（尖括号）
+- 模块内部：`#include "scene_adapter.h"`（双引号）
 - Lume 引擎：`#include <scene/interface/intf_scene.h>`
 - Base/Core：`#include <base/containers/vector.h>`、`#include <core/intf_engine.h>`
 - 智能指针：使用 Lume 的 `BASE_NS::shared_ptr`/`BASE_NS::refcnt_ptr` 和 OHOS 的 `sptr`
