@@ -1617,7 +1617,7 @@ MLN_LOADER_EXPORT MlnDeviceAddress MLNAPI_CALL MlnGetBufferResourceAddress(MlnDe
     return s_MlnGetBufferResourceAddress(device, resource);
 }
 
-MLN_LOADER_EXPORT MlnAccelerationStructure MLNAPI_CALL MlnCreateAccelerationStructure(
+MLN_LOADER_EXPORT MlnResource MLNAPI_CALL MlnCreateAccelerationStructure(
     MlnDevice device, const MlnAccelerationStructureDescriptor* descriptor)
 {
     if (!s_MlnCreateAccelerationStructure) {
