@@ -31,6 +31,9 @@ RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t GetAlignedByteSize(const uint32_t byteSize, const uint32_t alignment)
 {
+    if (byteSize > UINT32_MAX - alignment) {
+        return UINT32_MAX;
+    }
     return (byteSize + alignment - 1) & (~(alignment - 1));
 }
 // Maleoon runs on top of Vulkan driver — same hardware alignment requirements apply.
@@ -42,9 +45,7 @@ constexpr uint32_t MIN_BUFFER_ALIGNMENT = 256u;
 GpuBufferMln::GpuBufferMln(Device& device, const GpuBufferDesc& desc) : device_(device), desc_(desc)
 {
     MLN_LOG_INIT("GpuBufferMln: creating buffer (size=%u, usage=0x%x, memFlags=0x%x, ringBuf=%d)",
-        desc.byteSize,
-        desc.usageFlags,
-        desc.memoryPropertyFlags,
+        desc.byteSize, desc.usageFlags, desc.memoryPropertyFlags,
         (desc.engineCreationFlags & CORE_ENGINE_BUFFER_CREATION_DYNAMIC_RING_BUFFER) ? 1 : 0);
     PLUGIN_ASSERT(desc_.byteSize > 0);
 
@@ -66,15 +67,19 @@ GpuBufferMln::GpuBufferMln(Device& device, const GpuBufferDesc& desc) : device_(
     // unaligned steps violate hardware minUniformBufferOffsetAlignment (typically 256).
     const uint32_t alignment = (isRingBuffer_ || isPersistentlyMapped_) ? MIN_BUFFER_ALIGNMENT : 1u;
     plat_.bindMemoryByteSize = GetAlignedByteSize(bindByteSize, alignment);
-    plat_.fullByteSize = plat_.bindMemoryByteSize * bufferingCount_;
+    const uint64_t fullSize = static_cast<uint64_t>(plat_.bindMemoryByteSize) * bufferingCount_;
+    if (fullSize > UINT32_MAX) {
+        MLN_LOG_ERR("GpuBufferMln: ring buffer size exceeds uint32_t (%llu), falling back to single buffering",
+            static_cast<unsigned long long>(fullSize));
+    }
+    plat_.fullByteSize = (fullSize <= UINT32_MAX) ? static_cast<uint32_t>(fullSize) : plat_.bindMemoryByteSize;
     plat_.currentByteOffset = 0u;
     plat_.usage = ToMlnBufferUsageFlags(desc_.usageFlags);
 
     CreateBuffer();
     if (!plat_.resource) {
         MLN_LOG_ERR("GpuBufferMln: CreateBuffer failed — skipping memory allocation (size=%u, usage=0x%x)",
-            plat_.fullByteSize,
-            static_cast<uint32_t>(plat_.usage));
+            plat_.fullByteSize, static_cast<uint32_t>(plat_.usage));
         return;
     }
     AllocateAndBindMemory();
@@ -176,7 +181,7 @@ GpuBufferMln::~GpuBufferMln()
 
     // Destroy acceleration structure handle (if created via EnsureAccelerationStructure)
     if (isAccelerationStructure_ && platAccel_.accelerationStructure) {
-        MlnDestroyAccelerationStructure(mlnDevice, platAccel_.accelerationStructure);
+        MlnDestroyResource(mlnDevice, platAccel_.accelerationStructure);
         platAccel_.accelerationStructure = MLN_NULL_HANDLE;
     }
 
@@ -289,7 +294,9 @@ void* GpuBufferMln::Map()
     if (!isMappable_) {
         return nullptr;
     }
-    PLUGIN_ASSERT(!isMapped_);
+    if (isMapped_) {
+        Unmap();
+    }
     isMapped_ = true;
 
     // Advance ring buffer offset
@@ -320,7 +327,9 @@ void* GpuBufferMln::MapMemory()
     if (!isMappable_) {
         return nullptr;
     }
-    PLUGIN_ASSERT(!isMapped_);
+    if (isMapped_) {
+        Unmap();
+    }
     isMapped_ = true;
 
     if (isPersistentlyMapped_ && plat_.mappedData) {

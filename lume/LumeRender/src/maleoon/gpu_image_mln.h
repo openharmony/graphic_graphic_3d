@@ -51,7 +51,8 @@ private:
     void CreateImage();
     void CreateImageViews();
     void AllocateAndBindMemory();
-    uint32_t FindMemoryType(uint32_t memoryTypeBits, MlnMemoryPropertyFlags requiredFlags) const;
+    uint32_t FindMemoryType(
+        uint32_t memoryTypeBits, MlnMemoryPropertyFlags requiredFlags, MlnMemoryPropertyFlags preferredFlags) const;
 
     Device& device_;
     GpuImageDesc desc_;

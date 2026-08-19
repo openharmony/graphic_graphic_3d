@@ -7,11 +7,6 @@
 
 #include <cstddef>
 #include <stdint.h>
-#include <vector>
-#include <map>
-#include <atomic>
-#include <string>
-#include <memory>
 #include <maleoon/maleoon_platform.h>
 #include <maleoon/maleoon_defines.h>
 
@@ -219,6 +214,8 @@ typedef MlnFlags MlnAccelerationStructureDescriptorFlags;
 
 typedef MlnFlags MlnQueryPoolDescriptorFlags;
 
+typedef MlnFlags MlnCallableProgramExtensionFlags;
+
 MLN_DEFINE_HANDLE(MlnDevice);
 
 MLN_DEFINE_HANDLE(MlnQueue);
@@ -252,8 +249,6 @@ MLN_DEFINE_NON_DISPATCHABLE_HANDLE(MlnSchedulingGraph);
 MLN_DEFINE_NON_DISPATCHABLE_HANDLE(MlnTimeline);
 
 MLN_DEFINE_NON_DISPATCHABLE_HANDLE(MlnRenderTarget);
-
-MLN_DEFINE_NON_DISPATCHABLE_HANDLE(MlnAccelerationStructure);
 
 MLN_DEFINE_NON_DISPATCHABLE_HANDLE(MlnPrivateDataSlot);
 

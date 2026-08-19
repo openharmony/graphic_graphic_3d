@@ -318,7 +318,7 @@ void DeviceMln::QueryFormatProperties()
             } else if (fp.bytesPerPixel > 0u || GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(i)) > 0u) {
                 // Only log formats that have a known byte size (skip unused/reserved indices)
                 ++queryFail;
-                MLN_LOG_ERR("FORMAT UNSUPPORTED AT INIT: idx=%u bpp=%u driver returned features=0",
+                MLN_LOG_INIT("FORMAT UNSUPPORTED AT INIT: idx=%u bpp=%u driver returned features=0",
                     i,
                     GpuProgramUtil::FormatByteSize(static_cast<BASE_NS::Format>(i)));
             }

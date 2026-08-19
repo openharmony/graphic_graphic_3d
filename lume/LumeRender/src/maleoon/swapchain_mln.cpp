@@ -92,6 +92,27 @@ void SwapchainMln::CreateDisplaySurface(const SwapchainCreateInfo& createInfo)
     }
 }
 
+namespace {
+// Clamp swapchain extent to valid range and handle zero-sized extent (mirrors Vulkan backend)
+void ClampSwapchainExtent(const MlnDisplaySurfaceCapabilities& caps, uint32_t& width, uint32_t& height)
+{
+    // Clamp to min/max image extent
+    width = std::clamp(width, caps.minImageExtent.width, caps.maxImageExtent.width);
+    height = std::clamp(height, caps.minImageExtent.height, caps.maxImageExtent.height);
+
+    MLN_LOG_INIT("swapchainExtent: %u x %u", width, height);
+
+    // maleoon compatibility: prevent zero-sized swapchain
+    if ((width == 0) || (height == 0)) {
+        PLUGIN_LOG_E("Maleoon zero sized swapchain cannot be created (width: %u, height: %u)", width, height);
+        PLUGIN_LOG_E("Maleoon using 1x1 swapchain");
+        PLUGIN_ASSERT(false);
+        width = 1;
+        height = 1;
+    }
+}
+} // namespace
+
 void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
 {
     const DeviceMln& deviceMln = static_cast<const DeviceMln&>(device_);
@@ -113,8 +134,13 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
 
     desc_.imageType = CORE_IMAGE_TYPE_2D;
     desc_.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
+
+    // Use current extent from surface capabilities
     desc_.width = caps.currentExtent.width;
     desc_.height = caps.currentExtent.height;
+
+    // Clamp extent to valid range (mirrors Vulkan backend behavior)
+    ClampSwapchainExtent(caps, desc_.width, desc_.height);
     desc_.depth = 1;
     desc_.mipCount = 1;
     desc_.layerCount = 1;
@@ -125,8 +151,9 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
     desc_.engineCreationFlags = EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS |
                                 EngineImageCreationFlagBits::CORE_ENGINE_IMAGE_CREATION_RESET_STATE_ON_FRAME_BORDERS;
 
-    // Determine format — query display surface supported formats (mirrors Vulkan GetColorFormat).
+    // Determine format+colorSpace — query display surface supported formats
     // Priority: HDR formats (if HDR flag) > SRGB > non-SRGB > fallback.
+    MlnColorSpace selectedColorSpace = MLN_COLOR_SPACE_SRGB_NONLINEAR;
     {
         const bool wantHdr = (createInfo.swapchainFlags & CORE_SWAPCHAIN_HDR_BIT) != 0;
         const bool wantSrgb = (createInfo.swapchainFlags & CORE_SWAPCHAIN_SRGB_BIT) != 0;
@@ -163,11 +190,32 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
             Format::BASE_FORMAT_B8G8R8A8_SRGB,
         };
 
-        auto findFormat = [&surfaceFormats](const Format* candidates, uint32_t count) -> Format {
+        // Preferred colorSpace for HDR and SDR (mirrors Vulkan GetColorInfo priority).
+        constexpr MlnColorSpace hdrPreferredColorSpaces[] = {
+            MLN_COLOR_SPACE_HDR10_ST2084,
+            MLN_COLOR_SPACE_HDR10_HLG,
+            MLN_COLOR_SPACE_BT2020_LINEAR,
+            MLN_COLOR_SPACE_DISPLAY_P3_LINEAR,
+        };
+
+        // Find matching format+colorSpace pair from surface formats.
+        // Returns matched Format; writes colorSpace to outColorSpace.
+        auto findFormatWithColorSpace = [&surfaceFormats](const Format* candidates, uint32_t count,
+                                        const MlnColorSpace* preferredColorSpaces, uint32_t csCount,
+                                        MlnColorSpace& outColorSpace) -> Format {
             for (uint32_t i = 0; i < count; ++i) {
                 const MlnFormat mlnFmt = ToMlnFormat(candidates[i]);
                 for (const auto& sf : surfaceFormats) {
                     if (sf.format == mlnFmt) {
+                        // prefer the most desirable colorSpace if present
+                        for (uint32_t ci = 0; ci < csCount; ++ci) {
+                            if (sf.colorSpace == preferredColorSpaces[ci]) {
+                                outColorSpace = sf.colorSpace;
+                                return candidates[i];
+                            }
+                        }
+                        // Accept any colorSpace the surface reports for this format
+                        outColorSpace = sf.colorSpace;
                         return candidates[i];
                     }
                 }
@@ -179,22 +227,29 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
 
         // Try HDR first if requested
         if (wantHdr) {
-            selectedFormat = findFormat(hdrFormats, sizeof(hdrFormats) / sizeof(hdrFormats[0]));
+            selectedFormat = findFormatWithColorSpace(hdrFormats, sizeof(hdrFormats) / sizeof(hdrFormats[0]),
+                hdrPreferredColorSpaces, sizeof(hdrPreferredColorSpaces) / sizeof(hdrPreferredColorSpaces[0]),
+                selectedColorSpace);
             if (selectedFormat != Format::BASE_FORMAT_UNDEFINED) {
-                MLN_LOG_INIT("Swapchain HDR format selected: %u", static_cast<uint32_t>(selectedFormat));
+                MLN_LOG_INIT("Swapchain HDR format selected: %u colorSpace: %u",
+                    static_cast<uint32_t>(selectedFormat), static_cast<uint32_t>(selectedColorSpace));
             }
         }
 
         // Fall back to SRGB / non-SRGB
         if (selectedFormat == Format::BASE_FORMAT_UNDEFINED) {
+            constexpr MlnColorSpace sdrColorSpaces[] = { MLN_COLOR_SPACE_SRGB_NONLINEAR };
             const Format* candidates = wantSrgb ? srgbFormats : nonSrgbFormats;
             const uint32_t candidateCount = sizeof(srgbFormats) / sizeof(srgbFormats[0]);
-            selectedFormat = findFormat(candidates, candidateCount);
+            selectedFormat = findFormatWithColorSpace(candidates, candidateCount,
+                sdrColorSpaces, sizeof(sdrColorSpaces) / sizeof(sdrColorSpaces[0]),
+                selectedColorSpace);
         }
 
         // Ultimate fallback (surface format query unavailable or no match)
         if (selectedFormat == Format::BASE_FORMAT_UNDEFINED) {
             selectedFormat = wantSrgb ? Format::BASE_FORMAT_R8G8B8A8_SRGB : Format::BASE_FORMAT_R8G8B8A8_UNORM;
+            selectedColorSpace = MLN_COLOR_SPACE_SRGB_NONLINEAR;
             MLN_LOG_INIT("Swapchain format: using fallback %u (query returned %u formats)",
                 static_cast<uint32_t>(selectedFormat),
                 fmtCount);
@@ -203,20 +258,43 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
         desc_.format = selectedFormat;
     }
 
-    // Depth buffer desc
+    // Depth buffer desc - query format support (mirrors Vulkan GetValidDepthFormat)
     if (createInfo.swapchainFlags & CORE_SWAPCHAIN_DEPTH_BUFFER_BIT) {
+        constexpr Format preferredDepthFormats[] = {
+            Format::BASE_FORMAT_D24_UNORM_S8_UINT,
+            Format::BASE_FORMAT_D32_SFLOAT,
+            Format::BASE_FORMAT_D16_UNORM,
+        };
+        Format depthFormat = Format::BASE_FORMAT_UNDEFINED;
+        for (auto fmt : preferredDepthFormats) {
+            const auto props = device_.GetFormatProperties(fmt);
+            if (props.optimalTilingFeatures & CORE_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+                depthFormat = fmt;
+                break;
+            }
+        }
+        if (depthFormat == Format::BASE_FORMAT_UNDEFINED) {
+            MLN_LOG_ERR("SwapchainMln: no supported depth format found, falling back to D24_UNORM_S8_UINT");
+            depthFormat = Format::BASE_FORMAT_D24_UNORM_S8_UINT;
+        } else {
+            MLN_LOG_INIT("Swapchain depth format selected: %u", static_cast<uint32_t>(depthFormat));
+        }
+
         descDepthBuffer_.imageType = CORE_IMAGE_TYPE_2D;
         descDepthBuffer_.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
-        descDepthBuffer_.format = Format::BASE_FORMAT_D24_UNORM_S8_UINT;
-        descDepthBuffer_.width = caps.currentExtent.width;
-        descDepthBuffer_.height = caps.currentExtent.height;
+        descDepthBuffer_.format = depthFormat;
+        descDepthBuffer_.width = desc_.width;   // use clamped width
+        descDepthBuffer_.height = desc_.height;  // use clamped height
         descDepthBuffer_.depth = 1;
         descDepthBuffer_.mipCount = 1;
         descDepthBuffer_.layerCount = 1;
         descDepthBuffer_.sampleCountFlags = CORE_SAMPLE_COUNT_1_BIT;
         descDepthBuffer_.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
-        descDepthBuffer_.usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        descDepthBuffer_.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        descDepthBuffer_.usageFlags = CORE_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            CORE_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+            CORE_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+        descDepthBuffer_.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+            CORE_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
     }
 
     // Maleoon 0324: only MLN_PRESENT_MODE_FIFO is defined (MAILBOX removed from spec)
@@ -225,7 +303,7 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
     // New API: MlnSwapchainDescriptor completely restructured
     MlnDisplaySurfaceFormat surfaceFormat{};
     surfaceFormat.format = ToMlnFormat(desc_.format);
-    surfaceFormat.colorSpace = MLN_COLOR_SPACE_SRGB_NONLINEAR;
+    surfaceFormat.colorSpace = selectedColorSpace;
 
     // Clamp minImageCount to [caps.minImageCount, caps.maxImageCount]
     uint32_t imageCount = config.swapchainImageCount;
@@ -263,6 +341,9 @@ void SwapchainMln::CreateSwapchain(const SwapchainCreateInfo& createInfo)
         static_cast<int>(presentMode),
         static_cast<uint32_t>(scDesc.imageUsage));
     plat_.swapchain = MlnCreateSwapchain(deviceMln.GetMlnDevice(), &scDesc);
+    if (!plat_.swapchain) {
+        MLN_LOG_ERR("SwapchainMln: MlnCreateSwapchain FAILED");
+    }
 }
 
 void SwapchainMln::GetSwapchainImages()
@@ -313,6 +394,10 @@ void SwapchainMln::GetSwapchainImages()
         viewDesc.subresourceRange.layerCount = 1;
 
         plat_.imageViews[i] = MlnCreateImageResourceView(mlnDev, &viewDesc);
+        if (!plat_.imageViews[i]) {
+            MLN_LOG_ERR("SwapchainMln: MlnCreateImageResourceView failed for image %u", i);
+            break;
+        }
     }
 }
 
