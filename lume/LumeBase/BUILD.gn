@@ -25,18 +25,6 @@ config("lume_base_api_config") {
     include_dirs = [
         "${LUME_BASE_PATH}/api"
     ]
-
-    # Configs applying to this config
-    configs = []
-    if (ohos_indep_compiler_enable) {
-        configs += [
-            "//bundle_packs/ohos_bundles/@ohos/bounds_checking_function:libsec_pub_config"
-        ]
-    } else {
-        configs += [
-            "//third_party/bounds_checking_function:libsec_public_config"
-        ]
-    }
     
     # C preprocessor defines - #defines
     defines = []
