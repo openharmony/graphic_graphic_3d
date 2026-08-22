@@ -348,6 +348,11 @@ ohos_source_set("test_plugin_static_src") {
   sources = [
     "test_plugin/src/static_plugin.cpp"
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #
@@ -393,6 +398,11 @@ ohos_source_set("test_plugin_shared_src") {
   sources = [
     "test_plugin/src/dynamic_plugin.cpp"
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #
@@ -420,6 +430,11 @@ ohos_source_set("test_plugin2_shared_src") {
   sources = [
     "test_plugin/src/dynamic_with_dependency_plugin.cpp"
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #
@@ -447,6 +462,11 @@ ohos_source_set("test_plugin3_shared_src") {
   sources = [
     "test_plugin/src/dynamic_with_dependency3_plugin.cpp"
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #
@@ -472,6 +492,11 @@ ohos_source_set("test_plugin_circular_a_shared_src") {
     "test_plugin/src/dynamic_circular_a_plugin.cpp",
     "test_plugin/src/dynamic_circular_uids.h",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_shared_library("libCoreTestSharedPluginCircularA") {
@@ -494,6 +519,11 @@ ohos_source_set("test_plugin_circular_b_shared_src") {
     "test_plugin/src/dynamic_circular_b_plugin.cpp",
     "test_plugin/src/dynamic_circular_uids.h",
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 ohos_shared_library("libCoreTestSharedPluginCircularB") {

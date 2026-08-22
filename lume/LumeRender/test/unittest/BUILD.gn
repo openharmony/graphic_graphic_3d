@@ -76,6 +76,12 @@ lume_compile_shader("lume_render_compile_test_shaders")
   shader_path = "${dest_gen_path}"
   include_path = "" # does nothing
   compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile",
+    ]
+  }
 }
 
 lume_compile_shader("lume_render_compile_vulkan_test_shaders")
@@ -89,6 +95,12 @@ lume_compile_shader("lume_render_compile_vulkan_test_shaders")
   shader_path = "${dest_gen_path}"
   include_path = "" # does nothing
   compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile",
+    ]
+  }
 }
 
 lume_compile_shader("lume_render_compile_separate_test_shaders")
@@ -102,6 +114,12 @@ lume_compile_shader("lume_render_compile_separate_test_shaders")
   shader_path = "${dest_gen_path}"
   include_path = ""
   compileShader_deps=["${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile"]
+  if (ohos_indep_compiler_enable) {
+    tool_path = "//prebuilts/graphics_3d/AGPBinaryCompile"
+    compileShader_deps -= [
+      "${LUME_BINARY_PATH}/LumeShaderCompiler:lume_binary_shader_compile",
+    ]
+  }
 }
 
 # rofs
