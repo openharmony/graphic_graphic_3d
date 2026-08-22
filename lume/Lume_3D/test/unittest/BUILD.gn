@@ -397,6 +397,11 @@ ohos_source_set("core3d_test_plugin_shared_src") {
   sources = [
     "test_plugin/src/3d_test_plugin.cpp"
   ]
+
+  external_deps = [ "bounds_checking_function:libsec_shared" ]
+
+  part_name = "graphic_3d"
+  subsystem_name = "graphic"
 }
 
 #

@@ -57,6 +57,7 @@ ohos_fuzztest("JsonImporterFuzzTest") {
   ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "hilog:libhilog",
   ]
