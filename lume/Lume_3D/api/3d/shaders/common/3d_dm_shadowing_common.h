@@ -25,11 +25,11 @@ Basic shadowing functions
 */
 // NOTE: has currently some issues
 #define CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS 1
+
+#define CORE_SHADOW_PCF_MAX_SAMPLES 16
 // Control whether to unroll the variable PCF shadow loops.
 // Define as 1 before including this header to enable unrolling for soft shadow performance.
 // Default is 0 (no unroll) to minimize compiled SPIR-V size.
-#define CORE_SHADOW_PCF_MAX_SAMPLES 16
-
 #ifndef CORE_SHADOW_PCF_UNROLL
 #define CORE_SHADOW_PCF_UNROLL 0
 #endif
@@ -184,16 +184,16 @@ float CalcVariablePcfShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec
 #endif
         for (int i = 0; i < CORE_SHADOW_PCF_MAX_SAMPLES; i++) {
             sum += GetPcfSampleCmp(shadow,
-                                      baseUv,
-                                      poissonDisk[i],
-                                      compareDepth,
-                                      texelSize,
-                                      receiverPlaneDepthBias,
-                                      bias,
-                                      dDepth_dx,
-                                      dDepth_dy,
-                                      uvGradient_x,
-                                      uvGradient_y);
+                baseUv,
+                poissonDisk[i],
+                compareDepth,
+                texelSize,
+                receiverPlaneDepthBias,
+                bias,
+                dDepth_dx,
+                dDepth_dy,
+                uvGradient_x,
+                uvGradient_y);
         }
 
         float num = min(float(clampedSampleCount), 16.0);
