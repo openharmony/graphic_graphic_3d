@@ -25,6 +25,14 @@ Basic shadowing functions
 */
 // NOTE: has currently some issues
 #define CORE_SHADOW_ENABLE_RECEIVER_PLANE_BIAS 1
+// Control whether to unroll the variable PCF shadow loops.
+// Define as 1 before including this header to enable unrolling for soft shadow performance.
+// Default is 0 (no unroll) to minimize compiled SPIR-V size.
+#define CORE_SHADOW_PCF_MAX_SAMPLES 16
+
+#ifndef CORE_SHADOW_PCF_UNROLL
+#define CORE_SHADOW_PCF_UNROLL 0
+#endif
 
 vec2 ComputeReceiverPlaneDepthBias(const vec3 uvDdx, const vec3 uvDdy)
 {
@@ -98,7 +106,7 @@ float Hash12(vec2 p)
     return fract((p3.x + p3.y) * p3.z);
 }
 
-void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, uint numSamples)
+void InitPoissonDiskSamples(vec2 randomSeed, out vec2[CORE_SHADOW_PCF_MAX_SAMPLES] disk, float radius, uint numSamples)
 {
     const float angleStep = 3.883222077450933;  // Delta Theta
 
@@ -109,7 +117,10 @@ void InitPoissonDiskSamples(vec2 randomSeed, out vec2[64] disk, float radius, ui
 
     float invNumSamples = 1.0 / float(numSamples);
 
-    [[unroll]] for (int i = 0; i < 64; i++) {
+#if (CORE_SHADOW_PCF_UNROLL == 1)
+    [[unroll]]
+#endif
+    for (int i = 0; i < CORE_SHADOW_PCF_MAX_SAMPLES; i++) {
         float fI = float(i);
         float active_ = step(fI, float(numSamples - 1));
 
@@ -158,7 +169,7 @@ float CalcVariablePcfShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec
         // Clamp sample count to valid range
         uint clampedSampleCount = clamp(sampleCount, 0, 64u);
 
-        vec2 poissonDisk[64];
+        vec2 poissonDisk[CORE_SHADOW_PCF_MAX_SAMPLES];
         vec2 seed = shadowCoord.xy * gl_FragCoord.xy;
         InitPoissonDiskSamples(seed, poissonDisk, sampleRadius, clampedSampleCount);
 
@@ -168,9 +179,11 @@ float CalcVariablePcfShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec
         vec2 uvGradient_y = dFdy(baseUv);
 
         float sum = 0.0;
-        [[unroll]] for (int i = 0; i < 64; i++) {
-            float mask = step(float(i), 16);
-            sum += (mask > 0.1) ? GetPcfSampleCmp(shadow,
+#if (CORE_SHADOW_PCF_UNROLL == 1)
+        [[unroll]]
+#endif
+        for (int i = 0; i < CORE_SHADOW_PCF_MAX_SAMPLES; i++) {
+            sum += GetPcfSampleCmp(shadow,
                                       baseUv,
                                       poissonDisk[i],
                                       compareDepth,
@@ -180,8 +193,7 @@ float CalcVariablePcfShadow(sampler2D shadow, vec4 inShadowCoord, float NoL, vec
                                       dDepth_dx,
                                       dDepth_dy,
                                       uvGradient_x,
-                                      uvGradient_y)
-                                : 0.0;
+                                      uvGradient_y);
         }
 
         float num = min(float(clampedSampleCount), 16.0);
