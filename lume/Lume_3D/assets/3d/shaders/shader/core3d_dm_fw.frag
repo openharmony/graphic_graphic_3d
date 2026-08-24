@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+#define CORE_SHADOW_PCF_UNROLL 1
 // include without extra flags
 #include "core3d_dm_fw_frag.h"
 
