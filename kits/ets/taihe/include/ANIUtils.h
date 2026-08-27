@@ -42,6 +42,10 @@ inline bool IsString(uintptr_t resourceStr, ani_env* env = nullptr)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("IsString failed to obtain ani_env");
+        return false;
+    }
     ani_class cls;
     auto stringClass = arkts::ani_signature::Builder::BuildClass({"std", "core", "String"});
     if (ANI_OK != env->FindClass(stringClass.Descriptor().c_str(), &cls)) {
@@ -59,6 +63,10 @@ inline std::string ToStdString(const ani_string& ani_str, ani_env* env = nullptr
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("ToStdString failed to obtain ani_env");
+        return {};
     }
     ani_size sz{};
 
@@ -79,6 +87,10 @@ inline ani_string ToANIString(std::string str, ani_env* env = nullptr)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("ToANIString failed to obtain ani_env");
+        return {};
     }
     ani_string result_string{};
     if (env->String_NewUTF8(str.c_str(), str.size(), &result_string) != ANI_OK) {

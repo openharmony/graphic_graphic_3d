@@ -341,6 +341,10 @@ void NodeImpl::destroy()
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void* nativePtr = nullptr;
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("nodeTransferStaticImpl failed to obtain ani_env");
+        return SceneNodes::Node({nullptr, nullptr});
+    }
     if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("nodeTransferStaticImpl failed during arkts_esvalue_unwrap.");
         return SceneNodes::Node({nullptr, nullptr});
@@ -387,6 +391,10 @@ uintptr_t nodeTransferDynamicImpl(::SceneNodes::Node input)
         return 0;
     }
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("nodeTransferDynamicImpl failed to obtain ani_env");
+        return 0;
+    }
     napi_env jsenv;
     if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");

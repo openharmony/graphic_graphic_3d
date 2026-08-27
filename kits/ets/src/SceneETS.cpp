@@ -206,7 +206,8 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         }
         uri[t] = '/';
     }
-    auto engineThreadTask = [this](SCENE_NS::IScene::Ptr scene) {
+    bool loadSuccess = false;
+    auto engineThreadTask = [this, &loadSuccess](SCENE_NS::IScene::Ptr scene) {
         if (!scene || !scene->RenderConfiguration()->GetValue()) {
             return;
         }
@@ -220,6 +221,7 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         auto& obr = META_NS::GetObjectRegistry();
         AddScene(&obr, scene);
         scene_ = scene;
+        loadSuccess = true;
 
         LoadRenderConfiguration(scene);
 
@@ -260,7 +262,7 @@ bool SceneETS::Load(std::string uri, SceneLoadParams sceneLoadParams)
         .Then(BASE_NS::move(engineThreadTask), engineQ)
         .Wait();
 
-    return true;
+    return loadSuccess;
 }
 
 std::vector<std::shared_ptr<AnimationETS>> SceneETS::GetAnimations()
@@ -591,6 +593,10 @@ std::shared_ptr<NodeETS> SceneETS::ImportScene(
         return nullptr;
     }
     SCENE_NS::IScene::Ptr extScene = scene->GetNativeScene();
+    if (!extScene) {
+        CORE_LOG_E("imported scene has no native scene (load failed)");
+        return nullptr;
+    }
     SCENE_NS::INode::Ptr parentObj;
     if (parent) {
         parentObj = parent->GetInternalNode();

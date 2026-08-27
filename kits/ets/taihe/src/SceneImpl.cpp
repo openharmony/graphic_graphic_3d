@@ -257,6 +257,10 @@ void SceneImpl::setEnvironment(::SceneResources::weak::Environment env)
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void* nativePtr = nullptr;
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("sceneTransferStaticImpl failed to obtain ani_env");
+        return ::SceneTH::Scene({nullptr, nullptr});
+    }
     if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
         return ::SceneTH::Scene({nullptr, nullptr});
@@ -299,6 +303,10 @@ uintptr_t sceneTransferDynamicImpl(::SceneTH::weak::Scene input)
         return 0;
     }
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("sceneTransferDynamicImpl failed to obtain ani_env");
+        return 0;
+    }
     napi_env jsenv;
     if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");

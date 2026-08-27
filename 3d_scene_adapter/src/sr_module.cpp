@@ -16,6 +16,11 @@
 
 #include "scene_adapter/sr_module.h"
 
+#include "3d_widget_adapter_log.h"
+
+#include <cmath>
+
+#include <base/math/mathf.h>
 #include <core/ecs/intf_ecs.h>
 #include <3d/implementation_uids.h>
 #include <3d/ecs/systems/intf_node_system.h>
@@ -46,6 +51,29 @@ BASE_NS::refcnt_ptr<CORE_NS::IEcs> SRModule::ecs_;
 CORE_NS::EntityReference SRModule::srConfigEntity_;
 
 namespace {
+// Upper bound on texture dimension; caps allocation requests at common GPU limits.
+constexpr float MAX_TEXTURE_DIMENSION = 16384.0f;
+
+bool IsFinitePositive(const float value)
+{
+    return std::isfinite(value) && (value > BASE_NS::Math::EPSILON);
+}
+
+bool ValidateGpuImageSize(float width, float height)
+{
+    if (IsFinitePositive(width) && IsFinitePositive(height) && (width <= MAX_TEXTURE_DIMENSION) &&
+        (height <= MAX_TEXTURE_DIMENSION)) {
+        return true;
+    }
+
+    WIDGET_LOGE("CreateGpuResource failed: invalid parameters (width=%f, height=%f). "
+                "Width and height must be finite, positive and <= %f.",
+        width,
+        height,
+        MAX_TEXTURE_DIMENSION);
+    return false;
+}
+
 float QualityToRate(const QualityTypeSR q)
 {
     float rate;
@@ -204,10 +232,13 @@ bool SRModule::Enable()
 RENDER_NS::RenderHandleReference SRModule::CreateGpuResource(
     BASE_NS::shared_ptr<RENDER_NS::IRenderContext> rc, float width, float height)
 {
+    if (!ValidateGpuImageSize(width, height)) {
+        return {};
+    }
     RENDER_NS::IGpuResourceManager& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
     RENDER_NS::GpuImageDesc desc;
-    desc.width = static_cast<int>(width);
-    desc.height = static_cast<int>(height);
+    desc.width = static_cast<uint32_t>(width);
+    desc.height = static_cast<uint32_t>(height);
     desc.depth = 1;
     desc.format = BASE_NS::Format::BASE_FORMAT_R8G8B8A8_SRGB;
     desc.memoryPropertyFlags = RENDER_NS::MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
