@@ -18,6 +18,9 @@
 #include <3d/ecs/components/camera_component.h>
 #include <3d/ecs/components/graphics_state_component.h>
 #include <3d/ecs/components/light_component.h>
+#include <3d/ecs/components/mesh_component.h>
+#include <3d/ecs/components/planar_reflection_component.h>
+#include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/systems/intf_render_system.h>
 #include <3d/ecs/systems/intf_render_preprocessor_system.h>
 #include <3d/render/intf_render_data_store_default_camera.h>
@@ -241,4 +244,56 @@ UNIT_TEST(API_EcsRenderSystem, ColorPrePassMultiViewCountDoesNotOverflow, testin
     for (const RenderCamera& renderCamera : dsCamera->GetCameras()) {
         EXPECT_LE(renderCamera.multiViewCameraCount, RenderSceneDataConstants::MAX_MULTI_VIEW_LAYER_CAMERA_COUNT);
     }
+}
+
+/**
+ * @tc.name: PlanarReflectionWithEmptySubmeshesDoesNotWriteOutOfBounds
+ * @tc.desc: A PlanarReflectionComponent CREATED event resolves the reflection material from the first submesh
+ *           of the associated mesh. When that mesh carries no submeshes the material stays invalid, which is
+ *           exactly the branch that used to assign submeshes[0] on the empty vector. Creating the component on
+ *           a submesh-less mesh must leave the mesh untouched instead of writing past the end of the vector.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(API_EcsRenderSystem, PlanarReflectionWithEmptySubmeshesDoesNotWriteOutOfBounds, testing::ext::TestSize.Level1)
+{
+    UTest::TestContext* testContext = UTest::GetTestContext();
+    auto ecs = testContext->ecs;
+
+    auto* renderSystem = GetSystem<IRenderSystem>(*ecs);
+    ASSERT_NE(nullptr, renderSystem);
+    renderSystem->SetActive(true);
+
+    auto meshMgr = GetManager<IMeshComponentManager>(*ecs);
+    auto renderMeshMgr = GetManager<IRenderMeshComponentManager>(*ecs);
+    auto planarMgr = GetManager<IPlanarReflectionComponentManager>(*ecs);
+    ASSERT_NE(nullptr, meshMgr);
+    ASSERT_NE(nullptr, renderMeshMgr);
+    ASSERT_NE(nullptr, planarMgr);
+
+    auto& em = ecs->GetEntityManager();
+
+    // Mesh component with no submeshes at all.
+    const Entity meshEntity = em.Create();
+    meshMgr->Create(meshEntity);
+    ASSERT_TRUE(meshMgr->HasComponent(meshEntity));
+    if (auto handle = meshMgr->Read(meshEntity); handle) {
+        ASSERT_TRUE(handle->submeshes.empty());
+    }
+
+    const Entity planeEntity = em.Create();
+    renderMeshMgr->Create(planeEntity);
+    if (auto handle = renderMeshMgr->Write(planeEntity); handle) {
+        handle->mesh = meshEntity;
+    }
+
+    // Triggers RenderSystem::OnComponentEvent(CREATED) for the planar reflection.
+    planarMgr->Create(planeEntity);
+    ecs->ProcessEvents();
+    ecs->Update(3u, 1u);
+    ecs->ProcessEvents();
+
+    // The submesh-less mesh must be left alone; no material may have been written into slot 0.
+    auto handle = meshMgr->Read(meshEntity);
+    ASSERT_TRUE(handle);
+    EXPECT_TRUE(handle->submeshes.empty());
 }

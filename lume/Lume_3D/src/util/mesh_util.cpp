@@ -134,6 +134,9 @@ constexpr uint32_t TORUS_MIN_MINOR_SECTORS = 3u;
 // overflow in vertex/index count math. 4096 yields up to ~16 M vertices on torus/sphere.
 constexpr uint32_t MESH_MAX_SECTORS = 4096u;
 
+// The per-axis bound alone still allows 4096 * 4096 vertices, over a gigabyte of buffers.
+constexpr uint32_t MESH_MAX_TOTAL_VERTICES = 1u << 20u;
+
 constexpr float CYLINDER_CAP_UV_RADIUS = 0.24f;
 
 constexpr Math::Vec2 CYLINDER_CAP_UV_CENTER[2u] = {Math::Vec2(0.25f, 0.25f), Math::Vec2(0.75f, 0.25f)};
@@ -185,7 +188,8 @@ bool ValidateCubeMeshParameters(float width, float height, float depth)
 bool ValidateSphereMeshParameters(float radius, uint32_t rings, uint32_t sectors)
 {
     if (IsFinitePositive(radius) && (rings >= SPHERE_MIN_RINGS) && (rings <= MESH_MAX_SECTORS) &&
-        (sectors >= SPHERE_MIN_SECTORS) && (sectors <= MESH_MAX_SECTORS)) {
+        (sectors >= SPHERE_MIN_SECTORS) && (sectors <= MESH_MAX_SECTORS) &&
+        ((rings * sectors) <= MESH_MAX_TOTAL_VERTICES)) {
         return true;
     }
 
@@ -222,7 +226,7 @@ bool ValidateTorusMeshParameters(float majorRadius, float minorRadius, uint32_t 
 {
     if (IsFinitePositive(majorRadius) && IsFinitePositive(minorRadius) && (majorSectors >= TORUS_MIN_MAJOR_SECTORS) &&
         (majorSectors <= MESH_MAX_SECTORS) && (minorSectors >= TORUS_MIN_MINOR_SECTORS) &&
-        (minorSectors <= MESH_MAX_SECTORS)) {
+        (minorSectors <= MESH_MAX_SECTORS) && ((majorSectors * minorSectors) <= MESH_MAX_TOTAL_VERTICES)) {
         return true;
     }
 
@@ -1071,8 +1075,12 @@ Entity MeshUtil::CreateMesh(const IEcs& ecs, const IMeshBuilder& builder, const 
 {
     auto meshEntity = builder.CreateMesh(const_cast<IEcs&>(ecs));
     if (!name.empty()) {
-        GetManager<IUriComponentManager>(ecs)->Set(meshEntity, {string(name)});
-        GetManager<INameComponentManager>(ecs)->Set(meshEntity, {string(name)});
+        if (auto* uriManager = GetManager<IUriComponentManager>(ecs); uriManager) {
+            uriManager->Set(meshEntity, {string(name)});
+        }
+        if (auto* nameManager = GetManager<INameComponentManager>(ecs); nameManager) {
+            nameManager->Set(meshEntity, {string(name)});
+        }
     }
     return meshEntity;
 }

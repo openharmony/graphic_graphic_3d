@@ -70,7 +70,8 @@ void UpdateCustomPropertyMetadata(const json::value& customProperties, CustomPro
             if (const auto customProps = ref.find(CUSTOM_PROPERTIES); customProps && customProps->is_array()) {
                 // process custom properties i.e. local factors
                 for (const auto& propRef : customProps->array_) {
-                    if (const auto customData = propRef.find(CUSTOM_PROPERTY_DATA); customData) {
+                    if (const auto customData = propRef.find(CUSTOM_PROPERTY_DATA);
+                        customData && customData->is_array()) {
                         // reserve the property count
                         properties.ReservePropertyCount(customData->array_.size());
                         for (const auto& dataValue : customData->array_) {

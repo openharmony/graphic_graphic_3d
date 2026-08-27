@@ -911,6 +911,18 @@ Entity UpdateReflectionPlaneMaterial(IRenderMeshComponentManager& renderMeshMgr,
     return {};
 }
 
+// a valid entity does not necessarily carry a RenderHandleComponent, so create it if the write fails
+ScopedHandle<RenderHandleComponent> WriteOrCreateRenderHandle(
+    IRenderHandleComponentManager& gpuHandleMgr, const Entity& entity)
+{
+    auto handle = gpuHandleMgr.Write(entity);
+    if (!handle) {
+        gpuHandleMgr.Create(entity);
+        handle = gpuHandleMgr.Write(entity);
+    }
+    return handle;
+}
+
 void ProcessReflectionTargetSize(const PlanarReflectionComponent& rc, const RenderCamera& cam, Math::UVec2& targetRes)
 {
     targetRes.x = Math::max(
@@ -963,8 +975,8 @@ ReflectionPlaneTargetUpdate UpdatePlaneReflectionTargetResolution(IGpuResourceMa
         }
         rptu.mipCount = Math::min(reflectionMaxMipBlur,
             static_cast<uint32_t>(std::log2f(static_cast<float>(std::max(targetRes.x, targetRes.y)))) + 1u);
-        if (auto handle = gpuHandleMgr.Write(rptu.colorRenderTarget)) {
-            handle->reference = reCreateGpuImage(
+        if (auto rhHandle = WriteOrCreateRenderHandle(gpuHandleMgr, rptu.colorRenderTarget); rhHandle) {
+            rhHandle->reference = reCreateGpuImage(
                 gpuResourceMgr, entity.id, colorRenderTarget, targetRes.x, targetRes.y, rptu.mipCount, false);
         }
 
@@ -972,9 +984,9 @@ ReflectionPlaneTargetUpdate UpdatePlaneReflectionTargetResolution(IGpuResourceMa
             rptu.depthRenderTarget = gpuHandleMgr.GetEcs().GetEntityManager().CreateReferenceCounted();
             gpuHandleMgr.Create(rptu.depthRenderTarget);
         }
-        if (auto handle = gpuHandleMgr.Write(rptu.depthRenderTarget)) {
-            handle->reference = reCreateGpuImage(
-                gpuResourceMgr, entity.id, depthRenderTarget, targetRes.x, targetRes.y, 1u, true);
+        if (auto rhHandle = WriteOrCreateRenderHandle(gpuHandleMgr, rptu.depthRenderTarget); rhHandle) {
+            rhHandle->reference =
+                reCreateGpuImage(gpuResourceMgr, entity.id, depthRenderTarget, targetRes.x, targetRes.y, 1u, true);
         }
 
         rptu.renderTargetResolution[0] = targetRes.x;
@@ -1914,8 +1926,18 @@ void RenderSystem::OnComponentEvent(
                     continue;
                 }
                 Entity material;
+                bool hasSubmesh = false;
                 if (auto meshHandle = meshMgr_->Read(meshId); meshHandle && !meshHandle->submeshes.empty()) {
                     material = meshHandle->submeshes[0U].material;
+                    hasSubmesh = true;
+                }
+                // without a submesh there is nothing to attach the reflection material to
+                if (!hasSubmesh) {
+#if CORE3D_VALIDATION_ENABLED
+                    PLUGIN_LOG_ONCE_E("planar_submesh" + to_hex(entity.id),
+                        "CORE3D_VALIDATION: PlanarReflectionComponent mesh has no submeshes");
+#endif
+                    continue;
                 }
                 if (!EntityUtil::IsValid(material)) {
                     material = ecs_.GetEntityManager().Create();
@@ -2579,6 +2601,23 @@ void RenderSystem::ProcessLight(const LightProcessData& lpd)
     dsLight_->AddLight(light);
 }
 
+namespace {
+// Substitute view for a light whose world matrix cannot be inverted. Math::Normalize() returns a zero vector below
+// epsilon, and LookAtRh is singular when the up vector is parallel to the view direction, so both need replacing.
+Math::Mat4X4 DegenerateLightView(const Math::Mat4X4& world, const Math::Vec4& dir)
+{
+    constexpr float upParallelLimit = 0.99f;
+    const Math::Vec3 lightPos{world.w.x, world.w.y, world.w.z};
+    Math::Vec3 lightDir{dir.x, dir.y, dir.z};
+    if (Math::Dot(lightDir, lightDir) < Math::EPSILON) {
+        lightDir = {0.0f, 0.0f, -1.0f};
+    }
+    const Math::Vec3 up =
+        (Math::abs(lightDir.y) > upParallelLimit) ? Math::Vec3{0.0f, 0.0f, 1.0f} : Math::Vec3{0.0f, 1.0f, 0.0f};
+    return Math::LookAtRh(lightPos, lightPos + lightDir, up);
+}
+}  // namespace
+
 void RenderSystem::ProcessShadowCamera(const LightProcessData lpd, RenderLight& light)
 {
     if ((light.lightUsageFlags &
@@ -2623,6 +2662,10 @@ void RenderSystem::ProcessShadowCamera(const LightProcessData lpd, RenderLight& 
     } else if (light.lightUsageFlags & RenderLight::LIGHT_USAGE_SPOT_LIGHT_BIT) {
         float determinant = 0.0f;
         camera.matrices.view = Math::Inverse(lpd.world, determinant);
+        if (Math::abs(determinant) < Math::EPSILON) {
+            // a zero scale transform makes Inverse produce a non-finite view matrix
+            camera.matrices.view = DegenerateLightView(lpd.world, light.dir);
+        }
         const float yFov = Math::clamp(light.spotLightParams.w * 2.0f, 0.0f, Math::PI);
         zFar = light.range;  // use light range for z far
         zNear = Math::max(0.1f, lpd.lightComponent.nearPlane);

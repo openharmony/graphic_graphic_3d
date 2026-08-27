@@ -508,9 +508,9 @@ void FindFrameIndices(const bool forward, const float currentTimestamp, const ar
     const auto end = timestamps.end();
     const auto pos = std::upper_bound(begin, end, currentTimestamp);
     if (forward) {
-        // Find next frame (forward).
+        // Find next frame (forward). upper_bound returns begin before the first timestamp.
         next = static_cast<size_t>(std::distance(begin, pos));
-        current = next - 1;
+        current = next ? next - 1 : 0;
     } else {
         // Find next frame (backward).
         current = static_cast<size_t>(std::distance(begin, pos));
