@@ -51,13 +51,19 @@ CpuDescriptorSet CreateCpuDescriptorSetData(
     return newSet;
 }
 
+// clamped, an out of range binding would overflow the +1U
+inline uint32_t BindingSlotPlusOne(const uint32_t binding)
+{
+    return Math::min(binding, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT - 1U) + 1U;
+}
+
 // GLES backend stores per-binding resources in a flat array indexed by the binding slot (see
 // ConvertDescSetToResource: dst[bindings.binding.binding]), so size by max-slot+1.
 inline uint32_t MaxBindingSlotPlusOne(const array_view<const DescriptorSetLayoutBinding> bindings)
 {
     uint32_t maxSlot = 0;
     for (const auto& b : bindings) {
-        maxSlot = Math::max(b.binding + 1U, maxSlot);
+        maxSlot = Math::max(BindingSlotPlusOne(b.binding), maxSlot);
     }
     return maxSlot;
 }
@@ -66,7 +72,7 @@ inline uint32_t MaxBindingSlotPlusOne(const vector<DescriptorSetLayoutBindingRes
 {
     uint32_t maxSlot = 0;
     for (const auto& b : bindings) {
-        maxSlot = Math::max(b.binding.binding + 1U, maxSlot);
+        maxSlot = Math::max(BindingSlotPlusOne(b.binding.binding), maxSlot);
     }
     return maxSlot;
 }
@@ -149,6 +155,9 @@ void BindBuffer(GpuResourceManager& gpuResourceMgr, const BindableBuffer& res, G
 void ConvertDescSetToResource(GpuResourceManager& gpuResMgr, const CpuDescriptorSet& srcSet, array_view<Gles::Bind> dst)
 {
     for (const auto& bindings : srcSet.bindings) {
+        if (bindings.binding.binding >= static_cast<uint32_t>(dst.size())) {
+            continue;  // out of range bindings have no slot in dst
+        }
         auto& obj = dst[bindings.binding.binding];
         const auto descriptorType = bindings.binding.descriptorType;
         obj.descriptorType = descriptorType;

@@ -37,6 +37,8 @@ using namespace CORE_NS;
 RENDER_BEGIN_NAMESPACE()
 namespace {
 constexpr uint32_t CUSTOM_PROPERTY_POD_CONTAINER_BYTE_SIZE{256U};
+// upper bound for json driven property counts
+constexpr size_t MAX_CUSTOM_PROPERTY_COUNT{1024U};
 constexpr string_view CUSTOM_PROPERTIES = "customProperties";
 constexpr string_view CUSTOM_BINDING_PROPERTIES = "customBindingProperties";
 constexpr string_view BINDING_PROPERTIES = "bindingProperties";
@@ -61,8 +63,9 @@ void UpdateCustomPropertyMetadata(const json::value& customProperties, ShaderPip
                         cpd.binding = (uint32_t)setProp->unsigned_;
                     }
                     if (const auto customData = propRef.find(CUSTOM_PROPERTY_DATA); customData) {
-                        // reserve the property count
-                        properties.ReservePropertyCount(customData->array_.size());
+                        // bounded, the count comes from json
+                        properties.ReservePropertyCount(
+                            Math::min(customData->array_.size(), MAX_CUSTOM_PROPERTY_COUNT));
                         for (const auto& dataValue : customData->array_) {
                             if (dataValue.is_object()) {
                                 string_view name;
@@ -112,12 +115,14 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                 customProps = ref.find(CUSTOM_BINDING_PROPERTIES);
             }
             if (customProps && customProps->is_array()) {
-                setAndBindings.reserve(customProps->array_.size());
+                // bounded, the count comes from json
+                setAndBindings.reserve(Math::min(customProps->array_.size(), MAX_CUSTOM_PROPERTY_COUNT));
                 // process the array
                 for (const auto& propRef : customProps->array_) {
                     if (const auto customData = propRef.find(CUSTOM_PROPERTY_DATA); customData) {
                         // reserve the property count
-                        properties.ReservePropertyCount(customData->array_.size());
+                        properties.ReservePropertyCount(
+                            Math::min(customData->array_.size(), MAX_CUSTOM_PROPERTY_COUNT));
                         for (const auto& dataValue : customData->array_) {
                             if (dataValue.is_object()) {
                                 string_view name;
@@ -139,11 +144,14 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                                         binding = (uint32_t)dataObject.value.unsigned_;
                                     }
                                 }
-                                set = Math::min(set, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
-                                binding = Math::min(binding, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
-                                setAndBindings.push_back({set, binding});
                                 const PropertyTypeDecl typeDecl =
                                     CustomPropertyBindingHelper::GetPropertyTypeDeclaration(type);
+                                // AddOffsetProperty() skips invalid types, the two are indexed in parallel
+                                if (typeDecl == PropertyType::INVALID) {
+                                    continue;
+                                }
+                                set = Math::min(set, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT);
+                                binding = Math::min(binding, PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
                                 const size_t align = CustomPropertyBindingHelper::GetPropertyTypeAlignment(typeDecl);
                                 const size_t offset = [](size_t value, size_t align) -> size_t {
                                     if (align == 0U) {
@@ -151,7 +159,13 @@ void UpdateBindingPropertyMetadata(const json::value& customProperties, CustomPr
                                     }
                                     return ((value + align - 1U) / align) * align;
                                 }(properties.GetByteSize(), align);
+                                const size_t propertyCount = properties.MetaData().size();
                                 properties.AddOffsetProperty(name, displayName, offset, typeDecl);
+                                if (properties.MetaData().size() == propertyCount) {
+                                    // the property was dropped, the two are indexed in parallel
+                                    continue;
+                                }
+                                setAndBindings.push_back({set, binding});
                             }
                         }
                     }

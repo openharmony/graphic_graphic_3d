@@ -64,7 +64,8 @@ void PostProcessColorAdjustmentsBlock(
 
         // 2. Contrast in LogC space
         outCol = ContrastLogC(outCol, contrast);
-        outCol = max(outCol, 0.0);
+        // a non-positive contrast makes LogCToLinear() return Inf
+        outCol = clamp(outCol, 0.0, CORE_CLAMP_MAX_VALUE);
 
         // 3. Apply color filter
         outCol *= filterColor.rgb;
@@ -77,6 +78,8 @@ void PostProcessColorAdjustmentsBlock(
 
         // 5. Saturation (matrix)
         outCol = (SaturationMatrix(saturation) * vec4(outCol, 1.0)).rgb;
+        // a negative saturation flips the matrix diagonal
+        outCol = clamp(outCol, 0.0, CORE_CLAMP_MAX_VALUE);
     }
 }
 

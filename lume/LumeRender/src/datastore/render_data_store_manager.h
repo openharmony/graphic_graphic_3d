@@ -18,6 +18,7 @@
 
 #include <mutex>
 
+#include <base/containers/atomics.h>
 #include <base/containers/flat_map.h>
 #include <base/containers/unique_ptr.h>
 #include <base/containers/unordered_map.h>
@@ -77,9 +78,10 @@ private:
     BASE_NS::unordered_map<IRenderDataStore*, uint64_t> pointerToStoreHash_;
     BASE_NS::vector<PendingRenderAccessStore> pendingRenderAccess_;
 
-    // lock not needed for access
+    // no lock needed, only touched from RenderFrame, the counter below detects a violation of that
     BASE_NS::flat_map<uint64_t, BASE_NS::refcnt_ptr<IRenderDataStore>> renderAccessStores_;
     BASE_NS::unordered_map<uint64_t, RenderDataStoreTypeInfo> factories_;
+    int32_t renderAccessStoresInUse_{0};
 
     RenderDataStoreFlags renderDataStoreFlags_{0u};
 };

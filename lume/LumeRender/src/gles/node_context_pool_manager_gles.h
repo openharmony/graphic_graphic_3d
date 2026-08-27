@@ -36,6 +36,8 @@ struct LowlevelFramebufferGL {
         // one fbo per subpass, one resolve fbo per subpass (if needed)
         uint32_t fbo{0};
         uint32_t resolve{0};
+        // fbo == 0 is a valid backbuffer target, failure needs a separate flag
+        bool valid{true};
     };
     BASE_NS::vector<SubPassPair> fbos;
 };

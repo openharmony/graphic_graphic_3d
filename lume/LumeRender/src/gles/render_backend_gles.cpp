@@ -385,6 +385,44 @@ struct BlitData {
     bool compressed{false};
 };
 
+// how many times the blit of this image type advances the source by sizeOfData
+uint64_t BlitSliceCount(const BlitData& bd)
+{
+    const auto& imageSubresource = bd.bufferImageCopy.imageSubresource;
+    if (bd.iPlat.type == GL_TEXTURE_3D) {
+        // Blit3D() walks the depth of the mip level, not the layers
+        return Math::max(1u, bd.imageDesc.depth >> imageSubresource.mipLevel);
+    }
+    if (bd.iPlat.type == GL_TEXTURE_2D_ARRAY) {
+        return imageSubresource.layerCount;
+    }
+    if (bd.iPlat.type == GL_TEXTURE_CUBE_MAP) {
+        // BlitCube() stops at the last cube map face
+        const uint64_t base = imageSubresource.baseArrayLayer;
+        const uint64_t last =
+            Math::min(base + imageSubresource.layerCount, static_cast<uint64_t>(Gles::CUBEMAP_LAYERS));
+        return (last > base) ? (last - base) : 0U;
+    }
+    // Blit2D() copies a single image
+    return 1U;
+}
+
+// the blits walk the source with data += sizeOfData per layer or slice
+bool ValidBlitSource(const BlitData& bd, const GpuBufferGLES& srcGpuBuffer)
+{
+    const uint64_t sliceCount = BlitSliceCount(bd);
+    const uint64_t neededByteSize =
+        static_cast<uint64_t>(bd.bufferImageCopy.bufferOffset) + (bd.sizeOfData * sliceCount);
+    if (neededByteSize > static_cast<uint64_t>(srcGpuBuffer.GetDesc().byteSize)) {
+        PLUGIN_LOG_E("BufferToImageCopy source range exceeds the buffer size (offset:%u, slices:%u, size:%u)",
+            bd.bufferImageCopy.bufferOffset,
+            static_cast<uint32_t>(sliceCount),
+            srcGpuBuffer.GetDesc().byteSize);
+        return false;
+    }
+    return true;
+}
+
 void BlitArray(DeviceGLES& device_, const BlitData& bd)
 {
     const auto& iPlat = bd.iPlat;
@@ -571,12 +609,9 @@ BlitData SetupBlit(DeviceGLES& device_, const BufferImageCopy& bufferImageCopy, 
     const auto& imageOffset = bufferImageCopy.imageOffset;
     PLUGIN_UNUSED(imageOffset);
     const auto& imageExtent = bufferImageCopy.imageExtent;
-    auto width = (!bufferImageCopy.bufferImageHeight || bufferImageCopy.bufferRowLength)
-                     ? bufferImageCopy.imageExtent.width
-                     : bufferImageCopy.bufferRowLength;
-    auto height = (!bufferImageCopy.bufferImageHeight || bufferImageCopy.bufferRowLength)
-                      ? bufferImageCopy.imageExtent.height
-                      : bufferImageCopy.bufferImageHeight;
+    // zero means tightly packed, the rest is the source layout GL_UNPACK_ROW_LENGTH/IMAGE_HEIGHT are set to
+    auto width = bufferImageCopy.bufferRowLength ? bufferImageCopy.bufferRowLength : imageExtent.width;
+    auto height = bufferImageCopy.bufferImageHeight ? bufferImageCopy.bufferImageHeight : imageExtent.height;
     // size is calculated for single layer / slice
     const uint64_t size =
         static_cast<uint64_t>(iPlat.bytesperpixel) * static_cast<uint64_t>(width) * static_cast<uint64_t>(height);
@@ -2086,20 +2121,23 @@ void RenderBackendGLES::BufferToImageCopy(const struct RenderCommandCopyBufferIm
         return;
     }
     const auto info = SetupBlit<usePixelUnpackBuffer>(device_, renderCmd.bufferImageCopy, *srcGpuBuffer, *dstGpuImage);
-    if (info.iPlat.type == GL_TEXTURE_CUBE_MAP) {
-        BlitCube(device_, info);
-    } else if (info.iPlat.type == GL_TEXTURE_2D) {
-        Blit2D(device_, info);
-    } else if (info.iPlat.type == GL_TEXTURE_2D_ARRAY) {
-        BlitArray(device_, info);
-    } else if (info.iPlat.type == GL_TEXTURE_3D) {
-        Blit3D(device_, info);
+    // skipped, not returned from, FinishBlit() unmaps what SetupBlit() mapped
+    if (ValidBlitSource(info, *srcGpuBuffer)) {
+        if (info.iPlat.type == GL_TEXTURE_CUBE_MAP) {
+            BlitCube(device_, info);
+        } else if (info.iPlat.type == GL_TEXTURE_2D) {
+            Blit2D(device_, info);
+        } else if (info.iPlat.type == GL_TEXTURE_2D_ARRAY) {
+            BlitArray(device_, info);
+        } else if (info.iPlat.type == GL_TEXTURE_3D) {
+            Blit3D(device_, info);
 #if RENDER_HAS_GLES_BACKEND
-    } else if (info.iPlat.type == GL_TEXTURE_EXTERNAL_OES) {
-        PLUGIN_LOG_E("Tried to copy to GL_TEXTURE_EXTERNAL_OES. Ignored!");
+        } else if (info.iPlat.type == GL_TEXTURE_EXTERNAL_OES) {
+            PLUGIN_LOG_E("Tried to copy to GL_TEXTURE_EXTERNAL_OES. Ignored!");
 #endif
-    } else {
-        PLUGIN_ASSERT_MSG(false, "RenderCommandCopyBufferImage unhandled type");
+        } else {
+            PLUGIN_ASSERT_MSG(false, "RenderCommandCopyBufferImage unhandled type");
+        }
     }
     FinishBlit<usePixelUnpackBuffer>(device_, *srcGpuBuffer);
 }

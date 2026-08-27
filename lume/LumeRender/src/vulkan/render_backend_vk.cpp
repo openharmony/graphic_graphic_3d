@@ -1049,6 +1049,12 @@ void RenderBackendVk::RenderSingleCommandList(RenderCommandContext& renderComman
 
     PLUGIN_ASSERT(ptrCmdPool);
     const LowLevelCommandBufferVk& cmdBuffer = ptrCmdPool->commandBuffer;
+    if ((ptrCmdPool->commandPool == VK_NULL_HANDLE) || (cmdBuffer.commandBuffer == VK_NULL_HANDLE)) {
+        // command pool creation failed, recording would be undefined behaviour
+        // the submitter skips a null command buffer
+        PLUGIN_LOG_E("no command buffer for render command list (%s)", debugNames.renderCommandBufferName.data());
+        return;
+    }
 
     if (beginCommandBuffer) {
         const VkDevice device = ((const DevicePlatformDataVk&)device_.GetPlatformData()).device;

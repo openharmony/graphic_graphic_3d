@@ -49,7 +49,6 @@ ShaderStateLoader::LoadResult ShaderStateLoader::Load(IFileManager& fileManager,
     }
 
     const uint64_t byteLength = file->GetLength();
-
     constexpr uint64_t MAX_SHADER_STATE_SIZE = 1U * 1024U * 1024U;
     if (byteLength > MAX_SHADER_STATE_SIZE) {
         return LoadResult("Shader state file too large.");

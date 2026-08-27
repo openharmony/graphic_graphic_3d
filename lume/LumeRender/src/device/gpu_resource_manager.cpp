@@ -58,6 +58,15 @@ constexpr MemoryPropertyFlags ADD_STAGING_MEM_OPT_FLAGS{
 
 constexpr uint32_t BUFFER_ALIGNMENT{256U};
 
+// from the clamped extents, log2f() of a zero extent is -INF and the cast UB
+inline uint32_t GetValidMipCount(const GpuImageDesc& desc)
+{
+    const uint32_t width = Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width));
+    const uint32_t height = Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height));
+    const uint32_t maxMipCount = static_cast<uint32_t>(std::log2f(static_cast<float>(Math::max(width, height)))) + 1u;
+    return Math::max(1u, Math::min(desc.mipCount, maxMipCount));
+}
+
 // make sure that generation is valid
 EngineResourceHandle InvalidateWithGeneration(const EngineResourceHandle handle)
 {
@@ -875,9 +884,7 @@ GpuResourceManager::StoreAllocationData GpuResourceManager::CreateImage(
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
-            Math::max(1u,
-                Math::min(desc.mipCount,
-                    static_cast<uint32_t>(std::log2f(static_cast<float>(Math::max(desc.width, desc.height)))) + 1u)),
+            GetValidMipCount(desc),
             Math::max(1u, desc.layerCount),
             Math::max(1u, desc.sampleCountFlags),
             desc.componentMapping,
@@ -1437,9 +1444,7 @@ RenderHandleReference GpuResourceManager::CreateShallowHandle(const GpuImageDesc
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.width)),
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.height)),
             Math::min(MAX_IMAGE_EXTENT, Math::max(1u, desc.depth)),
-            Math::max(1u,
-                Math::min(desc.mipCount,
-                    static_cast<uint32_t>(std::log2f(static_cast<float>(Math::max(desc.width, desc.height)))) + 1u)),
+            GetValidMipCount(desc),
             Math::max(1u, desc.layerCount),
             Math::max(1u, desc.sampleCountFlags),
             desc.componentMapping,
@@ -2257,8 +2262,10 @@ void GpuResourceManager::LockFrameStagingData()
             auto& rtrgb = renderTimeReservedGpuBuffer_;
             if (rtrgb.neededByteSize > 0U) {
                 if ((!rtrgb.handle) || (rtrgb.storedByteSize < rtrgb.neededByteSize)) {
-                    // over-allocate
-                    rtrgb.storedByteSize = rtrgb.neededByteSize + Align(rtrgb.neededByteSize / 8U, BUFFER_ALIGNMENT);
+                    // over-allocate in 64 bits, the addition could wrap
+                    const uint64_t storedByteSize = static_cast<uint64_t>(rtrgb.neededByteSize) +
+                                                    Align(rtrgb.neededByteSize / 8U, BUFFER_ALIGNMENT);
+                    rtrgb.storedByteSize = static_cast<uint32_t>(Math::min(storedByteSize, uint64_t(UINT32_MAX)));
                     // re-create
                     rtrgb.handle = CreateBuffer({}, rtrgb.baseHandle, GetMapBufferDesc(rtrgb.storedByteSize)).handle;
                     rtrgb.baseHandle = rtrgb.handle.GetHandle();
@@ -2981,6 +2988,11 @@ RenderHandle GpuResourceManager::ReserveRenderTimeGpuBuffer(const uint32_t byteS
     const auto currIndex = static_cast<uint32_t>(renderTimeReservedGpuBuffer_.values.size());
 
     const uint32_t fullByteSize = Align(byteSize, BUFFER_ALIGNMENT);
+    // the accumulation must not wrap, the reservations are indexed into the allocated buffer
+    if ((static_cast<uint64_t>(currOffset) + fullByteSize) > MAX_SINGLE_ALLOC_SIZE) {
+        PLUGIN_LOG_E("render time gpu buffer reservation exceeds the maximum (%u)", MAX_SINGLE_ALLOC_SIZE);
+        return {};
+    }
 
     renderTimeReservedGpuBuffer_.neededByteSize += fullByteSize;
     // store only the needed bytesize
@@ -3006,6 +3018,11 @@ IRenderNodeGpuResourceManager::MappedGpuBufferData GpuResourceManager::AcquireRe
         const uint32_t index = RenderHandleUtil::GetIndexPart(handle);
         if (index < static_cast<uint32_t>(renderTimeReservedGpuBuffer_.executeValues.size())) {
             const auto& ref = renderTimeReservedGpuBuffer_.executeValues[index];
+            // the mapping is missing if the buffer creation failed
+            if ((!renderTimeReservedGpuBuffer_.mappedData) || ((static_cast<uint64_t>(ref.byteOffset) + ref.byteSize) >
+                                                                  renderTimeReservedGpuBuffer_.storedByteSize)) {
+                return mgbd;
+            }
             mgbd.bindingByteOffset = ref.byteOffset;
             mgbd.byteSize = ref.byteSize;
             mgbd.data = static_cast<uint8_t*>(renderTimeReservedGpuBuffer_.mappedData) + ref.byteOffset;

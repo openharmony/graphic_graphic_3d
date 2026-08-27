@@ -96,6 +96,27 @@ void FromJson(const json::value& jsonData, JsonContext<DescriptorSetLayout>& con
     // NOTE: does not fetch descriptor set arrays
 }
 
+// the backends index flat per-binding arrays with the binding slot
+void ClampDescriptorSetLayout(DescriptorSetLayout& layout, const string_view uri)
+{
+    size_t validCount = 0;
+    for (size_t idx = 0; idx < layout.bindings.size(); ++idx) {
+        if (layout.bindings[idx].binding >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+            PLUGIN_LOG_W("Dropping out of range binding %u (name:%.*s) (set:%u)",
+                layout.bindings[idx].binding,
+                static_cast<int>(uri.size()),
+                uri.data(),
+                layout.set);
+            continue;
+        }
+        if (validCount >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+            break;
+        }
+        layout.bindings[validCount++] = layout.bindings[idx];
+    }
+    layout.bindings.resize(validCount);
+}
+
 PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unused]] const string_view uri,
     PipelineLayout& pl, string& renderSlotName, bool& defaultRenderSlot)
 {
@@ -159,11 +180,8 @@ PipelineLayoutLoader::LoadResult Load(const json::value& jsonData, [[maybe_unuse
         for (uint32_t idx = 0; idx < inputDescriptorSetCount; ++idx) {
             const uint32_t setIndex = descriptorSetLayouts[idx].set;
             if (setIndex < PipelineLayoutConstants::MAX_DESCRIPTOR_SET_COUNT) {
-                auto& dsl = descriptorSetLayouts[idx];
-                if (dsl.bindings.size() > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
-                    dsl.bindings.resize(PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT);
-                }
-                pl.descriptorSetLayouts[setIndex] = move(dsl);
+                ClampDescriptorSetLayout(descriptorSetLayouts[idx], uri);
+                pl.descriptorSetLayouts[setIndex] = move(descriptorSetLayouts[idx]);
             }
         }
     } else {

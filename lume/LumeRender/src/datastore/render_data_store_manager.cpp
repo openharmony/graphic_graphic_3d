@@ -38,6 +38,7 @@ void RenderDataStoreManager::CommitFrameData()
         pendingRenderAccess = std::move(pendingRenderAccess_);
     }
 
+    BASE_NS::AtomicIncrement(&renderAccessStoresInUse_);
     // prepare access for render time access
     for (auto& pendingRef : pendingRenderAccess) {
         renderAccessStores_.insert_or_assign(pendingRef.hash, BASE_NS::move(pendingRef.renderDataStore));
@@ -47,13 +48,17 @@ void RenderDataStoreManager::CommitFrameData()
     // all valid stores can be accessed from render access stores without locks
     // remove unused data stores and gather their hashes so that stores_ can be cleaned up as well.
     for (auto it = renderAccessStores_.begin(); it != renderAccessStores_.end();) {
-        if (it->second->GetRefCount() > 2) {  // in stores_, renderAccessStores_ and user, 2: min ref count
+        if (!it->second) {
+            // must not be dereferenced, and must not erase the stores_ entry
+            it = renderAccessStores_.erase(it);
+        } else if (it->second->GetRefCount() > 2) {  // in stores_, renderAccessStores_ and user, 2: min ref count
             ++it;
         } else {
             pendingRenderAccess.push_back({it->first, BASE_NS::move(it->second)});
             it = renderAccessStores_.erase(it);
         }
     }
+    BASE_NS::AtomicDecrement(&renderAccessStoresInUse_);
     if (!pendingRenderAccess.empty()) {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto& ref : pendingRenderAccess) {
@@ -165,7 +170,10 @@ BASE_NS::refcnt_ptr<IRenderDataStore> RenderDataStoreManager::Create(
             dataStore = dataStoreIt.first->second;
         }
 
-        pendingRenderAccess_.push_back({dataStoreNameHash, dataStore});
+        // a null store would overwrite the live entry and be dereferenced in CommitFrameData()
+        if (dataStore) {
+            pendingRenderAccess_.push_back({dataStoreNameHash, dataStore});
+        }
         return dataStore;
     } else {
         PLUGIN_LOG_E("render data store type not found (type: %s) (named: %s)",
@@ -198,6 +206,10 @@ void RenderDataStoreManager::RemoveRenderDataStoreFactory(const RenderDataStoreT
 {
     // stores_ and pointerToStoreHash_ are modified under lock. renderAccessStores_ is assumed to be touched only from
     // RenderFrame, so this doesn't help. This implies that plugins should be unloaded only while not rendering.
+    if (BASE_NS::AtomicRead(&renderAccessStoresInUse_) != 0) {
+        PLUGIN_LOG_E("render data store factory removed while rendering, plugins must be unloaded when not rendering");
+        PLUGIN_ASSERT(false && "concurrent renderAccessStores_ access");
+    }
     std::lock_guard lock(mutex_);
 
     for (auto b = pointerToStoreHash_.begin(), e = pointerToStoreHash_.end(); b != e;) {
