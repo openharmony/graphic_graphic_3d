@@ -173,6 +173,7 @@ ohos_source_set("campreview_src") {
     "c_utils:utils",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"

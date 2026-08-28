@@ -42,6 +42,7 @@ ohos_source_set("lume_png_src") {
   external_deps = [
     "c_utils:utils",
     "libpng:libpng",
+    "bounds_checking_function:libsec_shared",
   ]
 
   part_name = "graphic_3d"
