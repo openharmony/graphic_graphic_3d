@@ -520,7 +520,7 @@ ohos_source_set("lume_scene_importer_src") {
   ]
 
   external_deps = [
-    "c_utils:utils"
+    "c_utils:utils",
     "bounds_checking_function:libsec_shared",
   ]
 
