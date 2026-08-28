@@ -52,9 +52,10 @@ namespace {
 // Upper bound on texture dimension; caps allocation requests at common GPU limits.
 constexpr float MAX_TEXTURE_DIMENSION = 16384.0f;
 
+// Dimensions are truncated to uint32_t pixels; >= 1.0f ensures a non-zero size after truncation.
 bool IsFinitePositive(const float value)
 {
-    return std::isfinite(value) && (value > Math::EPSILON);
+    return std::isfinite(value) && (value >= 1.0f);
 }
 
 bool ValidateGpuImageSize(float width, float height)
@@ -65,7 +66,7 @@ bool ValidateGpuImageSize(float width, float height)
     }
 
     WIDGET_LOGE("gpu image creation failed: invalid parameters (width=%f, height=%f). "
-                "Width and height must be finite, positive and <= %f.",
+                "Width and height must be finite, >= 1 and <= %f.",
         width,
         height,
         MAX_TEXTURE_DIMENSION);
