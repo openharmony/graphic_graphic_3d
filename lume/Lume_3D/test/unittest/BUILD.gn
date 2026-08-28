@@ -242,6 +242,7 @@ ohos_unittest("lume_3d_src_test") {
 
     # ECS - Components
     "src_unit_test/src/ecs/components/base_manager_test.cpp",
+    "src_unit_test/src/ecs/components/animation_component_manager_test.cpp",
 
     # ECS - Systems
     "src_unit_test/src/ecs/systems/local_matrix_system_test.cpp",
@@ -262,6 +263,7 @@ ohos_unittest("lume_3d_src_test") {
     # Render
     "src_unit_test/src/render/render_data_store_morph_test.cpp",
     "src_unit_test/src/render/render_data_store_weather_test.cpp",
+    "src_unit_test/src/render/render_data_store_light_probe_test.cpp",
     "src_unit_test/src/render/render_node_camera_single_post_process_test.cpp",
     "src_unit_test/src/render/render_node_default_camera_post_process_interface_controller_test.cpp",
     "src_unit_test/src/render/render_node_scene_util_test.cpp",
@@ -270,6 +272,9 @@ ohos_unittest("lume_3d_src_test") {
     "src_unit_test/src/util/mesh_util_test.cpp",
     "src_unit_test/src/util/mesh_builder_security_test.cpp",
     "src_unit_test/src/util/property_util_test.cpp",
+    "src_unit_test/src/util/bowyer_watson_delaunay_3d_test.cpp",
+    "src_unit_test/src/util/light_probe_util_test.cpp",
+    "src_unit_test/src/util/uri_lookup_test.cpp",
   ]
 
   # External deps

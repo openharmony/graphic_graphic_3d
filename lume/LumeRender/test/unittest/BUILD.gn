@@ -350,6 +350,7 @@ ohos_unittest("lume_render_src_test") {
     "src_unit_test/src/datastore/render_data_store_manager_test.cpp",
     "src_unit_test/src/datastore/render_data_store_post_process_test.cpp",
     "src_unit_test/src/datastore/render_data_store_default_acceleration_structure_staging_test.cpp",
+    "src_unit_test/src/datastore/render_data_store_shader_passes_test.cpp",
 
     # Device
     "src_unit_test/src/device/shader_manager_test.cpp",
@@ -409,6 +410,10 @@ ohos_unittest("lume_render_src_test") {
     "src_unit_test/src/nodecontext/render_node_manager_test.cpp",
     "src_unit_test/src/nodecontext/node_context_pso_manager_test.cpp",
     "src_unit_test/src/nodecontext/render_node_context_manager_test.cpp",
+
+    # Render Graph
+    "src_unit_test/src/render_graph/render_graph_barrier_test.cpp",
+    "src_unit_test/src/render_graph/render_graph_layout_transition_test.cpp",
 
     # Render
     "src_unit_test/src/render/render_context_test.cpp",

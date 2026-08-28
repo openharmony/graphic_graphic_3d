@@ -24,7 +24,12 @@ module_output_path = "graphic_3d/graphic_3d/3d_widget_adapter_test"
 ohos_unittest("3d_widget_adpater_test") {
   module_out_path = module_output_path
 
-  sources = [ "3d_widget_adapter_test.cpp" ]
+  sources = [
+    "3d_widget_adapter_test.cpp",
+    "data_type_unit_test.cpp",
+    "geometry_unit_test.cpp",
+    "shader_input_buffer_unit_test.cpp",
+  ]
 
   include_dirs = []
 
