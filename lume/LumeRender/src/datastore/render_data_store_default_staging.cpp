@@ -157,6 +157,10 @@ void RenderDataStoreDefaultStaging::CopyDataToBuffer(
         const GpuBufferDesc stagingBufferDesc =
             GpuResourceManager::GetStagingBufferDesc(static_cast<uint32_t>(dat.size_bytes()));
         const RenderHandleReference stagingBufferHandle = gpuResourceMgr_.Create(stagingBufferDesc);
+        if (!stagingBufferHandle) {
+            PLUGIN_LOG_E("CopyDataToBuffer staging buffer creation failed.");
+            return;
+        }
 
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -181,7 +185,7 @@ void RenderDataStoreDefaultStaging::CopyDataToBuffer(
 void RenderDataStoreDefaultStaging::CopyDataToBufferOnCpu(
     const array_view<const uint8_t>& dat, const RenderHandleReference& dstHandle, const BufferCopy& bufferCopy)
 {
-    if ((dat.size_bytes() > 0) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
+    if ((dat.size_bytes() > 0) && (dat.size_bytes() <= UINT32_MAX) && gpuResourceMgr_.IsGpuBuffer(dstHandle)) {
         const GpuBufferDesc bufDesc = gpuResourceMgr_.GetBufferDescriptor(dstHandle);
         if ((bufDesc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
             (bufDesc.memoryPropertyFlags & CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
@@ -210,6 +214,10 @@ void RenderDataStoreDefaultStaging::CopyDataToImage(const array_view<const uint8
         const GpuBufferDesc stagingBufferDesc =
             GpuResourceManager::GetStagingBufferDesc(static_cast<uint32_t>(dat.size_bytes()));
         const RenderHandleReference stagingBufferHandle = gpuResourceMgr_.Create(stagingBufferDesc);
+        if (!stagingBufferHandle) {
+            PLUGIN_LOG_E("CopyDataToImage staging buffer creation failed.");
+            return;
+        }
 
         std::lock_guard<std::mutex> lock(mutex_);
 

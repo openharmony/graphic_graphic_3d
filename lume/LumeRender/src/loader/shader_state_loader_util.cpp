@@ -25,6 +25,10 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 
 RENDER_BEGIN_NAMESPACE()
+namespace {
+// upper bound for the json driven shader state count
+constexpr size_t MAX_SHADER_STATE_COUNT{1024U};
+}  // namespace
 // clang-format off
 RENDER_JSON_SERIALIZE_ENUM(PrimitiveTopology,
     {
@@ -328,7 +332,8 @@ ShaderStateResult LoadStates(const json::value& jsonData)
     ShaderStateResult ssr;
     if (const json::value* iter = jsonData.find("shaderStates"); iter && iter->is_array()) {
         const auto& allStates = iter->array_;
-        ssr.states.states.reserve(allStates.size());
+        // bounded, the count comes from json
+        ssr.states.states.reserve(Math::min(allStates.size(), MAX_SHADER_STATE_COUNT));
         for (auto const& state : allStates) {
             IShaderManager::ShaderStateLoaderVariantData variant;
             SafeGetJsonValue(state, "variantName", ssr.res.error, variant.variantName);
@@ -363,7 +368,9 @@ ShaderStateResult LoadStates(const json::value& jsonData)
     if (!ssr.res.success) {
         ssr.res.error += "error loading shader states\n";
         PLUGIN_LOG_E("error loading shader states: %s", ssr.res.error.c_str());
+        // both are cleared, consumers index them in parallel
         ssr.states.states.clear();
+        ssr.states.variantData.clear();
     }
     return ssr;
 }

@@ -817,7 +817,9 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
 
         const bool nonZero = (maxRes.x > 0U) && (maxRes.y > 0U);
         const bool sizeChanged = ((cm.gpuImageDesc.width != maxRes.x) || (cm.gpuImageDesc.height != maxRes.y));
-        if (nonZero && (sizeChanged || reflectionChanged)) {
+        // the vectors below are sized to cameraCount_, so a count change alone must re-create them
+        const bool countChanged = (cm.renderMeshEntity.size() != cameraCount_);
+        if (nonZero && (sizeChanged || reflectionChanged || countChanged)) {
             cm.matPerCamera.resize(cameraCount_);
             cm.meshEntity.resize(cameraCount_);
             cm.renderMeshEntity.resize(cameraCount_);
@@ -874,7 +876,10 @@ bool WeatherSystem::Update(bool frameRenderingQueued, uint64_t /* time */, uint6
         }
     }
     if (cloudWasEnabled_ != cloudEnabledThisFrame) {
-        for (uint32_t i = 0; i < cameraCount_; i++) {
+        // the cloud targets are not created for zero sized cameras, so renderMeshEntity can be shorter
+        const uint32_t nodeCount =
+            Math::min(cameraCount_, static_cast<uint32_t>(cloudMatData_.renderMeshEntity.size()));
+        for (uint32_t i = 0; i < nodeCount; i++) {
             if (auto* nodeSystem = GetSystem<INodeSystem>(ecs_)) {
                 if (auto* node = nodeSystem->GetNode(cloudMatData_.renderMeshEntity[i])) {
                     node->SetEnabled(cloudEnabledThisFrame);

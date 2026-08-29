@@ -336,6 +336,10 @@ void CameraImpl::setRenderingPipeline(::taihe::optional_view<::SceneTypes::Rende
     ani_object esValue = reinterpret_cast<ani_object>(input);
     void* nativePtr = nullptr;
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("cameraTransferStaticImpl failed to obtain ani_env");
+        return SceneNodes::Camera({nullptr, nullptr});
+    }
     if (!arkts_esvalue_unwrap(guard.get_env(), esValue, &nativePtr) || nativePtr == nullptr) {
         WIDGET_LOGE("unwrap esvalue failed");
         return SceneNodes::Camera({nullptr, nullptr});
@@ -364,6 +368,10 @@ uintptr_t cameraTransferDynamicImpl(::SceneNodes::weak::Camera input)
     SCENE_NS::INode::Ptr cameraNode = interface_pointer_cast<SCENE_NS::INode>(nativeObj);
     RETURN_IF_NULL_WITH_VALUE(cameraNode, 0);
     taihe::env_guard guard;
+    if (guard.get_env() == nullptr) {
+        WIDGET_LOGE("cameraTransferDynamicImpl failed to obtain ani_env");
+        return 0;
+    }
     napi_env jsenv;
     if (!arkts_napi_scope_open(guard.get_env(), &jsenv)) {
         WIDGET_LOGE("arkts_napi_scope_open failed");

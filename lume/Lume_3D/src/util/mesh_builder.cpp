@@ -1177,6 +1177,25 @@ void MeshBuilder::AddSubmesh(const Submesh& info)
     submeshInfos_.push_back(SubmeshExt{info, {}, {}, {}});
 }
 
+bool MeshBuilder::IsValidSubmeshIndex(size_t submeshIndex) const
+{
+    if ((submeshIndex >= submeshInfos_.size()) || (submeshIndex >= submeshes_.size())) {
+        PLUGIN_LOG_E("MeshBuilder: submesh index (%zu) out of range", submeshIndex);
+        return false;
+    }
+    return true;
+}
+
+bool MeshBuilder::CanGrowVertexData(uint64_t byteSize) const
+{
+    // the offsets are accumulated over all submeshes, so the sum is what has to stay addressable
+    if ((static_cast<uint64_t>(vertexData_.size()) + byteSize) > static_cast<uint64_t>(INT32_MAX)) {
+        PLUGIN_LOG_E("MeshBuilder: generated vertex data exceeds int32_t offset limit");
+        return false;
+    }
+    return true;
+}
+
 const MeshBuilder::Submesh& MeshBuilder::GetSubmesh(size_t index) const
 {
     if (submeshInfos_.empty() || index >= submeshInfos_.size()) {
@@ -1234,7 +1253,10 @@ void MeshBuilder::Allocate()
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
             EngineBufferCreationFlagBits::CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
-        const uint64_t totalStagingSize = vertexDataSize_ + indexDataSize_ + jointDataSize_ + targetDataSize_;
+        // widen before summing: on 32 bit targets size_t addition would wrap before the check below
+        const uint64_t totalStagingSize =
+            static_cast<uint64_t>(vertexDataSize_) + static_cast<uint64_t>(indexDataSize_) +
+            static_cast<uint64_t>(jointDataSize_) + static_cast<uint64_t>(targetDataSize_);
         if (totalStagingSize > UINT32_MAX) {
             PLUGIN_LOG_E("MeshBuilder: staging buffer size exceeds uint32_t limit");
             return;
@@ -1323,10 +1345,20 @@ MeshBuilder::BufferSizesInBytes MeshBuilder::CalculateSizes()
 void MeshBuilder::SetVertexData(size_t submeshIndex, const DataBuffer& positions, const DataBuffer& normals,
     const DataBuffer& texcoords0, const DataBuffer& texcoords1, const DataBuffer& tangents, const DataBuffer& colors)
 {
+    if (!IsValidSubmeshIndex(submeshIndex)) {
+        return;
+    }
     auto buffer = (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) ? vertexPtr_ : stagingPtr_;
     if (buffer) {
         // *Vertex data* | index data | joint data | morph data
         SubmeshExt& submesh = submeshInfos_[submeshIndex];
+
+        // Worst case the float copies below append position, normal and uv0. Bail before touching the submesh
+        // description so a rejected submesh is not left describing vertices it has no buffer access for.
+        constexpr uint64_t maxGeneratedPerVertex = 2U * sizeof(Math::Vec3) + sizeof(Math::Vec2);
+        if (!CanGrowVertexData(static_cast<uint64_t>(submesh.info.vertexCount) * maxGeneratedPerVertex)) {
+            return;
+        }
 
         // Submesh info for this submesh.
         MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
@@ -1484,6 +1516,9 @@ void MeshBuilder::RemapBufferAccessToBindings(size_t submeshIndex)
 
 void MeshBuilder::SetIndexData(size_t submeshIndex, const DataBuffer& indices)
 {
+    if (!IsValidSubmeshIndex(submeshIndex)) {
+        return;
+    }
     auto buffer = (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) ? vertexPtr_ : stagingPtr_;
     if (buffer) {
         // Vertex data | *index data* | joint data | morph data
@@ -1531,6 +1566,9 @@ void MeshBuilder::SetIndexData(size_t submeshIndex, const DataBuffer& indices)
 void MeshBuilder::SetJointData(
     size_t submeshIndex, const DataBuffer& jointData, const DataBuffer& weightData, const DataBuffer& vertexPositions)
 {
+    if (!IsValidSubmeshIndex(submeshIndex)) {
+        return;
+    }
     auto buffer = (flags_ & ConfigurationFlagBits::NO_STAGING_BUFFER) ? vertexPtr_ : stagingPtr_;
     if (buffer) {
         // Vertex data | index data | *joint data* | morph data
@@ -1585,6 +1623,9 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
     const DataBuffer& baseNormals, const DataBuffer& baseTangents, const DataBuffer& targetPositions,
     const DataBuffer& targetNormals, const DataBuffer& targetTangents)
 {
+    if (!IsValidSubmeshIndex(submeshIndex)) {
+        return;
+    }
     // Submesh info for this submesh.
     SubmeshExt& submesh = submeshInfos_[submeshIndex];
     if (!submesh.info.morphTargetCount) {
@@ -1690,6 +1731,9 @@ void MeshBuilder::SetMorphTargetData(size_t submeshIndex, const DataBuffer& base
 
 void MeshBuilder::SetAABB(size_t submeshIndex, const Math::Vec3& min, const Math::Vec3& max)
 {
+    if (!IsValidSubmeshIndex(submeshIndex)) {
+        return;
+    }
     MeshComponent::Submesh& submeshDesc = submeshes_[submeshIndex];
     submeshDesc.aabbMin = min;
     submeshDesc.aabbMax = max;
@@ -2011,9 +2055,13 @@ void MeshBuilder::GenerateMissingAttributes() const
             continue;
         }
         // Reserve space for the to be generated normals and uvs
-        vertexData_.reserve(vertexData_.size() +
-                            (submesh.hasNormals ? 0U : submesh.info.vertexCount * sizeof(Math::Vec3)) +
-                            (submesh.hasUv0 ? 0U : submesh.info.vertexCount * sizeof(Math::Vec2)));
+        const uint64_t generatedSize =
+            (submesh.hasNormals ? 0U : static_cast<uint64_t>(submesh.info.vertexCount) * sizeof(Math::Vec3)) +
+            (submesh.hasUv0 ? 0U : static_cast<uint64_t>(submesh.info.vertexCount) * sizeof(Math::Vec2));
+        if (!CanGrowVertexData(generatedSize)) {
+            continue;
+        }
+        vertexData_.reserve(vertexData_.size() + static_cast<size_t>(generatedSize));
 
         const DataBuffer indexData{
             (submesh.info.indexType == IndexType::CORE_INDEX_TYPE_UINT16) ? BASE_FORMAT_R16_UINT : BASE_FORMAT_R32_UINT,

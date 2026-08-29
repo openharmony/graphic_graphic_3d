@@ -257,6 +257,11 @@ ContextCommandPoolVk CreateContextCommandPool(
         &commandPoolCreateInfo,                     // pCreateInfo
         nullptr,                                    // pAllocator
         &ctxPool.commandPool));                     // pCommandPool
+    if (ctxPool.commandPool == VK_NULL_HANDLE) {
+        // VALIDATE_VK_RESULT only logs, allocating from a null pool would be undefined behaviour
+        PLUGIN_LOG_E("command pool creation failed");
+        return ctxPool;
+    }
 
     // pre-create command buffers and semaphores
     const VkCommandBufferAllocateInfo commandBufferAllocateInfo{

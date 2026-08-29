@@ -61,3 +61,32 @@ UNIT_TEST(SRC_PipelineLayoutLoader, LoadPipelineLayoutTest, testing::ext::TestSi
         ASSERT_TRUE(result.success);
     }
 }
+
+/**
+ * @tc.name: LoadPipelineLayoutOutOfRangeBindingTest
+ * @tc.desc: Out of range binding slots must be dropped, backends index flat arrays with them.
+ * @tc.type: FUNC
+ */
+UNIT_TEST(SRC_PipelineLayoutLoader, LoadPipelineLayoutOutOfRangeBindingTest, testing::ext::TestSize.Level1)
+{
+    PipelineLayoutLoader loader;
+    {
+        // binding == UINT32_MAX would overflow binding + 1U in the GLES backend and size the array to zero
+        BASE_NS::string jsonStr = "{\"descriptorSetLayouts\":[{\"set\":0,\"bindings\":["
+                                  "{\"binding\":4294967295,\"descriptorType\":\"uniform_buffer\"},"
+                                  "{\"binding\":1,\"descriptorType\":\"uniform_buffer\"}]}]}";
+        auto result = loader.Load(jsonStr);
+        ASSERT_TRUE(result.success);
+        const auto& bindings = loader.GetPipelineLayout().descriptorSetLayouts[0].bindings;
+        ASSERT_EQ(bindings.size(), 1U);
+        ASSERT_EQ(bindings[0].binding, 1U);
+    }
+    {
+        // every binding at or above the maximum is dropped
+        BASE_NS::string jsonStr = "{\"descriptorSetLayouts\":[{\"set\":0,\"bindings\":["
+                                  "{\"binding\":16,\"descriptorType\":\"uniform_buffer\"}]}]}";
+        auto result = loader.Load(jsonStr);
+        ASSERT_TRUE(result.success);
+        ASSERT_TRUE(loader.GetPipelineLayout().descriptorSetLayouts[0].bindings.empty());
+    }
+}

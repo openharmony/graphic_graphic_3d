@@ -348,6 +348,8 @@ bool SceneAdapter::LoadEngineLib()
             LOAD_FUNC(CORE_NS::GetPluginRegister, "_ZN4Core17GetPluginRegisterEv") &&
             LOAD_FUNC(CORE_NS::IsDebugBuild, "_ZN4Core12IsDebugBuildEv") &&
             LOAD_FUNC(CORE_NS::GetVersion, "_ZN4Core13GetVersionRevEv"))) {
+        dlclose(engineInstance_.libHandle_);
+        engineInstance_.libHandle_ = nullptr;
         return false;
     }
 #undef LOAD_FUNC
@@ -378,6 +380,7 @@ bool SceneAdapter::LoadPlugins(const CORE_NS::PlatformCreateInfo& platformCreate
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
     if (!CORE_NS::GetPluginRegister().LoadPlugins(DefaultPluginList)) {
         WIDGET_LOGE("fail to load scene widget plugin");
+        ShutdownPluginRegistry();
         return false;
     }
     WIDGET_LOGI("load plugin success");

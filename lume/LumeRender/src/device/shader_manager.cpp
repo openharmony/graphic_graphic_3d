@@ -138,6 +138,12 @@ uint64_t BASE_NS::hash(const RENDER_NS::GraphicsState& state)
 
 RENDER_BEGIN_NAMESPACE()
 namespace {
+// GetIndexPart() of an invalid handle is a valid looking index, it must not be stored as one
+inline uint32_t GetIndexPartOrInvalid(const RenderHandle& handle)
+{
+    return RenderHandleUtil::IsValid(handle) ? RenderHandleUtil::GetIndexPart(handle) : INVALID_SM_INDEX;
+}
+
 constexpr AdditionalDescriptorTypeFlags GetPackedDescriptorTypeFlags(
     const ImageFlags imageFlags, const ImageDimension imageDimension)
 {
@@ -531,7 +537,15 @@ RenderHandle ShaderManager::CreateClientData(
     PLUGIN_ASSERT(
         (type == RenderHandleType::COMPUTE_SHADER_STATE_OBJECT) || (type == RenderHandleType::SHADER_STATE_OBJECT));
     const uint64_t frameIndex = device_.GetFrameCount();
-    if (auto iter = nameToClientHandle_.find(path); iter != nameToClientHandle_.end()) {
+    const auto iter = nameToClientHandle_.find(path);
+    // the cached index addresses the other type's container, re-using it would overwrite a shader and
+    // creating a new one would replace the name mapping of the shader already using the name
+    if ((iter != nameToClientHandle_.end()) && (RenderHandleUtil::GetHandleType(iter->second) != type)) {
+        PLUGIN_LOG_E(
+            "shader name (%.*s) already in use by another shader type", static_cast<int>(path.size()), path.data());
+        return {};
+    }
+    if (iter != nameToClientHandle_.end()) {
         clientHandle = iter->second;
         // we update the frame index if the shader has been (re)loaded
         const uint32_t arrayIndex = RenderHandleUtil::GetIndexPart(clientHandle);
@@ -662,6 +676,9 @@ RenderHandleReference ShaderManager::Create(const ComputeShaderCreateData& creat
     auto const clientHandle = CreateClientData(fullName,
         RenderHandleType::COMPUTE_SHADER_STATE_OBJECT,
         {createInfo.renderSlotId, createInfo.pipelineLayoutIndex, reflectionPlIndex, createInfo.categoryId});
+    if (!RenderHandleUtil::IsValid(clientHandle)) {
+        return {};
+    }
     if (createInfo.pipelineLayoutIndex != INVALID_SM_INDEX) {
         pl_.computeShaderToIndex[clientHandle] = createInfo.pipelineLayoutIndex;
     }
@@ -685,7 +702,8 @@ RenderHandleReference ShaderManager::Create(const ComputeShaderCreateData& creat
 
     const uint32_t index = RenderHandleUtil::GetIndexPart(clientHandle);
     if (IsComputeShaderFunc(clientHandle) &&
-        (index < static_cast<uint32_t>(computeShaderMappings_.clientData.size()))) {
+        (index < static_cast<uint32_t>(computeShaderMappings_.clientData.size())) &&
+        (index < static_cast<uint32_t>(computeShaderMappings_.nameData.size()))) {
         auto& nameDataRef = computeShaderMappings_.nameData[index];
         nameDataRef.path = createInfo.path;
         nameDataRef.variantName = pathCreateInfo.variantName;
@@ -745,6 +763,9 @@ RenderHandleReference ShaderManager::Create(const ShaderCreateData& createInfo,
     auto const clientHandle = CreateClientData(fullName,
         RenderHandleType::SHADER_STATE_OBJECT,
         {createInfo.renderSlotId, createInfo.pipelineLayoutIndex, reflectionPlIndex, createInfo.categoryId});
+    if (!RenderHandleUtil::IsValid(clientHandle)) {
+        return {};
+    }
 
     if (createInfo.pipelineLayoutIndex != INVALID_SM_INDEX) {
         pl_.shaderToIndex[clientHandle] = createInfo.pipelineLayoutIndex;
@@ -779,7 +800,8 @@ RenderHandleReference ShaderManager::Create(const ShaderCreateData& createInfo,
     }
 
     const uint32_t index = RenderHandleUtil::GetIndexPart(clientHandle);
-    if (IsShaderFunc(clientHandle) && (index < static_cast<uint32_t>(shaderMappings_.clientData.size()))) {
+    if (IsShaderFunc(clientHandle) && (index < static_cast<uint32_t>(shaderMappings_.clientData.size())) &&
+        (index < static_cast<uint32_t>(shaderMappings_.nameData.size()))) {
         return CreateShaderDataImpl(createInfo, pathCreateInfo, baseShaderCreateInfo, clientHandle, index);
     }
     return {};
@@ -812,7 +834,7 @@ RenderHandleReference ShaderManager::CreateComputeShader(const ComputeShaderCrea
             return Create(ComputeShaderCreateData{createInfo.path,
                               createInfo.renderSlotId,
                               createInfo.categoryId,
-                              RenderHandleUtil::GetIndexPart(createInfo.pipelineLayout),
+                              GetIndexPartOrInvalid(createInfo.pipelineLayout),
                               moduleIdx,
                               {},
                               {}},
@@ -845,9 +867,9 @@ RenderHandleReference ShaderManager::CreateShader(
             return Create(ShaderCreateData{createInfo.path,
                               createInfo.renderSlotId,
                               createInfo.categoryId,
-                              RenderHandleUtil::GetIndexPart(createInfo.vertexInputDeclaration),
-                              RenderHandleUtil::GetIndexPart(createInfo.pipelineLayout),
-                              RenderHandleUtil::GetIndexPart(createInfo.graphicsState),
+                              GetIndexPartOrInvalid(createInfo.vertexInputDeclaration),
+                              GetIndexPartOrInvalid(createInfo.pipelineLayout),
+                              GetIndexPartOrInvalid(createInfo.graphicsState),
                               vertShaderModule,
                               fragShaderModule,
                               {},

@@ -51,6 +51,10 @@ ani_object WrapDoubleAsObj(const ani_double value, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("WrapDoubleAsObj failed to obtain ani_env");
+        return {};
+    }
     static constexpr const char* className = "std.core.Double";
     ani_object obj{};
 
@@ -83,6 +87,10 @@ ani_double ParseObjToDouble(ani_object obj, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("ParseObjToDouble failed to obtain ani_env");
+        return 0.0;
+    }
     ani_double value = 0.0;
     ani_status status = env->Object_CallMethodByName_Double(obj, "toDouble", ":d", &value);
     if (status != ANI_OK) {
@@ -96,6 +104,10 @@ ani_object WrapIntAsObj(const ani_int value, ani_env* env)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("WrapIntAsObj failed to obtain ani_env");
+        return {};
     }
     static constexpr const char* className = "std.core.Int";
     ani_object obj{};
@@ -129,6 +141,10 @@ ani_int ParseObjToInt(ani_object obj, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("ParseObjToInt failed to obtain ani_env");
+        return 0;
+    }
     ani_int value = 0;
     ani_status status = env->Object_CallMethodByName_Int(obj, "toInt", ":i", &value);
     if (status != ANI_OK) {
@@ -143,6 +159,10 @@ ani_object WrapBoolAsObj(const ani_boolean value, ani_env* env)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("WrapBoolAsObj failed to obtain ani_env");
+        return {};
     }
     static constexpr const char* className = "std.core.Boolean";
     ani_object obj{};
@@ -176,6 +196,10 @@ ani_boolean ParseObjToBool(ani_object obj, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("ParseObjToBool failed to obtain ani_env");
+        return ANI_FALSE;
+    }
     ani_boolean value = ANI_FALSE;
     ani_status status = env->Object_CallMethodByName_Boolean(obj, "toBoolean", ":z", &value);
     if (status != ANI_OK) {
@@ -190,6 +214,10 @@ ani_object WrapColorAsObj(::SceneTypes::Color color, ani_env* env)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("WrapColorAsObj failed to obtain ani_env");
+        return {};
     }
 
     ani_object obj{};
@@ -226,6 +254,10 @@ BASE_NS::Color ParseObjToColor(ani_object obj, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("ParseObjToColor failed to obtain ani_env");
+        return BASE_NS::Color(0, 0, 0, 0);
+    }
 
     ani_double r = 0.0;
     ani_double g = 0.0;
@@ -257,6 +289,10 @@ AniObjectType HandleAniObject(ani_object obj, ani_env* env)
     if (env == nullptr) {
         env = guard.get_env();
     }
+    if (env == nullptr) {
+        WIDGET_LOGE("HandleAniObject failed to obtain ani_env");
+        return AniObjectType::TYPE_UNKNOWN;
+    }
 
     for (const auto& checker : typeCheckers) {
         if (checker.Check(obj, env)) {
@@ -272,6 +308,10 @@ std::string ResourceToString(ani_object ani_obj, ani_env* env)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("ResourceToString failed to obtain ani_env");
+        return resourceStr;
     }
 
     ani_object params;
@@ -312,6 +352,10 @@ std::string ExtractUri(uintptr_t uri, ani_env *env)
     taihe::env_guard guard;
     if (env == nullptr) {
         env = guard.get_env();
+    }
+    if (env == nullptr) {
+        WIDGET_LOGE("ExtractUri failed to obtain ani_env");
+        return uriStr;
     }
     if (IsString(uri, env)) {
         // actually not supported anymore.

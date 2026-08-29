@@ -456,7 +456,10 @@ void BoidsSimWorldImpl::addBoidsSimComponent(
         return;
     }
 
-    comp->PopulateAllProperties();
+    if (!comp->PopulateAllProperties()) {
+        WIDGET_LOGE("Failed to populate properties for 'BoidsSwarmComponent', parameters will not be applied");
+        return;
+    }
     ApplyBoidsSwarmParams(comp, params);
 }
 
@@ -564,7 +567,10 @@ void BoidsSimWorldImpl::addBoidsSimGravityComponent(
         return;
     }
 
-    comp->PopulateAllProperties();
+    if (!comp->PopulateAllProperties()) {
+        WIDGET_LOGE("Failed to populate properties for 'BoidsSwarmGravityComponent', parameters will not be applied");
+        return;
+    }
     ApplyBoidsSwarmGravityParams(comp, params);
 }
 
@@ -645,7 +651,10 @@ void BoidsSimWorldImpl::addBoidsSimRepulsionComponent(
         return;
     }
 
-    comp->PopulateAllProperties();
+    if (!comp->PopulateAllProperties()) {
+        WIDGET_LOGE("Failed to populate properties for 'BoidsSwarmRepulsionComponent', parameters will not be applied");
+        return;
+    }
     ApplyBoidsSwarmRepulsionParams(comp, params);
 }
 

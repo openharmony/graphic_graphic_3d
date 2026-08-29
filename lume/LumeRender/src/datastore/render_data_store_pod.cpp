@@ -61,6 +61,11 @@ void RenderDataStorePod::CreatePod(
         contains = nameToDataOffset_.contains(name);
         if (!contains) {
             const size_t prevByteSize = dataStore_.size();
+            // checked before growing, returning after the resize would orphan the bytes
+            if (prevByteSize > UINT32_MAX || srcData.size() > UINT32_MAX) {
+                PLUGIN_LOG_E("RenderDataStorePod data exceeds uint32_t limit");
+                return;
+            }
             const size_t newByteSize = prevByteSize + srcData.size();
             dataStore_.resize(newByteSize);
             uint8_t* dst = &dataStore_[prevByteSize];
@@ -69,10 +74,6 @@ void RenderDataStorePod::CreatePod(
             }
 
             auto& typeNameRef = typeNameToPodNames_[tpName];
-            if (prevByteSize > UINT32_MAX || srcData.size() > UINT32_MAX) {
-                PLUGIN_LOG_E("RenderDataStorePod data exceeds uint32_t limit");
-                return;
-            }
             nameToDataOffset_[name] = {static_cast<uint32_t>(prevByteSize), static_cast<uint32_t>(srcData.size())};
             typeNameRef.emplace_back(name);
         }

@@ -278,6 +278,55 @@ void ValidateFragmentShadingRate(const Size2D& size)
 }
 #endif  // RENDER_VALIDATION_ENABLED
 
+bool ValidAttachmentIndices(
+    const uint32_t* indices, const uint32_t count, const uint32_t maxCount, const uint32_t attachmentCount)
+{
+    if (count > maxCount) {
+        return false;
+    }
+    for (uint32_t idx = 0; idx < count; ++idx) {
+        if (indices[idx] >= attachmentCount) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// the render passes and the backends index fixed size arrays with the subpass indices without checking
+bool ValidSubpassAttachments(
+    const RenderPassDesc& renderPassDesc, const array_view<const RenderPassSubpassDesc> subpassDescs)
+{
+    const uint32_t attachmentCount = renderPassDesc.attachmentCount;
+    if (attachmentCount > PipelineStateConstants::MAX_RENDER_PASS_ATTACHMENT_COUNT) {
+        return false;
+    }
+    for (const auto& sb : subpassDescs) {
+        if ((!ValidAttachmentIndices(sb.colorAttachmentIndices,
+                sb.colorAttachmentCount,
+                PipelineStateConstants::MAX_COLOR_ATTACHMENT_COUNT,
+                attachmentCount)) ||
+            (!ValidAttachmentIndices(sb.inputAttachmentIndices,
+                sb.inputAttachmentCount,
+                PipelineStateConstants::MAX_INPUT_ATTACHMENT_COUNT,
+                attachmentCount)) ||
+            (!ValidAttachmentIndices(sb.resolveAttachmentIndices,
+                sb.resolveAttachmentCount,
+                PipelineStateConstants::MAX_RESOLVE_ATTACHMENT_COUNT,
+                attachmentCount))) {
+            return false;
+        }
+        // the single attachment indices are only used when their count is one
+        if ((!ValidAttachmentIndices(&sb.depthAttachmentIndex, sb.depthAttachmentCount, 1U, attachmentCount)) ||
+            (!ValidAttachmentIndices(
+                &sb.depthResolveAttachmentIndex, sb.depthResolveAttachmentCount, 1U, attachmentCount)) ||
+            (!ValidAttachmentIndices(
+                &sb.fragmentShadingRateAttachmentIndex, sb.fragmentShadingRateAttachmentCount, 1U, attachmentCount))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 constexpr uint32_t INVALID_CL_IDX{~0u};
 
 constexpr size_t BYTE_SIZE_ALIGNMENT{64};
@@ -321,8 +370,9 @@ void* AllocateRenderData(
 }
 
 template<typename T>
-T* AllocateRenderData(RenderCommandList::LinearAllocatorStruct& allocator, uint32_t count)
+T* AllocateRenderData(RenderCommandList::LinearAllocatorStruct& allocator, size_t count)
 {
+    // size_t, a uint32_t count would make this guard unreachable
     if (count > SIZE_MAX / sizeof(T)) {
         return nullptr;
     }
@@ -339,7 +389,7 @@ template<typename T>
 bool CopyGeometryArray(RenderCommandList::LinearAllocatorStruct& allocator, const array_view<const T> src, T*& outData,
     array_view<T>& outView)
 {
-    T* buf = AllocateRenderData<T>(allocator, static_cast<uint32_t>(src.size()));
+    T* buf = AllocateRenderData<T>(allocator, src.size());
     if (!buf) {
         return false;
     }
@@ -960,6 +1010,10 @@ void RenderCommandList::BeginRenderPass(
 #endif
         stateData_.validCommandList = false;
     }
+    if (!ValidSubpassAttachments(renderPassDesc, subpassDescs)) {
+        PLUGIN_LOG_E("RenderCommandList: subpass attachment index out of range (node: %s)", nodeName_.c_str());
+        stateData_.validCommandList = false;
+    }
     ValidateRenderPass(renderPassDesc);
     if (!stateData_.validCommandList) {
         return;
@@ -1038,6 +1092,10 @@ void RenderCommandList::BeginRenderPass(
         PLUGIN_LOG_E("RCL:BeginRenderPass: subpassStartIdx(%u) must be smaller than renderPassDesc.subpassCount (%u)",
             subpassStartIdx,
             renderPassDesc.subpassCount);
+        stateData_.validCommandList = false;
+    }
+    if (!ValidSubpassAttachments(renderPassDesc, {&subpassDesc, 1U})) {
+        PLUGIN_LOG_E("RenderCommandList: subpass attachment index out of range (node: %s)", nodeName_.c_str());
         stateData_.validCommandList = false;
     }
 

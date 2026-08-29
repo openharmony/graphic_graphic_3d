@@ -1667,6 +1667,38 @@ bool ParseMaterial(LoadResult& loadResult, const json::value& jsonData)
     return result;
 }
 
+// as_number<uint32_t>() is a bare static_cast, so a negative or oversized index would wrap into a valid one.
+bool GetAccessorIndex(const json::value& value, uint32_t& index)
+{
+    if (value.is_unsigned_int()) {
+        if (value.unsigned_ > UINT32_MAX) {
+            return false;
+        }
+        index = static_cast<uint32_t>(value.unsigned_);
+        return true;
+    }
+    if (value.is_signed_int()) {
+        if ((value.signed_ < 0) || (value.signed_ > static_cast<int64_t>(UINT32_MAX))) {
+            return false;
+        }
+        index = static_cast<uint32_t>(value.signed_);
+        return true;
+    }
+    if (value.is_floating_point()) {
+        // out of spec, but some exporters write indices as "1.0". Accept when the value is integral.
+        if ((value.float_ < 0.0) || (value.float_ > static_cast<double>(UINT32_MAX))) {
+            return false;
+        }
+        const auto truncated = static_cast<uint32_t>(value.float_);
+        if (static_cast<double>(truncated) != value.float_) {
+            return false;
+        }
+        index = truncated;
+        return true;
+    }
+    return false;
+}
+
 bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, MeshPrimitive& meshPrimitive)
 {
     if (const auto* attirbutesJson = jsonData.find("attributes"); attirbutesJson && attirbutesJson->is_object()) {
@@ -1678,7 +1710,10 @@ bool PrimitiveAttributes(LoadResult& loadResult, const json::value& jsonData, Me
                     RETURN_WITH_ERROR(loadResult, "Invalid attribute type.");
                 }
 
-                const uint32_t accessor = it.value.as_number<uint32_t>();
+                uint32_t accessor = 0U;
+                if (!GetAccessorIndex(it.value, accessor)) {
+                    RETURN_WITH_ERROR(loadResult, "Invalid accessor index.");
+                }
                 if (accessor < loadResult.data->accessors.size()) {
                     attribute.accessor = loadResult.data->accessors[accessor].get();
 
@@ -1746,8 +1781,10 @@ bool PrimitiveTargets(
                         RETURN_WITH_ERROR(loadResult, "Invalid attribute type.");
                     }
 
-                    const uint32_t accessor = it.value.as_number<uint32_t>();
-
+                    uint32_t accessor = 0U;
+                    if (!GetAccessorIndex(it.value, accessor)) {
+                        RETURN_WITH_ERROR(loadResult, "Invalid accessor index.");
+                    }
                     if (accessor < loadResult.data->accessors.size()) {
                         attribute.accessor = loadResult.data->accessors[accessor].get();
 

@@ -162,11 +162,13 @@ void CustomPropertyPodContainer::Reset()
     metaStrings_.clear();
     metaData_.clear();
     data_.clear();
+    reservePropertyCount_ = 0U;
 }
 
 void CustomPropertyPodContainer::ReservePropertyCount(size_t propertyCount)
 {
-    reservePropertyCount_ = propertyCount;
+    // accumulated, AddOffsetProperty() gates on metaStrings_.size() < reservePropertyCount_
+    reservePropertyCount_ += propertyCount;
     metaStrings_.reserve(reservePropertyCount_);
     metaData_.reserve(reservePropertyCount_);
 }
@@ -560,7 +562,8 @@ void CustomPropertyBindingContainer::Release(IPropertyHandle* handle) const
 
 void CustomPropertyBindingContainer::ReservePropertyCount(size_t propertyCount)
 {
-    reservePropertyCount_ = propertyCount;
+    // accumulated, AddOffsetProperty() gates on metaStrings_.size() < reservePropertyCount_
+    reservePropertyCount_ += propertyCount;
     metaStrings_.reserve(reservePropertyCount_);
     metaData_.reserve(reservePropertyCount_);
     // max size

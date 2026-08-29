@@ -159,6 +159,12 @@ private:
 
     void RemapBufferAccessToBindings(size_t submeshIndex);
 
+    // submeshInfos_ grows with AddSubmesh while submeshes_ is sized once in Initialize, so both must be checked
+    bool IsValidSubmeshIndex(size_t submeshIndex) const;
+
+    // SubmeshExt records offsets into vertexData_ as int32_t, so the accumulated data must stay below INT32_MAX
+    bool CanGrowVertexData(uint64_t byteSize) const;
+
     RENDER_NS::IRenderContext& renderContext_;
     RENDER_NS::VertexInputDeclarationView vertexInputDeclaration_;
 

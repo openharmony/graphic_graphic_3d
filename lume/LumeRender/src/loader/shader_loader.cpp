@@ -582,7 +582,9 @@ void ShaderLoader::CreateShaderStates(const string_view uri,
     const array_view<const IShaderManager::ShaderStateLoaderVariantData>& variantData,
     const array_view<const GraphicsState>& states)
 {
-    for (size_t stateIdx = 0; stateIdx < states.size(); ++stateIdx) {
+    // the two are filled in lockstep by LoadStates, the invariant is not enforced here
+    const size_t stateCount = Math::min(states.size(), variantData.size());
+    for (size_t stateIdx = 0; stateIdx < stateCount; ++stateIdx) {
         const ShaderManager::GraphicsStateCreateInfo createInfo{uri, states[stateIdx]};
         const auto& variant = variantData[stateIdx];
         const ShaderManager::GraphicsStateVariantCreateInfo variantCreateInfo{variant.renderSlot,

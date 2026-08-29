@@ -31,6 +31,10 @@ VkSamplerYcbcrConversion CreateYcbcrConversion(const DeviceVk& deviceVk)
 {
     const auto& devicePlat = static_cast<const DevicePlatformDataVk&>(deviceVk.GetPlatformData());
     VkSamplerYcbcrConversion samplerYcbcrConversion = VK_NULL_HANDLE;
+    if (!deviceVk.GetExtFunctions().vkCreateSamplerYcbcrConversion) {
+        PLUGIN_LOG_E("vkCreateSamplerYcbcrConversion not available");
+        return samplerYcbcrConversion;
+    }
     const VkDevice vkDevice = devicePlat.device;
     // NOTE: should be queried from image (hwbuffer)
     PlatformHardwareBufferUtil::HardwareBufferProperties hwBufferProperties;
@@ -80,7 +84,12 @@ GpuSamplerVk::GpuSamplerVk(Device& device, const GpuSamplerDesc& desc) : device_
     if ((desc.engineCreationFlags & CORE_ENGINE_SAMPLER_CREATION_YCBCR) &&
         deviceVk.GetCommonDeviceExtensions().samplerYcbcrConversion) {
         samplerConversion_ = CreateYcbcrConversion(deviceVk);
-        VkSamplerYcbcrConversionInfo yCbcrConversionInfo{
+        if (samplerConversion_ == VK_NULL_HANDLE) {
+            // a sampler without the conversion cannot sample the ycbcr image it was requested for
+            PLUGIN_LOG_E("ycbcr conversion creation failed, sampler not created");
+            return;
+        }
+        const VkSamplerYcbcrConversionInfo yCbcrConversionInfo{
             VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,  // sType
             nullptr,                                          // pNext
             samplerConversion_,                               // conversion

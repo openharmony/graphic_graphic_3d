@@ -167,6 +167,9 @@ bool ReadDescriptorSetsV0(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
         if ((end - ptr) < static_cast<ptrdiff_t>(bindings * bindingSize)) {
             return false;
         }
+        if (bindings > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+            return false;
+        }
 
         auto& layout = pipelineLayout.descriptorSetLayouts[set];
         layout.set = set;
@@ -174,6 +177,9 @@ bool ReadDescriptorSetsV0(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
         for (auto j = 0u; j < bindings; ++j) {
             DescriptorSetLayoutBinding& binding = layout.bindings.emplace_back();
             binding.binding = static_cast<uint32_t>(Read16U(ptr));
+            if (binding.binding >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+                return false;
+            }
             binding.descriptorType = static_cast<DescriptorType>(Read16U(ptr));
             if ((binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) &&
                 (binding.descriptorType == (DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE & 0xffff))) {
@@ -215,6 +221,9 @@ bool ReadDescriptorSetsV1(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
         if ((end - ptr) < static_cast<ptrdiff_t>(bindings * bindingSize)) {
             return false;
         }
+        if (bindings > PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+            return false;
+        }
 
         auto& layout = pipelineLayout.descriptorSetLayouts[set];
         layout.set = set;
@@ -222,6 +231,9 @@ bool ReadDescriptorSetsV1(PipelineLayout& pipelineLayout, const uint8_t*& ptr, c
         for (auto j = 0u; j < bindings; ++j) {
             DescriptorSetLayoutBinding& binding = layout.bindings.emplace_back();
             binding.binding = static_cast<uint32_t>(Read16U(ptr));
+            if (binding.binding >= PipelineLayoutConstants::MAX_DESCRIPTOR_SET_BINDING_COUNT) {
+                return false;
+            }
             binding.descriptorType = static_cast<DescriptorType>(Read16U(ptr));
             if ((binding.descriptorType > DescriptorType::CORE_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) &&
                 (binding.descriptorType == (DescriptorType::CORE_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE & 0xffff))) {

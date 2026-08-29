@@ -15,6 +15,11 @@
 
 #include "scene_adapter/fg_module.h"
 
+#include "3d_widget_adapter_log.h"
+
+#include <cmath>
+
+#include <base/math/mathf.h>
 #include <core/ecs/intf_ecs.h>
 #include <3d/implementation_uids.h>
 #include <3d/ecs/systems/intf_node_system.h>
@@ -44,6 +49,30 @@ using namespace FG;
 BASE_NS::refcnt_ptr<CORE_NS::IEcs> FGModule::ecs_;
 
 namespace {
+// Upper bound on texture dimension; caps allocation requests at common GPU limits.
+constexpr float MAX_TEXTURE_DIMENSION = 16384.0f;
+
+// Dimensions are truncated to uint32_t pixels; >= 1.0f ensures a non-zero size after truncation.
+bool IsFinitePositive(const float value)
+{
+    return std::isfinite(value) && (value >= 1.0f);
+}
+
+bool ValidateGpuImageSize(float width, float height)
+{
+    if (IsFinitePositive(width) && IsFinitePositive(height) && (width <= MAX_TEXTURE_DIMENSION) &&
+        (height <= MAX_TEXTURE_DIMENSION)) {
+        return true;
+    }
+
+    WIDGET_LOGE("gpu image creation failed: invalid parameters (width=%f, height=%f). "
+                "Width and height must be finite, >= 1 and <= %f.",
+        width,
+        height,
+        MAX_TEXTURE_DIMENSION);
+    return false;
+}
+
 GpuImageDesc GetGpuImageDesc(shared_ptr<IRenderContext> rc, const Base::string_view& name, const Format format,
     const uint32_t width, const uint32_t height)
 {
@@ -251,10 +280,13 @@ void FGModule::SetWindowSize(const int& width, const int& height)
 
 RenderHandleReference FGModule::CreateGpuResource(shared_ptr<IRenderContext> rc, float width, float height)
 {
+    if (!ValidateGpuImageSize(width, height)) {
+        return {};
+    }
     IGpuResourceManager& gpuResourceMgr = rc->GetDevice().GetGpuResourceManager();
     GpuImageDesc desc;
-    desc.width = static_cast<int>(width);
-    desc.height = static_cast<int>(height);
+    desc.width = static_cast<uint32_t>(width);
+    desc.height = static_cast<uint32_t>(height);
     desc.depth = 1;
     desc.format = Format::BASE_FORMAT_R8G8B8A8_SRGB;
     desc.memoryPropertyFlags = MemoryPropertyFlagBits::CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -273,15 +305,19 @@ void FGModule::CreateGpuImages(shared_ptr<IRenderContext> rc, float width, float
     RENDER_NS::RenderHandleReference& FGColorOutputHandle_, RENDER_NS::RenderHandleReference& FGPredictOutputHandle_,
     RENDER_NS::RenderHandleReference& FGDepthOutputHandle_)
 {
+    if (!ValidateGpuImageSize(width, height)) {
+        return;
+    }
     FGColorOutputHandle_ = CreateTexture(
-        rc, "FG_COLOR_OUTPUT", BASE_FORMAT_R8G8B8A8_SRGB, static_cast<int>(width), static_cast<int>(height));
+        rc, "FG_COLOR_OUTPUT", BASE_FORMAT_R8G8B8A8_SRGB, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     FGPredictOutputHandle_ = CreateTexture(
-        rc, "FG_PREDICT_OUTPUT", BASE_FORMAT_R8G8B8A8_SRGB, static_cast<int>(width), static_cast<int>(height));
+        rc, "FG_PREDICT_OUTPUT", BASE_FORMAT_R8G8B8A8_SRGB, static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height));
     FGDepthOutputHandle_ = CreateTextureDepth(rc,
         "SCENE_DEPTH_EMPTY",
         fg.algorithm_ == 1 ? BASE_FORMAT_D32_SFLOAT_S8_UINT : BASE_FORMAT_D32_SFLOAT,
-        static_cast<int>(width),
-        static_cast<int>(height));
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height));
 }
 
 void FGModule::AttachComponent()
