@@ -242,6 +242,7 @@ ohos_unittest("lume_3d_src_test") {
 
     # ECS - Components
     "src_unit_test/src/ecs/components/base_manager_test.cpp",
+    "src_unit_test/src/ecs/components/animation_component_manager_test.cpp",
 
     # ECS - Systems
     "src_unit_test/src/ecs/systems/local_matrix_system_test.cpp",
@@ -270,6 +271,9 @@ ohos_unittest("lume_3d_src_test") {
     "src_unit_test/src/util/mesh_util_test.cpp",
     "src_unit_test/src/util/mesh_builder_security_test.cpp",
     "src_unit_test/src/util/property_util_test.cpp",
+    "src_unit_test/src/util/bowyer_watson_delaunay_3d_test.cpp",
+    "src_unit_test/src/util/light_probe_util_test.cpp",
+    "src_unit_test/src/util/uri_lookup_test.cpp",
   ]
 
   # External deps
