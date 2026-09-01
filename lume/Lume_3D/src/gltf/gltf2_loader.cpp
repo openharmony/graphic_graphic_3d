@@ -1766,9 +1766,6 @@ bool PrimitiveTargets(
             if (!target.is_object()) {
                 return true;
             }
-            if (meshPrimitive.targets.size() >= RenderSceneDataConstants::MAX_MORPH_TARGET_COUNT) {
-                RETURN_WITH_ERROR(loadResult, "Too many morph targets.");
-            }
             MorphTarget mTarget;
 #ifdef GLTF2_EXTENSION_IGFX_COMPRESSED
             mTarget.iGfxCompressed = compressed;

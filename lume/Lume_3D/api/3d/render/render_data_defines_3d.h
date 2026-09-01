@@ -36,9 +36,6 @@ CORE3D_BEGIN_NAMESPACE()
  */
 /** Render data constants */
 namespace RenderSceneDataConstants {
-/** Max morph target count */
-static constexpr uint32_t MAX_MORPH_TARGET_COUNT{64u};
-
 /** Mesh indices in index */
 static constexpr uint32_t MESH_INDEX_INDEX{5u};
 /** Mesh weights in index */
