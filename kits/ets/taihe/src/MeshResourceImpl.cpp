@@ -15,8 +15,8 @@
 
 #include "ANIUtils.h"
 #include "MeshResourceImpl.h"
-#include "TaiheErrorUtil.h"
 #include "geometry_definition/GeometryDefinition.h"
+#include <string>
 
 #ifdef __SCENE_ADAPTER__
 #include "3d_widget_adapter_log.h"
@@ -49,9 +49,9 @@ BASE_NS::unique_ptr<Geometry::CustomETS> MeshResourceImpl::MakeCustomETS(
         for (size_t i = 0; i < indicesArray.size(); ++i) {
             const uint32_t idx = static_cast<uint32_t>(indicesArray[i]);
             if (idx >= vertexCount) {
-                SetBusinessError(ErrorCode::INVALID_ARGUMENTS,
-                    "Invalid index in CustomGeometry: index %d out of range [0, %u)",
-                    static_cast<int32_t>(idx), vertexCount);
+                taihe::set_error(std::string("Invalid index in CustomGeometry: index ") +
+                                 std::to_string(static_cast<int32_t>(idx)) +
+                                 " out of range [0, " + std::to_string(vertexCount) + "]");
                 return nullptr;
             }
             indices[i] = idx;
@@ -101,10 +101,10 @@ SceneResources::MeshResource MeshResourceImpl::Create(
         if (radius > 0 && height > 0 && segmentCount >= CYLINDER_MIN_SEGMENTS) {
             gd = BASE_NS::make_unique<Geometry::CylinderETS>(radius, height, segmentCount);
         } else {
-            SetBusinessError(ErrorCode::INVALID_ARGUMENTS, "Unable to create CylinderETS: Invalid parameters given");
+            taihe::set_error("Unable to create CylinderETS: Invalid parameters given");
         }
     } else {
-        SetBusinessError(ErrorCode::INVALID_ARGUMENTS, "Unknown type of GeometryDefinition");
+        taihe::set_error("Unknown type of GeometryDefinition");
         return SceneResources::MeshResource({nullptr, nullptr});
     }
     const std::string name(params.name);
