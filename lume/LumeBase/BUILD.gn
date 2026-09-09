@@ -55,13 +55,13 @@ config("lume_unit_test_config") {
     ]
   }
 
-  if (target_cpu == "arm64") {
+  if (target_cpu == "arm64" || target_cpu == "x86_64") {
     defines += [
       "OHOS_PLATFORM_CORE_PATH=\"/system/lib64/\"",
       "OHOS_PLATFORM_PLUGINS_PATH=\"/system/lib64/graphics3d/\""
     ]
   }
-  
+
   # Flags passed to all C/C++ compiler
   cflags = [
     "-Wall",
