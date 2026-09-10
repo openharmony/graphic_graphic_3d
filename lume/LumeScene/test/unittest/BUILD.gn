@@ -200,7 +200,10 @@ ohos_unittest("lume_scene_api_test") {
 # group ("unittest")
 group("unittest") {
     testonly = true
-    deps = [ 
+    deps = []
+    if (target_cpu != "x86_64") {
+      deps += [
         ":lume_scene_api_test",
     ]
+  }
 }

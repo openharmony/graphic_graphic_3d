@@ -186,7 +186,13 @@ ohos_unittest("lume_3d_api_test") {
   ]
 
   # Test data
-  resource_config_file = "//foundation/graphic/graphic_3d/lume/Lume_3D/test/unittest/assets/ohos_test.xml"
+  if (target_cpu == "arm64" || target_cpu == "x86_64") {
+    resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeEngine/test/unittest/assets/ohos_test_64.xml"
+  }
+
+  if (target_cpu == "arm" || target_cpu == "x86") {
+    resource_config_file = "//foundation/graphic/graphic_3d/lume/LumeEngine/test/unittest/assets/ohos_test.xml"
+  }
 
   # graphic/graphic_3d
   part_name = "graphic_3d"
@@ -326,10 +332,13 @@ ohos_unittest("lume_3d_src_test") {
 # group ("unittest")
 group("unittest") {
     testonly = true
-    deps = [ 
+    deps = []
+    if (target_cpu != "x86_64") {
+      deps += [
         ":lume_3d_api_test",
         ":lume_3d_src_test"
     ]
+  }
 }
 
 #

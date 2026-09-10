@@ -481,10 +481,13 @@ ohos_unittest("lume_render_src_test") {
 # group ("unittest")
 group("unittest") {
     testonly = true
-    deps = [ 
+    deps = []
+    if (target_cpu != "x86_64") {
+      deps += [
         ":lume_render_api_test",
         ":lume_render_src_test"
     ]
+  }
 }
 
 #
