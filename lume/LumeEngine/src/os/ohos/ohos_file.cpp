@@ -14,6 +14,7 @@
  */
 
 #include "ohos_file.h"
+#include "parse_resource_uint32.h"
 
 #include <cerrno>
 #include <cstdint>
@@ -256,13 +257,19 @@ bool OhosFile::GetResourceId(const std::string& uri, uint32_t& resId) const
 {
     std::smatch matches;
     if (std::regex_match(uri, matches, MEDIA_RES_ID_REGEX) && matches.size() == OHOS_RESOURCE_MATCH_SIZE) {
-        resId = static_cast<uint32_t>(std::stoul(matches[1].str()));
-        return true;
+        if (ParseResourceUInt32(matches[1].str(), resId)) {
+            return true;
+        }
+        CORE_LOG_E("invalid resource id in uri:%s", uri.c_str());
+        return false;
     }
     std::smatch hapMatches;
     if (std::regex_match(uri, hapMatches, MEDIA_HAP_RES_ID_REGEX) && hapMatches.size() == OHOS_RESOURCE_MATCH_SIZE) {
-        resId = static_cast<uint32_t>(std::stoul(hapMatches[1].str()));
-        return true;
+        if (ParseResourceUInt32(hapMatches[1].str(), resId)) {
+            return true;
+        }
+        CORE_LOG_E("invalid resource id in uri:%s", uri.c_str());
+        return false;
     }
     return false;
 }
